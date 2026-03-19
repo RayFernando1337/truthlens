@@ -4,22 +4,22 @@ overview: Overhaul TruthLens UI to fix scroll behavior, remove jarring tab auto-
 todos:
   - id: smart-scroll
     content: Implement smart auto-scroll in PulseFeed and TranscriptInput (follow mode with pause-on-scroll-up + 'scroll to live' pill)
-    status: pending
+    status: completed
   - id: stop-tab-switch
     content: Remove setActiveTab('analysis') from triggerL2 in page.tsx so L2 results don't yank user away
-    status: pending
+    status: completed
   - id: view-mode-toggle
     content: Add viewMode state ('debug'|'insights') and header toggle pills in page.tsx
-    status: pending
+    status: completed
   - id: insights-panel
     content: Build InsightsPanel.tsx -- unified single-scroll view combining L1 pulse strip + L2 analysis cards + L3 patterns (no tabs, no accordions)
-    status: pending
+    status: completed
   - id: transcript-linking
     content: Add color-coded left borders on voice transcript chunks in TranscriptInput based on flag severity
-    status: pending
+    status: completed
   - id: polish
     content: Polish transitions between modes, ensure debug mode is untouched, verify scroll behavior in both modes
-    status: pending
+    status: completed
 isProject: false
 ---
 

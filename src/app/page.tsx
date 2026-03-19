@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   PulseEntry,
   PulseResult,
   AnalysisResult,
   PatternsResult,
 } from "@/lib/types";
+import { severityFromPulse } from "@/lib/pulse-utils";
+import type { ChunkSeverity } from "@/lib/pulse-utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import TranscriptInput from "./components/TranscriptInput";
 import PulseFeed from "./components/PulseFeed";
 import AnalysisPanel from "./components/AnalysisPanel";
 import PatternsPanel from "./components/PatternsPanel";
+import InsightsPanel from "./components/InsightsPanel";
 
 type Tab = "pulse" | "analysis" | "patterns";
+type ViewMode = "debug" | "insights";
 
 function splitIntoChunks(text: string): string[] {
   const paragraphs = text
@@ -43,6 +47,7 @@ function splitIntoChunks(text: string): string[] {
 }
 
 export default function Home() {
+  const [viewMode, setViewMode] = useState<ViewMode>("insights");
   const [activeTab, setActiveTab] = useState<Tab>("pulse");
   const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([]);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
@@ -71,7 +76,6 @@ export default function Home() {
   const triggerL2 = useCallback(
     async (chunks: string[], allClaims: string[]) => {
       setIsAnalysisLoading(true);
-      setActiveTab("analysis");
       try {
         const res = await fetch("/api/analyze/deep", {
           method: "POST",
@@ -153,6 +157,19 @@ export default function Home() {
 
   const { isRecording, error: voiceError, startRecording, stopRecording } =
     useVoiceInput({ onChunkTranscribed: handleVoiceChunk });
+
+  const voiceChunkSeverities = useMemo((): ChunkSeverity[] => {
+    return voiceTranscript.map((_, i) => {
+      const e = pulseEntries.find((p) => p.id === `voice-${i}`);
+      return e ? severityFromPulse(e.result) : "ok";
+    });
+  }, [voiceTranscript, pulseEntries]);
+
+  const seekTranscriptChunk = useCallback((index: number) => {
+    document
+      .getElementById(`tl-transcript-chunk-${index}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []);
 
   const handleStartRecording = useCallback(() => {
     setPulseEntries([]);
@@ -303,13 +320,42 @@ export default function Home() {
     <div className="flex h-full flex-col bg-[#0a0a0a]">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-[#222] px-6 py-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-sm font-bold tracking-wider text-[#e5e5e5]">
             TRUTHLENS
           </h1>
           <span className="text-[10px] text-[#444]">
+            {viewMode === "debug" ? "Debug view · " : "Insights view · "}
             nemotron 3 super &middot; 3-tier analysis
           </span>
+          <div
+            className="flex items-center gap-0.5 border border-[#222] p-0.5"
+            role="group"
+            aria-label="Interface mode"
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode("insights")}
+              className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+                viewMode === "insights"
+                  ? "bg-[#e5e5e5] text-[#0a0a0a]"
+                  : "text-[#666] hover:text-[#e5e5e5]"
+              }`}
+            >
+              Insights
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("debug")}
+              className={`px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+                viewMode === "debug"
+                  ? "bg-[#e5e5e5] text-[#0a0a0a]"
+                  : "text-[#666] hover:text-[#e5e5e5]"
+              }`}
+            >
+              Debug
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {isRecording && (
@@ -341,63 +387,97 @@ export default function Home() {
             onStartRecording={handleStartRecording}
             onStopRecording={handleStopRecording}
             chunkProgress={chunkProgress}
+            insightsMode={viewMode === "insights"}
+            voiceChunkSeverities={voiceChunkSeverities}
           />
         </div>
 
         {/* Right: Analysis panels */}
         <div className="flex flex-1 flex-col bg-[#141414]">
-          {/* Tabs */}
-          <div className="flex border-b border-[#222]">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative px-5 py-3 text-[11px] font-semibold uppercase tracking-widest transition-colors ${
-                  activeTab === tab.id
-                    ? "text-[#e5e5e5]"
-                    : "text-[#444] hover:text-[#666]"
-                }`}
-              >
-                {tab.label}
-                {tab.count && (
-                  <span className="ml-2 text-[10px] tabular-nums text-[#666]">
-                    {tab.count}
-                  </span>
-                )}
-                {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-px bg-[#e5e5e5]" />
-                )}
-                {tab.id === "analysis" && isAnalysisLoading && (
-                  <span className="ml-2 inline-block h-1 w-1 animate-pulse bg-[#ffaa00]" />
-                )}
-                {tab.id === "patterns" && isPatternsLoading && (
-                  <span className="ml-2 inline-block h-1 w-1 animate-pulse bg-[#ffaa00]" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === "pulse" && (
-              <PulseFeed
+          {viewMode === "insights" ? (
+            <div className="flex-1 overflow-hidden transition-opacity duration-150">
+              <InsightsPanel
                 entries={pulseEntries}
                 processingChunk={processingChunk}
+                analysisResult={analysisResult}
+                patternsResult={patternsResult}
+                isAnalysisLoading={isAnalysisLoading}
+                isPatternsLoading={isPatternsLoading}
+                onSeekTranscriptChunk={seekTranscriptChunk}
               />
-            )}
-            {activeTab === "analysis" && (
-              <AnalysisPanel
-                result={analysisResult}
-                isLoading={isAnalysisLoading}
-              />
-            )}
-            {activeTab === "patterns" && (
-              <PatternsPanel
-                result={patternsResult}
-                isLoading={isPatternsLoading}
-              />
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="flex border-b border-[#222]">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative px-5 py-3 text-[11px] font-semibold uppercase tracking-widest transition-colors ${
+                      activeTab === tab.id
+                        ? "text-[#e5e5e5]"
+                        : "text-[#444] hover:text-[#666]"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count && (
+                      <span className="ml-2 text-[10px] tabular-nums text-[#666]">
+                        {tab.count}
+                      </span>
+                    )}
+                    {activeTab === tab.id && (
+                      <span className="absolute bottom-0 left-0 right-0 h-px bg-[#e5e5e5]" />
+                    )}
+                    {tab.id === "analysis" && isAnalysisLoading && (
+                      <span className="ml-2 inline-block h-1 w-1 animate-pulse bg-[#ffaa00]" />
+                    )}
+                    {tab.id === "analysis" &&
+                      !isAnalysisLoading &&
+                      analysisResult && (
+                        <span
+                          className="ml-2 inline-block h-1 w-1 rounded-full bg-[#00cc66]"
+                          title="Analysis ready"
+                        />
+                      )}
+                    {tab.id === "patterns" && isPatternsLoading && (
+                      <span className="ml-2 inline-block h-1 w-1 animate-pulse bg-[#ffaa00]" />
+                    )}
+                    {tab.id === "patterns" &&
+                      !isPatternsLoading &&
+                      patternsResult && (
+                        <span
+                          className="ml-2 inline-block h-1 w-1 rounded-full bg-[#00cc66]"
+                          title="Patterns ready"
+                        />
+                      )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-hidden transition-opacity duration-150">
+                {activeTab === "pulse" && (
+                  <PulseFeed
+                    entries={pulseEntries}
+                    processingChunk={processingChunk}
+                  />
+                )}
+                {activeTab === "analysis" && (
+                  <AnalysisPanel
+                    result={analysisResult}
+                    isLoading={isAnalysisLoading}
+                  />
+                )}
+                {activeTab === "patterns" && (
+                  <PatternsPanel
+                    result={patternsResult}
+                    isLoading={isPatternsLoading}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

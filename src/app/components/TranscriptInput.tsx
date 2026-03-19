@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import type { ChunkSeverity } from "@/lib/pulse-utils";
 
 const DEMO_TRANSCRIPT = `Our new AI platform processes data 10x faster than any competitor on the market. We've seen this across thousands of deployments.
 
@@ -16,6 +17,14 @@ Looking at the broader market, we're seeing unprecedented adoption rates. Our gr
 
 const URL_PATTERN = /^https?:\/\/\S+$/;
 
+const NEAR_BOTTOM_PX = 80;
+
+const SEVERITY_BORDER: Record<ChunkSeverity, string> = {
+  ok: "border-l-[#00cc66]",
+  warn: "border-l-[#ffaa00]",
+  flag: "border-l-[#ff4400]",
+};
+
 type InputMode = "text" | "url" | "voice";
 
 export default function TranscriptInput({
@@ -29,6 +38,8 @@ export default function TranscriptInput({
   onStartRecording,
   onStopRecording,
   chunkProgress,
+  insightsMode,
+  voiceChunkSeverities,
 }: {
   onAnalyze: (text: string) => void;
   onFetchUrl: (url: string) => void;
@@ -40,14 +51,59 @@ export default function TranscriptInput({
   onStartRecording: () => void;
   onStopRecording: () => void;
   chunkProgress: { current: number; total: number } | null;
+  /** When true, voice chunks show severity borders from pulse flags */
+  insightsMode?: boolean;
+  /** Per voice chunk index; length should match voiceTranscript when provided */
+  voiceChunkSeverities?: ChunkSeverity[];
 }) {
   const [text, setText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const followingRef = useRef(true);
+  const [showJumpToLive, setShowJumpToLive] = useState(false);
 
   const inputMode: InputMode = useMemo(() => {
     if (isRecording) return "voice";
     if (URL_PATTERN.test(text.trim())) return "url";
     return "text";
   }, [text, isRecording]);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    followingRef.current = true;
+    setShowJumpToLive(false);
+  }, []);
+
+  const handleTranscriptScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+    followingRef.current = nearBottom;
+    setShowJumpToLive(!nearBottom);
+  }, []);
+
+  const hasVoiceChunks = voiceTranscript.length > 0;
+
+  useEffect(() => {
+    if (isRecording && voiceTranscript.length === 0) {
+      followingRef.current = true;
+      setShowJumpToLive(false);
+    }
+  }, [isRecording, voiceTranscript.length]);
+
+  useEffect(() => {
+    if (!isRecording && !hasVoiceChunks) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (followingRef.current) {
+      el.scrollTop = el.scrollHeight;
+      setShowJumpToLive(false);
+    } else {
+      setShowJumpToLive(true);
+    }
+  }, [voiceTranscript, isRecording, hasVoiceChunks]);
 
   function handleAction() {
     const content = text.trim();
@@ -64,7 +120,11 @@ export default function TranscriptInput({
   }
 
   const busy = isProcessing || isFetchingUrl;
-  const hasVoiceChunks = voiceTranscript.length > 0;
+
+  function severityForIndex(i: number): ChunkSeverity {
+    if (!voiceChunkSeverities || i >= voiceChunkSeverities.length) return "ok";
+    return voiceChunkSeverities[i] ?? "ok";
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -104,7 +164,7 @@ export default function TranscriptInput({
       </div>
 
       {/* Content area */}
-      <div className="flex-1 p-4">
+      <div className="relative flex-1 overflow-hidden p-4">
         {isRecording || hasVoiceChunks ? (
           <div className="flex h-full flex-col">
             {isRecording && (
@@ -118,7 +178,20 @@ export default function TranscriptInput({
                 </span>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto">
+            {showJumpToLive && (
+              <button
+                type="button"
+                onClick={scrollToBottom}
+                className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 border border-[#333] bg-[#0a0a0a] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] shadow-lg transition-colors hover:border-[#e5e5e5]"
+              >
+                Scroll to live
+              </button>
+            )}
+            <div
+              ref={scrollRef}
+              onScroll={handleTranscriptScroll}
+              className="min-h-0 flex-1 overflow-y-auto"
+            >
               {voiceTranscript.length === 0 ? (
                 <p className="text-sm text-[#333]">
                   Speak clearly. Transcription will appear here as audio is
@@ -126,14 +199,24 @@ export default function TranscriptInput({
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {voiceTranscript.map((chunk, i) => (
-                    <p key={i} className="text-sm leading-relaxed text-[#e5e5e5]">
-                      <span className="mr-2 text-[10px] tabular-nums text-[#444]">
-                        [{i + 1}]
-                      </span>
-                      {chunk}
-                    </p>
-                  ))}
+                  {voiceTranscript.map((chunk, i) => {
+                    const borderClass =
+                      insightsMode && voiceChunkSeverities
+                        ? `border-l-2 pl-2 ${SEVERITY_BORDER[severityForIndex(i)]}`
+                        : "";
+                    return (
+                      <p
+                        key={i}
+                        id={`tl-transcript-chunk-${i}`}
+                        className={`text-sm leading-relaxed text-[#e5e5e5] ${borderClass}`}
+                      >
+                        <span className="mr-2 text-[10px] tabular-nums text-[#444]">
+                          [{i + 1}]
+                        </span>
+                        {chunk}
+                      </p>
+                    );
+                  })}
                 </div>
               )}
             </div>
