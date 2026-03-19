@@ -7,6 +7,7 @@ import type {
   AnalysisResult,
   PatternsResult,
 } from "@/lib/types";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import TranscriptInput from "./components/TranscriptInput";
 import PulseFeed from "./components/PulseFeed";
 import AnalysisPanel from "./components/AnalysisPanel";
@@ -51,6 +52,7 @@ export default function Home() {
     null
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [isPatternsLoading, setIsPatternsLoading] = useState(false);
   const [processingChunk, setProcessingChunk] = useState<string | null>(null);
@@ -59,7 +61,12 @@ export default function Home() {
     total: number;
   } | null>(null);
 
+  const [voiceTranscript, setVoiceTranscript] = useState<string[]>([]);
+
   const abortRef = useRef(false);
+  const voiceChunksRef = useRef<string[]>([]);
+  const voiceClaimsRef = useRef<string[]>([]);
+  const voiceChunkIdRef = useRef(0);
 
   const triggerL2 = useCallback(
     async (chunks: string[], allClaims: string[]) => {
@@ -99,12 +106,87 @@ export default function Home() {
     }
   }, []);
 
+  // --- Voice chunk handler: runs L1 on each transcribed chunk ---
+  const handleVoiceChunk = useCallback(
+    async (text: string) => {
+      setVoiceTranscript((prev) => [...prev, text]);
+      setActiveTab("pulse");
+
+      const chunkId = voiceChunkIdRef.current++;
+      voiceChunksRef.current.push(text);
+
+      setProcessingChunk(text);
+
+      try {
+        const res = await fetch("/api/analyze/pulse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chunk: text }),
+        });
+
+        if (res.ok) {
+          const result: PulseResult = await res.json();
+          const entry: PulseEntry = {
+            id: `voice-${chunkId}`,
+            chunk: text,
+            result,
+          };
+          setPulseEntries((prev) => [...prev, entry]);
+          voiceClaimsRef.current.push(...result.claims);
+        }
+      } catch {
+        // continue listening
+      }
+
+      setProcessingChunk(null);
+
+      const chunkCount = voiceChunksRef.current.length;
+      if (chunkCount === 8) {
+        triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
+      }
+      if (chunkCount === 15) {
+        triggerL3([...voiceChunksRef.current]);
+      }
+    },
+    [triggerL2, triggerL3]
+  );
+
+  const { isRecording, error: voiceError, startRecording, stopRecording } =
+    useVoiceInput({ onChunkTranscribed: handleVoiceChunk });
+
+  const handleStartRecording = useCallback(() => {
+    setPulseEntries([]);
+    setAnalysisResult(null);
+    setPatternsResult(null);
+    setVoiceTranscript([]);
+    voiceChunksRef.current = [];
+    voiceClaimsRef.current = [];
+    voiceChunkIdRef.current = 0;
+    setActiveTab("pulse");
+    startRecording();
+  }, [startRecording]);
+
+  const handleStopRecording = useCallback(async () => {
+    await stopRecording();
+
+    // Fire final L2/L3 if thresholds weren't met during recording
+    const chunkCount = voiceChunksRef.current.length;
+    if (chunkCount >= 5 && chunkCount < 8) {
+      triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
+    }
+    if (chunkCount >= 4 && chunkCount < 15) {
+      triggerL3([...voiceChunksRef.current]);
+    }
+  }, [stopRecording, triggerL2, triggerL3]);
+
+  // --- Text paste handler (existing) ---
   const handleAnalyze = useCallback(
     async (text: string) => {
       abortRef.current = false;
       setPulseEntries([]);
       setAnalysisResult(null);
       setPatternsResult(null);
+      setVoiceTranscript([]);
       setIsProcessing(true);
       setActiveTab("pulse");
 
@@ -153,7 +235,6 @@ export default function Home() {
         }
       }
 
-      // final triggers if thresholds weren't met during processing
       if (processedChunks.length >= 3 && processedChunks.length < 4) {
         triggerL2(processedChunks, allClaims);
       }
@@ -168,6 +249,43 @@ export default function Home() {
       setChunkProgress(null);
     },
     [triggerL2, triggerL3]
+  );
+
+  // --- URL fetch handler ---
+  const handleFetchUrl = useCallback(
+    async (url: string) => {
+      setIsFetchingUrl(true);
+      setPulseEntries([]);
+      setAnalysisResult(null);
+      setPatternsResult(null);
+      setVoiceTranscript([]);
+
+      try {
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        if (!res.ok) {
+          const { error } = await res.json();
+          console.error("Extract error:", error);
+          return;
+        }
+
+        const { text } = await res.json();
+        if (text) {
+          setIsFetchingUrl(false);
+          handleAnalyze(text);
+          return;
+        }
+      } catch (e) {
+        console.error("Fetch URL failed:", e);
+      } finally {
+        setIsFetchingUrl(false);
+      }
+    },
+    [handleAnalyze]
   );
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -193,11 +311,19 @@ export default function Home() {
             nemotron 3 super &middot; 3-tier analysis
           </span>
         </div>
-        {pulseBadge > 0 && (
-          <span className="text-[10px] tabular-nums text-[#ff4400]">
-            {pulseBadge} flag{pulseBadge !== 1 ? "s" : ""} detected
-          </span>
-        )}
+        <div className="flex items-center gap-4">
+          {isRecording && (
+            <span className="flex items-center gap-1.5 text-[10px] text-[#ff4400]">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff4400]" />
+              LIVE
+            </span>
+          )}
+          {pulseBadge > 0 && (
+            <span className="text-[10px] tabular-nums text-[#ff4400]">
+              {pulseBadge} flag{pulseBadge !== 1 ? "s" : ""} detected
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Main two-panel layout */}
@@ -206,7 +332,14 @@ export default function Home() {
         <div className="w-[400px] shrink-0 border-r border-[#222] bg-[#0a0a0a]">
           <TranscriptInput
             onAnalyze={handleAnalyze}
+            onFetchUrl={handleFetchUrl}
+            isRecording={isRecording}
             isProcessing={isProcessing}
+            isFetchingUrl={isFetchingUrl}
+            voiceTranscript={voiceTranscript}
+            voiceError={voiceError}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
             chunkProgress={chunkProgress}
           />
         </div>

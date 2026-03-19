@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.35",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "@mozilla/readability": "^0.6.0",
     "ai": "^6.0.116",
+    "linkedom": "^0.18.12",
     "next": "16.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
