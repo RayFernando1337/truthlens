@@ -33,6 +33,14 @@ export interface Appeals {
   logos: string;
 }
 
+export interface TavilySource {
+  query: string;
+  title: string;
+  url: string;
+  snippet: string;
+  score: number;
+}
+
 export interface AnalysisResult {
   tldr: string;
   corePoints: string[];
@@ -42,6 +50,8 @@ export interface AnalysisResult {
   assumptions: string[];
   steelman: string;
   missing: string[];
+  /** Tavily sources that were searched to verify claims (populated by L2 route). */
+  sources?: TavilySource[];
 }
 
 export interface PatternEntry {

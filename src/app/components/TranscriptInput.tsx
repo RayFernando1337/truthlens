@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import type { ChunkSeverity } from "@/lib/pulse-utils";
 
-const DEMO_TRANSCRIPT = `Our new AI platform processes data 10x faster than any competitor on the market. We've seen this across thousands of deployments.
+const DEMO_GENERIC = `Our new AI platform processes data 10x faster than any competitor on the market. We've seen this across thousands of deployments.
 
 Industry analysts predict that by 2027, every Fortune 500 company will have adopted this technology. The transformation is inevitable.
 
@@ -14,6 +14,31 @@ We believe this represents a fundamental shift in how businesses operate. As one
 The architecture is built on proprietary algorithms that no other company has been able to replicate. Our team of world-class researchers has spent over a decade perfecting this approach.
 
 Looking at the broader market, we're seeing unprecedented adoption rates. Our growth trajectory puts us on track to be the dominant platform within two years. The numbers speak for themselves.`;
+
+const DEMO_ANDREESSEN = `We're adding a trillion dollars to the national debt every 100 days right now, and it's now passing the size of the Defense Department budget and it's compounding, and pretty soon it's going to be adding a trillion dollars every 90 days, and then every 80 days, and then every 70 days. And then if this doesn't get fixed, at some point, we enter a hyper-inflationary spiral and we become Argentina or Brazil.
+
+The United States just kept growing. If you just look at economic growth charts, the US just kept growing and very significantly, many other countries stopped growing. Canada stopped growing, the UK has stopped growing, Germany has stopped growing, and some of those countries may be actually growing backwards at this point.
+
+We can be energy independent anytime we want. This last administration decided they didn't want to be, they wanted to turn off American energy. This new administration has declared that they have a goal of turning it on in a dramatic way. There's no question we can be energy independent, we can be a giant net energy exporter. It's purely a question of choice.
+
+We're the beneficiary of 50, 100, 200 years of basically the most aggressive driven, smartest people in the world, most capable people moving to the US and raising their kids here. We're by far the most dynamic population, most aggressive set of characters, certainly in any Western country.
+
+For anything in software, anything in AI, anything in advanced biotech, all these advanced areas of technology, we're by far the leader. All of our competitors have profound issues, and the competitive landscape is remarkable how much better positioned we are for growth.
+
+The low point in the 70s was Jimmy Carter who went on TV and gave the Malaise Speech. And then Reagan came in and he's like, "Yep, nope, it's morning in America and we're the shining city on the hill." And the national spirit came roaring back and roared really hard for a full decade. I think that's exactly what could happen here.
+
+Most people don't actually have some inner core of rock solid beliefs. I think what happens is they conform to the belief system around them, and most of the time they're not even aware that they're basically part of a herd. Why does every dinner party have the exact same conversation? Why does everybody agree on every single issue? Why is that agreement precisely what was in the New York Times today?
+
+The idea that people have beliefs is mostly wrong. I think most people just go along. The most high status people are the most prone to just go along because they're the most focused on status. Harvard and Yale believe the exact same thing. The New York Times and The Washington Post believe the exact same thing. The Ford Foundation and the Rockefeller Foundation believe the exact same thing. But those things change over time, but there's never conflict in the moment.
+
+AI censorship is a million times more dangerous than social media censorship. AI values will be a million times bigger and more intense and more important than the social media censorship fight. The Biden administration had seething contempt for tech.`;
+
+type DemoKey = "generic" | "andreessen";
+
+const DEMOS: Record<DemoKey, { label: string; transcript: string }> = {
+  generic: { label: "Tech pitch", transcript: DEMO_GENERIC },
+  andreessen: { label: "Andreessen", transcript: DEMO_ANDREESSEN },
+};
 
 const URL_PATTERN = /^https?:\/\/\S+$/;
 
@@ -115,8 +140,8 @@ export default function TranscriptInput({
     }
   }
 
-  function loadDemo() {
-    setText(DEMO_TRANSCRIPT);
+  function loadDemo(key: DemoKey) {
+    setText(DEMOS[key].transcript);
   }
 
   const busy = isProcessing || isFetchingUrl;
@@ -134,15 +159,19 @@ export default function TranscriptInput({
           Input
         </span>
         <div className="flex items-center gap-3">
-          {!isRecording && (
-            <button
-              onClick={loadDemo}
-              disabled={busy}
-              className="text-[11px] uppercase tracking-wider text-[#666] transition-colors hover:text-[#e5e5e5] disabled:opacity-30"
-            >
-              Load demo
-            </button>
-          )}
+          {!isRecording &&
+            (Object.entries(DEMOS) as [DemoKey, (typeof DEMOS)[DemoKey]][]).map(
+              ([key, { label }]) => (
+                <button
+                  key={key}
+                  onClick={() => loadDemo(key)}
+                  disabled={busy}
+                  className="text-[11px] uppercase tracking-wider text-[#666] transition-colors hover:text-[#e5e5e5] disabled:opacity-30"
+                >
+                  {label}
+                </button>
+              )
+            )}
           <button
             onClick={isRecording ? onStopRecording : onStartRecording}
             disabled={busy && !isRecording}
