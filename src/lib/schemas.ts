@@ -71,4 +71,23 @@ export const patternsSchema = z.object({
   overallAssessment: z
     .string()
     .describe("Concise reliability summary"),
+  fullAnalysis: z.object({
+    tldr: z.string().describe("1-2 sentence summary of the core claim"),
+    corePoints: z.array(z.string()).describe("Key arguments, stripped of rhetoric"),
+    underlyingStatement: z.string().describe("What they actually want you to believe"),
+    evidenceTable: z.array(
+      z.object({
+        claim: z.string(),
+        evidence: z.string().describe("Supporting evidence or lack thereof"),
+      })
+    ),
+    appeals: z.object({
+      ethos: z.string().describe("How they establish credibility"),
+      pathos: z.string().describe("Emotional language and framing"),
+      logos: z.string().describe("The actual logical chain"),
+    }),
+    assumptions: z.array(z.string()).describe("Premises taken for granted but not proven"),
+    steelman: z.string().describe("Strongest, most defensible version of the argument"),
+    missing: z.array(z.string()).describe("Evidence or counterarguments that would strengthen or challenge the argument"),
+  }).describe("Full rhetorical analysis using the complete transcript"),
 });

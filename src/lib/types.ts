@@ -53,4 +53,6 @@ export interface PatternsResult {
   patterns: PatternEntry[];
   trustTrajectory: number[];
   overallAssessment: string;
+  /** Full-transcript rhetorical breakdown (merged into L3 since it has the complete context). */
+  fullAnalysis?: AnalysisResult;
 }

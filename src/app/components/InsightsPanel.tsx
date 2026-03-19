@@ -139,7 +139,21 @@ export default function InsightsPanel({
 
   const hasAnyPulse = entries.length > 0 || processingChunk;
 
-  /** Newest segment first (left), older to the right — matches “live” reading order. */
+  /**
+   * Best available rhetorical analysis: prefer L3's fullAnalysis (complete
+   * transcript) over L2's partial-window analysis.
+   */
+  const analysis: AnalysisResult | null =
+    patternsResult?.fullAnalysis ?? analysisResult;
+
+  const analysisLoading = isAnalysisLoading || (isPatternsLoading && !analysis);
+
+  const analysisSource: string | null = patternsResult?.fullAnalysis
+    ? "Full transcript"
+    : analysisResult
+      ? "Partial · updating when full transcript ready"
+      : null;
+
   const pulseStripNewestFirst = useMemo(
     () =>
       [...entries]
@@ -212,34 +226,42 @@ export default function InsightsPanel({
         )}
       </div>
 
-      {/* L2 summary */}
+      {/* Rhetorical analysis — uses L3 fullAnalysis when available, L2 as early pass */}
       <div className="border-b border-[#222] px-4 py-4">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-          Deep analysis
-        </span>
-        {isAnalysisLoading && (
+        <div className="flex flex-wrap items-baseline gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+            Analysis
+          </span>
+          {analysisSource && (
+            <span className="text-[9px] uppercase tracking-wider text-[#00cc66]">
+              {analysisSource}
+            </span>
+          )}
+        </div>
+        {analysisLoading && (
           <div className="mt-3 flex items-center gap-2">
             <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
             <span className="text-[10px] uppercase tracking-widest text-[#444]">
-              Running verification…
+              {isAnalysisLoading
+                ? "Running verification (early pass)…"
+                : "Running full-transcript analysis…"}
             </span>
           </div>
         )}
-        {!isAnalysisLoading && !analysisResult && (
+        {!analysisLoading && !analysis && (
           <p className="mt-2 text-[11px] text-[#444]">
-            Voice: first deep pass at <span className="text-[#888]">8</span>{" "}
-            chunks, then every <span className="text-[#888]">+4</span> on the
-            full session. Paste/URL: after 4 segments (unchanged).
+            Early pass (L2) runs at 8 chunks, full analysis (L3) at 6 chunks
+            on the complete transcript.
           </p>
         )}
-        {analysisResult && (
+        {analysis && (
           <div className="mt-3 space-y-4">
             <div className="border border-[#222] bg-[#0a0a0a] p-4">
               <p className="text-sm leading-relaxed text-[#e5e5e5]">
-                {analysisResult.tldr}
+                {analysis.tldr}
               </p>
               <p className="mt-2 text-xs text-[#ff4400]">
-                {analysisResult.underlyingStatement}
+                {analysis.underlyingStatement}
               </p>
             </div>
 
@@ -248,7 +270,7 @@ export default function InsightsPanel({
                 Core points
               </span>
               <ul className="mt-2 space-y-2">
-                {analysisResult.corePoints.map((point, i) => (
+                {analysis.corePoints.map((point, i) => (
                   <li
                     key={i}
                     className="flex gap-2 text-xs text-[#e5e5e5]"
@@ -265,7 +287,7 @@ export default function InsightsPanel({
                 Evidence
               </span>
               <div className="mt-2 space-y-2">
-                {analysisResult.evidenceTable.map((row, i) => (
+                {analysis.evidenceTable.map((row, i) => (
                   <div
                     key={i}
                     className="border-l-2 border-[#333] pl-3"
@@ -281,13 +303,13 @@ export default function InsightsPanel({
               </div>
             </div>
 
-            {analysisResult.missing.length > 0 && (
+            {analysis.missing.length > 0 && (
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
                   Gaps to verify
                 </span>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {analysisResult.missing.map((m, i) => (
+                  {analysis.missing.map((m, i) => (
                     <span
                       key={i}
                       className="inline-block border border-[#ff4400]/40 bg-[#ff4400]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#ff4400]"
@@ -299,13 +321,13 @@ export default function InsightsPanel({
               </div>
             )}
 
-            {analysisResult.assumptions.length > 0 && (
+            {analysis.assumptions.length > 0 && (
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
                   Assumptions
                 </span>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {analysisResult.assumptions.map((a, i) => (
+                  {analysis.assumptions.map((a, i) => (
                     <span
                       key={i}
                       className="inline-block border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#ffaa00]"
@@ -341,7 +363,7 @@ export default function InsightsPanel({
               </div>
               {appealOpen && (
                 <p className="mt-2 text-xs leading-relaxed text-[#e5e5e5]">
-                  {analysisResult.appeals[appealOpen]}
+                  {analysis.appeals[appealOpen]}
                 </p>
               )}
             </div>
@@ -351,14 +373,14 @@ export default function InsightsPanel({
                 Steelman
               </span>
               <p className="mt-2 text-xs leading-relaxed text-[#e5e5e5]">
-                {analysisResult.steelman}
+                {analysis.steelman}
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* L3 patterns */}
+      {/* Session patterns + trust trajectory */}
       <div className="px-4 py-4">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
           Session patterns
@@ -376,10 +398,9 @@ export default function InsightsPanel({
             <span className="text-[#666]">Voice:</span> first pass after{" "}
             <strong className="text-[#888]">6</strong> chunks (~24s), then{" "}
             <strong className="text-[#888]">every 4</strong> new chunks the
-            full transcript is re-scanned (rolling tail). Stop with{" "}
+            full transcript is re-scanned. Stop with{" "}
             <strong className="text-[#888]">4+</strong> chunks runs a final
-            pass if the tape grew since the last one.{" "}
-            <span className="text-[#666]">Paste:</span> still at 6 segments.
+            pass.
           </p>
         )}
         {patternsResult && (
