@@ -17,17 +17,17 @@ const PATTERN_COLORS: Record<string, string> = {
 };
 
 const PATTERN_ICONS: Record<string, string> = {
-  escalation: "↗",
-  contradiction: "⨉",
-  "narrative-arc": "◇",
-  "cherry-picking": "◫",
+  escalation: "\u2197",
+  contradiction: "\u2A09",
+  "narrative-arc": "\u25C7",
+  "cherry-picking": "\u25EB",
 };
 
 function TrustChart({ data }: { data: number[] }) {
   if (data.length === 0) return null;
 
   const w = 400;
-  const h = 80;
+  const h = 60;
   const padding = 2;
   const step = (w - padding * 2) / Math.max(data.length - 1, 1);
 
@@ -52,13 +52,13 @@ function TrustChart({ data }: { data: number[] }) {
   const lineColor = getColor(avgValue);
 
   return (
-    <div className="border border-[#222] p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-widest text-[#666]">
+    <div className="border border-[#222] p-2">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-widest text-[#666]">
           Trust trajectory
         </span>
         <span
-          className="text-[10px] font-semibold tabular-nums"
+          className="text-[9px] font-semibold tabular-nums"
           style={{ color: lineColor }}
         >
           avg {Math.round(avgValue * 100)}
@@ -101,10 +101,6 @@ function TrustChart({ data }: { data: number[] }) {
           />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[9px] text-[#444]">
-        <span>start</span>
-        <span>end</span>
-      </div>
     </div>
   );
 }
@@ -139,10 +135,6 @@ export default function InsightsPanel({
 
   const hasAnyPulse = entries.length > 0 || processingChunk;
 
-  /**
-   * Best available rhetorical analysis: prefer L3's fullAnalysis (complete
-   * transcript) over L2's partial-window analysis.
-   */
   const analysis: AnalysisResult | null =
     patternsResult?.fullAnalysis ?? analysisResult;
 
@@ -151,7 +143,7 @@ export default function InsightsPanel({
   const analysisSource: string | null = patternsResult?.fullAnalysis
     ? "Full transcript"
     : analysisResult
-      ? "Partial · updating when full transcript ready"
+      ? "Partial \u00B7 updating when full transcript ready"
       : null;
 
   const pulseStripNewestFirst = useMemo(
@@ -163,10 +155,10 @@ export default function InsightsPanel({
   );
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full min-w-0 overflow-y-auto">
       {/* Live pulse strip */}
-      <div className="sticky top-0 z-[1] border-b border-[#222] bg-[#141414] px-4 py-3">
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+      <div className="sticky top-0 z-[1] border-b border-[#222] bg-[#141414] px-4 py-2">
+        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
             Live pulse
           </span>
@@ -196,7 +188,7 @@ export default function InsightsPanel({
                   type="button"
                   title={`Chunk ${i + 1}: scroll transcript`}
                   onClick={() => onSeekTranscriptChunk(i)}
-                  className="flex min-w-[120px] max-w-[200px] shrink-0 flex-col gap-2 border border-[#222] bg-[#0a0a0a] p-2 text-left transition-colors hover:border-[#333]"
+                  className="flex min-w-[120px] max-w-[200px] shrink-0 flex-col gap-1.5 border border-[#222] bg-[#0a0a0a] p-2 text-left transition-colors hover:border-[#333]"
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -208,7 +200,7 @@ export default function InsightsPanel({
                   </div>
                   <p className="line-clamp-2 text-[10px] leading-snug text-[#888]">
                     {entry.chunk.slice(0, 120)}
-                    {entry.chunk.length > 120 ? "…" : ""}
+                    {entry.chunk.length > 120 ? "\u2026" : ""}
                   </p>
                   {primaryFlag ? (
                     <div className="scale-90 origin-top-left">
@@ -226,11 +218,70 @@ export default function InsightsPanel({
         )}
       </div>
 
-      {/* Rhetorical analysis — uses L3 fullAnalysis when available, L2 as early pass */}
-      <div className="border-b border-[#222] px-4 py-4">
+      {/* Overall assessment + trust chart -- shown first so it's visible without scrolling */}
+      {(patternsResult || isPatternsLoading) && (
+        <div className="min-w-0 border-b border-[#222] px-4 py-3">
+          {isPatternsLoading && !patternsResult && (
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+              <span className="text-[10px] uppercase tracking-widest text-[#444]">
+                Scanning full transcript…
+              </span>
+            </div>
+          )}
+          {patternsResult && (
+            <div className="space-y-3">
+              <div className="border border-[#222] bg-[#0a0a0a] p-3">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+                  Overall assessment
+                </span>
+                <p className="mt-1.5 min-w-0 text-sm leading-relaxed text-[#e5e5e5]">
+                  {patternsResult.overallAssessment}
+                </p>
+              </div>
+              {patternsResult.trustTrajectory.length > 0 && (
+                <TrustChart data={patternsResult.trustTrajectory} />
+              )}
+              {patternsResult.patterns.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {patternsResult.patterns.map((pattern, i) => {
+                    const color = PATTERN_COLORS[pattern.type] ?? "#666";
+                    const icon = PATTERN_ICONS[pattern.type] ?? "\u2022";
+                    return (
+                      <div
+                        key={i}
+                        className="min-w-0 flex-1 basis-[calc(50%-0.25rem)] border-l-2 pl-2"
+                        style={{ borderColor: color }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span style={{ color }} className="text-[10px]">
+                            {icon}
+                          </span>
+                          <span
+                            className="text-[9px] font-semibold uppercase tracking-wider"
+                            style={{ color }}
+                          >
+                            {pattern.type}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 min-w-0 text-[11px] leading-snug text-[#ccc]">
+                          {pattern.description}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Analysis -- TLDR + key findings */}
+      <div className="min-w-0 border-b border-[#222] px-4 py-3">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-            Analysis
+            {analysis ? "Deep analysis" : "Analysis"}
           </span>
           {analysisSource && (
             <span className="text-[9px] uppercase tracking-wider text-[#00cc66]">
@@ -239,7 +290,7 @@ export default function InsightsPanel({
           )}
         </div>
         {analysisLoading && (
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
             <span className="text-[10px] uppercase tracking-widest text-[#444]">
               {isAnalysisLoading
@@ -249,211 +300,164 @@ export default function InsightsPanel({
           </div>
         )}
         {!analysisLoading && !analysis && (
-          <p className="mt-2 text-[11px] text-[#444]">
-            Early pass (L2) runs at 8 chunks, full analysis (L3) at 6 chunks
-            on the complete transcript.
+          <p className="mt-1.5 text-[11px] text-[#444]">
+            Appears after more content is captured.
           </p>
         )}
         {analysis && (
-          <div className="mt-3 space-y-4">
-            <div className="border border-[#222] bg-[#0a0a0a] p-4">
-              <p className="text-sm leading-relaxed text-[#e5e5e5]">
+          <div className="mt-2 min-w-0 space-y-3">
+            {/* TLDR + underlying statement */}
+            <div className="min-w-0 border border-[#222] bg-[#0a0a0a] p-3">
+              <p className="min-w-0 text-xs leading-relaxed text-[#e5e5e5]">
                 {analysis.tldr}
               </p>
-              <p className="mt-2 text-xs text-[#ff4400]">
-                {analysis.underlyingStatement}
-              </p>
+              {analysis.underlyingStatement && (
+                <p className="mt-1.5 min-w-0 text-[11px] leading-snug text-[#ff4400]">
+                  {analysis.underlyingStatement}
+                </p>
+              )}
             </div>
 
-            <div>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+            {/* Core points */}
+            <div className="min-w-0">
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
                 Core points
               </span>
-              <ul className="mt-2 space-y-2">
+              <ul className="mt-1.5 space-y-1">
                 {analysis.corePoints.map((point, i) => (
                   <li
                     key={i}
-                    className="flex gap-2 text-xs text-[#e5e5e5]"
+                    className="min-w-0 text-[11px] leading-snug text-[#e5e5e5]"
                   >
-                    <span className="text-[#666]">{i + 1}.</span>
+                    <span className="mr-1.5 text-[#666]">{i + 1}.</span>
                     {point}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                Evidence
-              </span>
-              <div className="mt-2 space-y-2">
-                {analysis.evidenceTable.map((row, i) => (
-                  <div
-                    key={i}
-                    className="border-l-2 border-[#333] pl-3"
-                  >
-                    <p className="text-xs font-medium text-[#e5e5e5]">
-                      {row.claim}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-[#666]">
-                      {row.evidence}
-                    </p>
+            {/* Evidence */}
+            {analysis.evidenceTable.length > 0 && (
+              <div className="min-w-0">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+                  Evidence
+                </span>
+                <div className="mt-1.5 space-y-1.5">
+                  {analysis.evidenceTable.map((row, i) => (
+                    <div
+                      key={i}
+                      className="min-w-0 border-l-2 border-[#333] pl-2"
+                    >
+                      <p className="min-w-0 text-[11px] font-medium leading-snug text-[#e5e5e5]">
+                        {row.claim}
+                      </p>
+                      <p className="mt-0.5 min-w-0 text-[10px] leading-snug text-[#666]">
+                        {row.evidence}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Gaps + Assumptions -- side by side when both present */}
+            <div className="flex min-w-0 flex-wrap gap-3">
+              {analysis.missing.length > 0 && (
+                <div className="min-w-0 flex-1 basis-[200px]">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+                    Gaps to verify
+                  </span>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {analysis.missing.map((m, i) => (
+                      <span
+                        key={i}
+                        className="inline-block max-w-full truncate border border-[#ff4400]/40 bg-[#ff4400]/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#ff4400]"
+                        title={m}
+                      >
+                        {m.length > 50 ? `${m.slice(0, 50)}\u2026` : m}
+                      </span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {analysis.missing.length > 0 && (
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                  Gaps to verify
-                </span>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {analysis.missing.map((m, i) => (
-                    <span
-                      key={i}
-                      className="inline-block border border-[#ff4400]/40 bg-[#ff4400]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#ff4400]"
-                    >
-                      {m.length > 80 ? `${m.slice(0, 80)}…` : m}
-                    </span>
-                  ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {analysis.assumptions.length > 0 && (
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                  Assumptions
-                </span>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {analysis.assumptions.map((a, i) => (
-                    <span
-                      key={i}
-                      className="inline-block border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#ffaa00]"
-                    >
-                      {a.length > 100 ? `${a.slice(0, 100)}…` : a}
-                    </span>
-                  ))}
+              {analysis.assumptions.length > 0 && (
+                <div className="min-w-0 flex-1 basis-[200px]">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+                    Assumptions
+                  </span>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {analysis.assumptions.map((a, i) => (
+                      <span
+                        key={i}
+                        className="inline-block max-w-full truncate border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#ffaa00]"
+                        title={a}
+                      >
+                        {a.length > 60 ? `${a.slice(0, 60)}\u2026` : a}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <div>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                Rhetorical appeals
-              </span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(["ethos", "pathos", "logos"] as const).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() =>
-                      setAppealOpen((prev) => (prev === key ? null : key))
-                    }
-                    className={`border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                      appealOpen === key
-                        ? "border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]"
-                        : "border-[#333] text-[#888] hover:border-[#666] hover:text-[#e5e5e5]"
-                    }`}
-                  >
-                    {key}
-                  </button>
-                ))}
-              </div>
-              {appealOpen && (
-                <p className="mt-2 text-xs leading-relaxed text-[#e5e5e5]">
-                  {analysis.appeals[appealOpen]}
-                </p>
               )}
             </div>
 
-            <div className="border border-[#00cc66]/40 bg-[#00cc66]/5 p-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#00cc66]">
-                Steelman
-              </span>
-              <p className="mt-2 text-xs leading-relaxed text-[#e5e5e5]">
-                {analysis.steelman}
-              </p>
+            {/* Rhetorical appeals + Steelman -- compact row */}
+            <div className="flex min-w-0 flex-wrap gap-3">
+              <div className="min-w-0 shrink-0">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+                  Rhetorical appeals
+                </span>
+                <div className="mt-1.5 flex gap-1.5">
+                  {(["ethos", "pathos", "logos"] as const).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setAppealOpen((prev) => (prev === key ? null : key))
+                      }
+                      className={`border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
+                        appealOpen === key
+                          ? "border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]"
+                          : "border-[#333] text-[#888] hover:border-[#666] hover:text-[#e5e5e5]"
+                      }`}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+                {appealOpen && (
+                  <p className="mt-1.5 min-w-0 max-w-md text-[11px] leading-snug text-[#e5e5e5]">
+                    {analysis.appeals[appealOpen]}
+                  </p>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 basis-[200px] border border-[#00cc66]/30 bg-[#00cc66]/5 p-2.5">
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-[#00cc66]">
+                  Steelman
+                </span>
+                <p className="mt-1 min-w-0 text-[11px] leading-snug text-[#e5e5e5]">
+                  {analysis.steelman}
+                </p>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Session patterns + trust trajectory */}
-      <div className="px-4 py-4">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-          Session patterns
-        </span>
-        {isPatternsLoading && (
-          <div className="mt-3 flex items-center gap-2">
-            <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
-            <span className="text-[10px] uppercase tracking-widest text-[#444]">
-              Scanning full transcript…
-            </span>
-          </div>
-        )}
-        {!isPatternsLoading && !patternsResult && (
-          <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-[#444]">
+      {/* Session patterns empty state -- only when no patterns yet and not loading above */}
+      {!patternsResult && !isPatternsLoading && (
+        <div className="px-4 py-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+            Session patterns
+          </span>
+          <p className="mt-1.5 max-w-xl text-[11px] leading-relaxed text-[#444]">
             <span className="text-[#666]">Voice:</span> first pass after{" "}
             <strong className="text-[#888]">6</strong> chunks (~24s), then{" "}
-            <strong className="text-[#888]">every 4</strong> new chunks the
-            full transcript is re-scanned. Stop with{" "}
-            <strong className="text-[#888]">4+</strong> chunks runs a final
-            pass.
+            <strong className="text-[#888]">every 4</strong> new chunks.
           </p>
-        )}
-        {patternsResult && (
-          <div className="mt-3 space-y-4">
-            {patternsResult.trustTrajectory.length > 0 && (
-              <TrustChart data={patternsResult.trustTrajectory} />
-            )}
-            {patternsResult.patterns.length > 0 && (
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                  Detected patterns
-                </span>
-                <div className="mt-3 space-y-3">
-                  {patternsResult.patterns.map((pattern, i) => {
-                    const color = PATTERN_COLORS[pattern.type] ?? "#666";
-                    const icon = PATTERN_ICONS[pattern.type] ?? "•";
-                    return (
-                      <div
-                        key={i}
-                        className="border-l-2 pl-3"
-                        style={{ borderColor: color }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span style={{ color }} className="text-xs">
-                            {icon}
-                          </span>
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-wider"
-                            style={{ color }}
-                          >
-                            {pattern.type}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs leading-relaxed text-[#e5e5e5]">
-                          {pattern.description}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <div className="border border-[#222] bg-[#0a0a0a] p-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-                Overall assessment
-              </span>
-              <p className="mt-2 text-sm leading-relaxed text-[#e5e5e5]">
-                {patternsResult.overallAssessment}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

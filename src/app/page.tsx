@@ -424,7 +424,7 @@ export default function Home() {
       {/* Main two-panel layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Input */}
-        <div className="w-[400px] shrink-0 border-r border-[#222] bg-[#0a0a0a]">
+        <div className="w-[320px] shrink-0 border-r border-[#222] bg-[#0a0a0a] xl:w-[400px]">
           <TranscriptInput
             onAnalyze={handleAnalyze}
             onFetchUrl={handleFetchUrl}
@@ -442,7 +442,7 @@ export default function Home() {
         </div>
 
         {/* Right: Analysis panels */}
-        <div className="flex flex-1 flex-col bg-[#141414]">
+        <div className="flex min-w-0 flex-1 flex-col bg-[#141414]">
           {viewMode === "insights" ? (
             <div className="flex-1 overflow-hidden transition-opacity duration-150">
               <InsightsPanel
