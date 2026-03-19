@@ -19,9 +19,16 @@ import InsightsPanel from "./components/InsightsPanel";
 type Tab = "pulse" | "analysis" | "patterns";
 type ViewMode = "debug" | "insights";
 
-/** Voice: L3 (patterns) runs after this many ~4s chunks — matches pasted-text threshold (6) for demos. */
-const VOICE_L3_CHUNK_THRESHOLD = 6;
-/** If you stop before threshold, still run L3 when you have at least this many chunks. */
+/** First deep analysis (L2) after this many voice chunks (~4s each). */
+const VOICE_L2_FIRST_CHUNKS = 8;
+/** Re-run L2 on every +N new chunks with full session so far (rolling tail). */
+const VOICE_L2_ROLL_EVERY = 4;
+
+/** First patterns (L3) after this many chunks — matches pasted-text (6) for demos. */
+const VOICE_L3_FIRST_CHUNKS = 6;
+/** Re-run L3 on every +N new chunks with full transcript (rolling tail). */
+const VOICE_L3_ROLL_EVERY = 4;
+/** On stop: still run L3 if you have at least this many chunks and no pass yet / final flush. */
 const VOICE_L3_STOP_MIN_CHUNKS = 4;
 
 function splitIntoChunks(text: string): string[] {
@@ -77,7 +84,10 @@ export default function Home() {
   const voiceChunksRef = useRef<string[]>([]);
   const voiceClaimsRef = useRef<string[]>([]);
   const voiceChunkIdRef = useRef(0);
-  const voiceL3TriggeredRef = useRef(false);
+  /** Chunk count when L2 last completed a request (0 = not yet). */
+  const voiceLastL2AtChunkCountRef = useRef(0);
+  /** Chunk count when L3 last completed a request (0 = not yet). */
+  const voiceLastL3AtChunkCountRef = useRef(0);
 
   const triggerL2 = useCallback(
     async (chunks: string[], allClaims: string[]) => {
@@ -150,13 +160,32 @@ export default function Home() {
 
       setProcessingChunk(null);
 
-      const chunkCount = voiceChunksRef.current.length;
-      if (chunkCount === 8) {
-        triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
+      const n = voiceChunksRef.current.length;
+      const allChunks = [...voiceChunksRef.current];
+      const allClaims = [...voiceClaimsRef.current];
+
+      // L2 rolling tail: first at VOICE_L2_FIRST_CHUNKS, then every +VOICE_L2_ROLL_EVERY chunks (full session).
+      if (n >= VOICE_L2_FIRST_CHUNKS) {
+        const lastL2 = voiceLastL2AtChunkCountRef.current;
+        if (lastL2 === 0) {
+          voiceLastL2AtChunkCountRef.current = n;
+          void triggerL2(allChunks, allClaims);
+        } else if (n - lastL2 >= VOICE_L2_ROLL_EVERY) {
+          voiceLastL2AtChunkCountRef.current = n;
+          void triggerL2(allChunks, allClaims);
+        }
       }
-      if (chunkCount === VOICE_L3_CHUNK_THRESHOLD) {
-        voiceL3TriggeredRef.current = true;
-        void triggerL3([...voiceChunksRef.current]);
+
+      // L3 rolling tail: first at VOICE_L3_FIRST_CHUNKS, then every +VOICE_L3_ROLL_EVERY chunks (full transcript).
+      if (n >= VOICE_L3_FIRST_CHUNKS) {
+        const lastL3 = voiceLastL3AtChunkCountRef.current;
+        if (lastL3 === 0) {
+          voiceLastL3AtChunkCountRef.current = n;
+          void triggerL3(allChunks);
+        } else if (n - lastL3 >= VOICE_L3_ROLL_EVERY) {
+          voiceLastL3AtChunkCountRef.current = n;
+          void triggerL3(allChunks);
+        }
       }
     },
     [triggerL2, triggerL3]
@@ -186,7 +215,8 @@ export default function Home() {
     voiceChunksRef.current = [];
     voiceClaimsRef.current = [];
     voiceChunkIdRef.current = 0;
-    voiceL3TriggeredRef.current = false;
+    voiceLastL2AtChunkCountRef.current = 0;
+    voiceLastL3AtChunkCountRef.current = 0;
     setActiveTab("pulse");
     startRecording();
   }, [startRecording]);
@@ -194,17 +224,24 @@ export default function Home() {
   const handleStopRecording = useCallback(async () => {
     await stopRecording();
 
-    // Fire final L2/L3 if thresholds weren't met during recording
-    const chunkCount = voiceChunksRef.current.length;
-    if (chunkCount >= 5 && chunkCount < 8) {
-      triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
+    const n = voiceChunksRef.current.length;
+    const chunks = [...voiceChunksRef.current];
+    const claims = [...voiceClaimsRef.current];
+
+    // L2: short sessions that never hit the rolling threshold
+    if (n >= 5 && n < VOICE_L2_FIRST_CHUNKS) {
+      void triggerL2(chunks, claims);
+      voiceLastL2AtChunkCountRef.current = n;
+    } else if (n >= VOICE_L2_FIRST_CHUNKS && n > voiceLastL2AtChunkCountRef.current) {
+      // Final flush so the last partial window is included
+      voiceLastL2AtChunkCountRef.current = n;
+      void triggerL2(chunks, claims);
     }
-    if (
-      !voiceL3TriggeredRef.current &&
-      chunkCount >= VOICE_L3_STOP_MIN_CHUNKS
-    ) {
-      voiceL3TriggeredRef.current = true;
-      void triggerL3([...voiceChunksRef.current]);
+
+    // L3: enough material and transcript grew since last patterns pass (or first-time short stop)
+    if (n >= VOICE_L3_STOP_MIN_CHUNKS && n > voiceLastL3AtChunkCountRef.current) {
+      voiceLastL3AtChunkCountRef.current = n;
+      void triggerL3(chunks);
     }
   }, [stopRecording, triggerL2, triggerL3]);
 

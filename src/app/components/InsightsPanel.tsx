@@ -227,7 +227,9 @@ export default function InsightsPanel({
         )}
         {!isAnalysisLoading && !analysisResult && (
           <p className="mt-2 text-[11px] text-[#444]">
-            Appears after enough chunks accumulate (same as debug Analysis tab).
+            Voice: first deep pass at <span className="text-[#888]">8</span>{" "}
+            chunks, then every <span className="text-[#888]">+4</span> on the
+            full session. Paste/URL: after 4 segments (unchanged).
           </p>
         )}
         {analysisResult && (
@@ -371,11 +373,13 @@ export default function InsightsPanel({
         )}
         {!isPatternsLoading && !patternsResult && (
           <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-[#444]">
-            <span className="text-[#666]">When it runs:</span> after{" "}
-            <strong className="text-[#888]">6</strong> voice chunks (~24s at 4s
-            chunks), same as pasted text at 6 segments. If you stop earlier,
-            it still runs with <strong className="text-[#888]">4+</strong>{" "}
-            chunks so short demos still get a session readout.
+            <span className="text-[#666]">Voice:</span> first pass after{" "}
+            <strong className="text-[#888]">6</strong> chunks (~24s), then{" "}
+            <strong className="text-[#888]">every 4</strong> new chunks the
+            full transcript is re-scanned (rolling tail). Stop with{" "}
+            <strong className="text-[#888]">4+</strong> chunks runs a final
+            pass if the tape grew since the last one.{" "}
+            <span className="text-[#666]">Paste:</span> still at 6 segments.
           </p>
         )}
         {patternsResult && (

@@ -129,10 +129,10 @@ export default function PatternsPanel({
           Session patterns (L3)
         </p>
         <p className="text-[11px] leading-relaxed text-[#444]">
-          Runs after <span className="text-[#666]">6 chunks</span> (mic or
-          pasted text). Stop the mic with{" "}
-          <span className="text-[#666]">4+ chunks</span> to run a shorter
-          session.
+          Mic: first run at <span className="text-[#666]">6 chunks</span>, then
+          every <span className="text-[#666]">+4</span> on the full transcript.
+          Stop runs a last pass if there are new chunks. Paste: at{" "}
+          <span className="text-[#666]">6 segments</span>.
         </p>
       </div>
     );
