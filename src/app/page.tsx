@@ -19,6 +19,11 @@ import InsightsPanel from "./components/InsightsPanel";
 type Tab = "pulse" | "analysis" | "patterns";
 type ViewMode = "debug" | "insights";
 
+/** Voice: L3 (patterns) runs after this many ~4s chunks — matches pasted-text threshold (6) for demos. */
+const VOICE_L3_CHUNK_THRESHOLD = 6;
+/** If you stop before threshold, still run L3 when you have at least this many chunks. */
+const VOICE_L3_STOP_MIN_CHUNKS = 4;
+
 function splitIntoChunks(text: string): string[] {
   const paragraphs = text
     .split(/\n\s*\n/)
@@ -72,6 +77,7 @@ export default function Home() {
   const voiceChunksRef = useRef<string[]>([]);
   const voiceClaimsRef = useRef<string[]>([]);
   const voiceChunkIdRef = useRef(0);
+  const voiceL3TriggeredRef = useRef(false);
 
   const triggerL2 = useCallback(
     async (chunks: string[], allClaims: string[]) => {
@@ -148,8 +154,9 @@ export default function Home() {
       if (chunkCount === 8) {
         triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
       }
-      if (chunkCount === 15) {
-        triggerL3([...voiceChunksRef.current]);
+      if (chunkCount === VOICE_L3_CHUNK_THRESHOLD) {
+        voiceL3TriggeredRef.current = true;
+        void triggerL3([...voiceChunksRef.current]);
       }
     },
     [triggerL2, triggerL3]
@@ -179,6 +186,7 @@ export default function Home() {
     voiceChunksRef.current = [];
     voiceClaimsRef.current = [];
     voiceChunkIdRef.current = 0;
+    voiceL3TriggeredRef.current = false;
     setActiveTab("pulse");
     startRecording();
   }, [startRecording]);
@@ -191,8 +199,12 @@ export default function Home() {
     if (chunkCount >= 5 && chunkCount < 8) {
       triggerL2([...voiceChunksRef.current], [...voiceClaimsRef.current]);
     }
-    if (chunkCount >= 4 && chunkCount < 15) {
-      triggerL3([...voiceChunksRef.current]);
+    if (
+      !voiceL3TriggeredRef.current &&
+      chunkCount >= VOICE_L3_STOP_MIN_CHUNKS
+    ) {
+      voiceL3TriggeredRef.current = true;
+      void triggerL3([...voiceChunksRef.current]);
     }
   }, [stopRecording, triggerL2, triggerL3]);
 

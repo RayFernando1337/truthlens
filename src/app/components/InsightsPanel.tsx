@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type {
   AnalysisResult,
   PatternsResult,
@@ -139,18 +139,42 @@ export default function InsightsPanel({
 
   const hasAnyPulse = entries.length > 0 || processingChunk;
 
+  /** Newest segment first (left), older to the right — matches “live” reading order. */
+  const pulseStripNewestFirst = useMemo(
+    () =>
+      [...entries]
+        .map((entry, index) => ({ entry, index }))
+        .reverse(),
+    [entries]
+  );
+
   return (
     <div className="h-full overflow-y-auto">
       {/* Live pulse strip */}
       <div className="sticky top-0 z-[1] border-b border-[#222] bg-[#141414] px-4 py-3">
-        <div className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#666]">
-          Live pulse
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+            Live pulse
+          </span>
+          {hasAnyPulse && (
+            <span className="text-[9px] uppercase tracking-wider text-[#444]">
+              Newest left
+            </span>
+          )}
         </div>
         {!hasAnyPulse ? (
           <p className="text-[11px] text-[#444]">Waiting for audio or text…</p>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {entries.map((entry, i) => {
+            {processingChunk && (
+              <div className="flex min-w-[100px] shrink-0 flex-col justify-center border border-dashed border-[#333] p-2">
+                <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+                <span className="mt-2 text-[9px] uppercase tracking-wider text-[#444]">
+                  Latest · analyzing…
+                </span>
+              </div>
+            )}
+            {pulseStripNewestFirst.map(({ entry, index: i }) => {
               const primaryFlag = entry.result.flags[0];
               return (
                 <button
@@ -184,12 +208,6 @@ export default function InsightsPanel({
                 </button>
               );
             })}
-            {processingChunk && (
-              <div className="flex min-w-[100px] shrink-0 flex-col justify-center border border-dashed border-[#333] p-2">
-                <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
-                <span className="mt-2 text-[9px] text-[#444]">Analyzing…</span>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -352,8 +370,12 @@ export default function InsightsPanel({
           </div>
         )}
         {!isPatternsLoading && !patternsResult && (
-          <p className="mt-2 text-[11px] text-[#444]">
-            Appears after more of the session is captured.
+          <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-[#444]">
+            <span className="text-[#666]">When it runs:</span> after{" "}
+            <strong className="text-[#888]">6</strong> voice chunks (~24s at 4s
+            chunks), same as pasted text at 6 segments. If you stop earlier,
+            it still runs with <strong className="text-[#888]">4+</strong>{" "}
+            chunks so short demos still get a session readout.
           </p>
         )}
         {patternsResult && (

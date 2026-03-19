@@ -124,9 +124,15 @@ export default function PatternsPanel({
 
   if (!result) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full max-w-md flex-col items-center justify-center gap-2 px-6 text-center">
         <p className="text-[11px] uppercase tracking-widest text-[#333]">
-          Triggers after 6+ chunks
+          Session patterns (L3)
+        </p>
+        <p className="text-[11px] leading-relaxed text-[#444]">
+          Runs after <span className="text-[#666]">6 chunks</span> (mic or
+          pasted text). Stop the mic with{" "}
+          <span className="text-[#666]">4+ chunks</span> to run a shorter
+          session.
         </p>
       </div>
     );
