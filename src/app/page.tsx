@@ -15,6 +15,7 @@ import PulseFeed from "./components/PulseFeed";
 import AnalysisPanel from "./components/AnalysisPanel";
 import PatternsPanel from "./components/PatternsPanel";
 import InsightsPanel from "./components/InsightsPanel";
+import ArchitectureDiagram from "./components/ArchitectureDiagram";
 
 type Tab = "pulse" | "analysis" | "patterns";
 type ViewMode = "debug" | "insights";
@@ -60,6 +61,7 @@ function splitIntoChunks(text: string): string[] {
 
 export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>("insights");
+  const [showArch, setShowArch] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("pulse");
   const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([]);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
@@ -375,7 +377,14 @@ export default function Home() {
           </h1>
           <span className="text-[10px] text-[#444]">
             {viewMode === "debug" ? "Debug view · " : "Insights view · "}
-            nemotron 3 super &middot; 3-tier analysis
+            nemotron 3 super &middot;{" "}
+            <button
+              type="button"
+              onClick={() => setShowArch(true)}
+              className="text-[#666] underline decoration-[#333] underline-offset-2 transition-colors hover:text-[#e5e5e5] hover:decoration-[#666]"
+            >
+              3-tier analysis
+            </button>
           </span>
           <div
             className="flex items-center gap-0.5 border border-[#222] p-0.5"
@@ -529,6 +538,7 @@ export default function Home() {
           )}
         </div>
       </div>
+      {showArch && <ArchitectureDiagram onClose={() => setShowArch(false)} />}
     </div>
   );
 }

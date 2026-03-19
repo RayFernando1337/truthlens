@@ -33,11 +33,30 @@ The idea that people have beliefs is mostly wrong. I think most people just go a
 
 AI censorship is a million times more dangerous than social media censorship. AI values will be a million times bigger and more intense and more important than the social media censorship fight. The Biden administration had seething contempt for tech.`;
 
-type DemoKey = "generic" | "andreessen";
+const DEMO_LENNY_POD = `Products or is it just I tell the Ai how to build products? It's like whatever. Whatever that job is called, who even knows what it's going to be, but it's going to be incredibly important.
+
+Because the people doing that job are going to be orchestrated by Ai. And so that's the track that the best people are going to be on. And I think that's the thing that.
+
+Lean hearted to. I think people aren't fully grasping just this. Specifically software engineering and how much that is changing. Like it's.
+
+It's pretty clear we're going to be in a world soon where engineers are not actually writing code, which I think a year ago we would not have thought and now it's just clearly this is where it's heading.
+
+It's like it's going to be this artisanal experience of sitting there writing code, which is so crazy how much that job is going to change. Yeah, so.
+
+I can hear I go back and again maybe the history lesson, but like I go back like. So The 1st You may know that. Do you know? The original definition of the term calculator, you know what that referred to?
+
+Referred to people Right. So. Back before there were like electronic calculators or computers or any of these things.
+
+The way that you would actually do computing and the way that you would do calculating like the way that insurance company would calculate actuarial tables or the military would like calculate, you know, I don't know, whatever troop logistics formulas or whatever it was.
+
+The way that you would do it is you would actually have a room full of people. And by the way, groups, you can have hundreds or thousands or tens of thousands of people.`;
+
+type DemoKey = "generic" | "andreessen" | "lennypod";
 
 const DEMOS: Record<DemoKey, { label: string; transcript: string }> = {
   generic: { label: "Tech pitch", transcript: DEMO_GENERIC },
   andreessen: { label: "Andreessen", transcript: DEMO_ANDREESSEN },
+  lennypod: { label: "Lenny Pod", transcript: DEMO_LENNY_POD },
 };
 
 const URL_PATTERN = /^https?:\/\/\S+$/;
