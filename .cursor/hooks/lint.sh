@@ -11,7 +11,7 @@ case "$file_path" in
     ws_root=$(echo "$input" | grep -o '"workspace_roots" *: *\[ *"[^"]*"' | grep -o '/[^"]*')
     if [ -z "$ws_root" ]; then exit 0; fi
     cd "$ws_root" 2>/dev/null || exit 0
-    bun run eslint --no-error-on-unmatched-pattern "$file_path" 2>&1
+    bun run eslint --no-error-on-unmatched-pattern "$file_path" >&2
     ;;
 esac
 
