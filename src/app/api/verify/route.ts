@@ -47,7 +47,21 @@ export async function POST(req: Request) {
       queue.queued
     );
     const webVerified = await Promise.all(
-      pendingWebClaims.map((claim) => verifyClaim(claim))
+      pendingWebClaims.map(async (claim) => {
+        try {
+          return await verifyClaim(claim);
+        } catch (e) {
+          console.warn(`[/api/verify] Exa failed for claim ${claim.claimId}:`, e instanceof Error ? e.message : e);
+          return {
+            claimId: claim.claimId,
+            claim: claim.text,
+            verdict: "unverifiable" as const,
+            confidence: 0,
+            explanation: "Web verification temporarily unavailable.",
+            source: "exa-web" as const,
+          };
+        }
+      })
     );
     const verificationRun = buildVerificationRun({
       sessionId: parsed.data.sessionId,
