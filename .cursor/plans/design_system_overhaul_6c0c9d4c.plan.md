@@ -4,7 +4,7 @@ overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded gr
 todos:
   - id: phase-1-shadcn
     content: "Phase 1: Install shadcn/ui — run init, get cn(), components.json, dependencies"
-    status: in_progress
+    status: completed
   - id: phase-2-tokens
     content: "Phase 2: Rationalize token palette in globals.css — full shadcn set + TruthLens extensions + backward compat aliases"
     status: pending
