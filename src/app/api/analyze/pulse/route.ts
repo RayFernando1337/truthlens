@@ -42,6 +42,7 @@ export async function POST(req: Request) {
 
     return Response.json(object);
   } catch (e) {
+    console.error("[/api/analyze/pulse]", e);
     const message = e instanceof Error ? e.message : "Analysis failed";
     return Response.json({ error: message }, { status: 502 });
   }

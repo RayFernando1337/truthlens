@@ -41,6 +41,7 @@ export async function POST(req: Request) {
 
     return Response.json(summary);
   } catch (e) {
+    console.error("[/api/analyze/summarize]", e);
     const message = e instanceof Error ? e.message : "Summary update failed";
     return Response.json({ error: message }, { status: 502 });
   }

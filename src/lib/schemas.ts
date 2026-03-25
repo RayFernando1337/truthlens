@@ -37,14 +37,27 @@ export const flagRevisionActionEnum = z.enum([
 
 // ─── L1 Pulse ─────────────────────────────────────────
 
+const pulseFlagItem = z.preprocess(
+  (val: unknown) => {
+    if (typeof val === "string") return { type: val, label: val };
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const obj = val as Record<string, unknown>;
+      if ("description" in obj && !("label" in obj)) {
+        const { description, ...rest } = obj;
+        return { ...rest, label: description };
+      }
+    }
+    return val;
+  },
+  z.object({
+    type: pulseFlagTypeEnum,
+    label: z.string().describe("Short description of the issue"),
+  }),
+);
+
 export const pulseSchema = z.object({
   claims: z.array(z.string()).describe("Factual claims made in the segment"),
-  flags: z.array(
-    z.object({
-      type: pulseFlagTypeEnum,
-      label: z.string().describe("Short description of the issue"),
-    })
-  ),
+  flags: z.array(pulseFlagItem),
   tone: z.string().describe("Overall tone of the segment"),
   confidence: z
     .number()

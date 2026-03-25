@@ -41,6 +41,7 @@ export async function POST(req: Request) {
 
     return Response.json(snapshot);
   } catch (e) {
+    console.error("[/api/analyze]", e);
     const message = e instanceof Error ? e.message : "Analysis failed";
     return Response.json({ error: message }, { status: 502 });
   }
