@@ -18,7 +18,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["src/app/page.tsx", "src/app/components/InsightsPanel.tsx"],
+    files: ["src/app/page.tsx"],
     rules: {
       "max-lines": "off",
     },
