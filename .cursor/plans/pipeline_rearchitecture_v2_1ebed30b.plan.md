@@ -61,13 +61,13 @@ todos:
     status: completed
   - id: p2c-verify-identity
     content: "[Phase 2C] Harden verification identity invariants: return claimId from LLM pre-check, join pre-check -> Exa by claimId, preserve claimId in final verdict/unverified rows, and emit cap-exceeded when the cap actually blocks work"
-    status: pending
+    status: completed
   - id: p2c-analysis-parity
     content: "[Phase 2C] Harden analysis contract parity: reconcile plan/types/schemas on evidence quotes + provenance, validate trustTrajectory length against analyzed segment count, and document batch/full window semantics"
-    status: pending
+    status: completed
   - id: p2c-smoke-checks
     content: "[Phase 2C] Add repeatable readiness checks for /api/analyze, /api/analyze/summarize, /api/verify/pre-check, and /api/verify so Phase 3 starts from verified contracts instead of assumptions"
-    status: pending
+    status: completed
   - id: p3-extract-hook
     content: "[Phase 3] Extract useTruthSession hook from page.tsx: session state (TruthSession), segment append/flush, request IDs with stale-response protection, pipeline status per stage, batch vs streaming policy, derived selectors for TruthPanel"
     status: pending

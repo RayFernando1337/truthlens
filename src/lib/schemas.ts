@@ -15,6 +15,11 @@ export const pulseFlagTypeEnum = z.enum([
 ]);
 
 export const analysisModeEnum = z.enum(["streaming", "full", "batch"]);
+export const analysisProvenanceHorizonEnum = z.enum([
+  "sliding-window",
+  "full-transcript",
+  "batch-document",
+]);
 
 export const patternTypeEnum = z.enum([
   "escalation",
@@ -77,7 +82,7 @@ export const rhetoricalCoreSchema = z.object({
     z.object({
       claim: z.string(),
       evidence: z.string().describe("Supporting evidence, or 'assertion only' / 'unnamed source'"),
-      quote: z.string().optional().describe("Exact words from the source text"),
+      quote: z.string().describe("Exact words from the source text for this claim"),
     })
   ),
   appeals: z.object({
@@ -139,6 +144,16 @@ export const analysisSnapshotSchema = rhetoricalCoreSchema.extend({
   windowStart: z.number().optional(),
   windowEnd: z.number().optional(),
   segmentIds: z.array(z.string()),
+  provenance: z.object({
+    horizon: analysisProvenanceHorizonEnum.describe(
+      "sliding-window for rolling analysis, full-transcript for whole-session passes, batch-document for paste/URL one-pass analysis"
+    ),
+    usesRunningSummary: z.boolean().describe(
+      "True when a rolling summary contributed context outside the provided segment list"
+    ),
+    summarySegmentsCovered: z.number().int().min(0),
+    analyzedSegmentCount: z.number().int().min(1),
+  }),
   timestamp: z.number(),
 });
 
@@ -147,6 +162,7 @@ export const analysisModelSchema = analysisSnapshotSchema.omit({
   windowStart: true,
   windowEnd: true,
   segmentIds: true,
+  provenance: true,
   timestamp: true,
 });
 
@@ -160,6 +176,7 @@ export const analysisRequestSchema = z.object({
 // ─── Verification ─────────────────────────────────────
 
 export const llmPreVerdictSchema = z.object({
+  claimId: z.string(),
   claim: z.string(),
   verifiable: z.boolean().describe("Whether this claim can be objectively fact-checked"),
   confidence: z.number().min(0).max(1),
@@ -185,6 +202,7 @@ export const claimTriageBatchSchema = z.object({
 });
 
 export const claimVerdictSchema = z.object({
+  claimId: z.string(),
   claim: z.string(),
   verdict: z.enum(["supported", "refuted", "unverifiable", "partially-supported"]),
   confidence: z.number().min(0).max(1),
@@ -254,7 +272,13 @@ export const verificationRunSchema = z.object({
   ]),
   llmResolved: z.array(claimVerdictSchema),
   webVerified: z.array(claimVerdictSchema),
-  unverified: z.array(z.string()),
+  unverified: z.array(
+    z.object({
+      claimId: z.string(),
+      claim: z.string(),
+      reason: z.enum(["needs-web", "not-verifiable", "cap-exceeded"]),
+    })
+  ),
   stats: z.object({
     totalClaims: z.number().int().min(0),
     llmChecked: z.number().int().min(0),

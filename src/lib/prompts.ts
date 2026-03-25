@@ -52,6 +52,8 @@ PATTERNS: Cross-argument patterns -- escalation (claims getting more extreme), c
 
 TRUST TRAJECTORY (trustTrajectory): Trust level 0.0-1.0 at each analyzed segment. This is a trajectory, not a verdict. A speaker who starts rigorous and slips is different from one who never tried.
 
+PROVENANCE: Respect the declared analysis mode. In streaming mode, analyze only the provided window and use the running summary as off-window context. In full mode, treat the provided material as the whole-session pass for this moment, with any running summary acting as summary-backed context. In batch mode, treat the input as a one-pass document analysis, not a rolling window.
+
 FLAG REVISIONS (flagRevisions): If prior L1 flags are provided with segment IDs, revise any that should be upgraded, downgraded, dismissed, or reclassified given fuller context. Return empty array if no flag data is provided.
 
 Principles:
@@ -65,6 +67,7 @@ Principles:
 export const LLM_PRE_VERIFY_PROMPT = `You are a fact-checker using only your training knowledge. For each claim, assess whether it can be objectively fact-checked and what your best assessment is.
 
 Guidelines:
+- Return the same claimId that came with each claim
 - Opinions, predictions, and value judgments are "not-verifiable"
 - If you're unsure, say "uncertain" -- this is honest and valuable
 - Do not guess. If the claim is outside your knowledge, mark needsWebSearch: true

@@ -10,10 +10,15 @@ import {
 export const maxDuration = 60;
 
 function getClaimsNeedingWebVerification(
-  llmResults: { needsWebSearch: boolean }[],
+  llmResults: { claimId: string; needsWebSearch: boolean }[],
   queuedClaims: Parameters<typeof prepareClaimQueue>[0]
 ) {
-  return queuedClaims.filter((_, index) => llmResults[index]?.needsWebSearch);
+  const claimIdsNeedingWeb = new Set(
+    llmResults
+      .filter((result) => result.needsWebSearch)
+      .map((result) => result.claimId)
+  );
+  return queuedClaims.filter((claim) => claimIdsNeedingWeb.has(claim.claimId));
 }
 
 export async function POST(req: Request) {
@@ -48,8 +53,8 @@ export async function POST(req: Request) {
       sessionId: parsed.data.sessionId,
       llmResults,
       webVerified,
-      skippedClaims: queue.skipped,
-      capped: queue.capped,
+      notVerifiableClaims: queue.notVerifiable,
+      cappedClaims: queue.cappedClaims,
     });
 
     return Response.json(verificationRunSchema.parse(verificationRun));

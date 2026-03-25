@@ -97,7 +97,7 @@ export interface CognitiveBias {
 export interface EvidenceRow {
   claim: string;
   evidence: string;
-  quote?: string;
+  quote: string;
 }
 
 export interface Appeals {
@@ -117,6 +117,18 @@ export interface FlagRevision {
   revisedType?: PulseFlagType;
   action: "upgrade" | "downgrade" | "dismiss" | "reclassify";
   reason: string;
+}
+
+export type AnalysisProvenanceHorizon =
+  | "sliding-window"
+  | "full-transcript"
+  | "batch-document";
+
+export interface AnalysisProvenance {
+  horizon: AnalysisProvenanceHorizon;
+  usesRunningSummary: boolean;
+  summarySegmentsCovered: number;
+  analyzedSegmentCount: number;
 }
 
 // ─── Analysis Snapshot ────────────────────────────────
@@ -143,6 +155,7 @@ export interface AnalysisSnapshot {
   windowStart?: number;
   windowEnd?: number;
   segmentIds: string[];
+  provenance: AnalysisProvenance;
   timestamp: number;
 }
 
@@ -202,6 +215,7 @@ export type ClaimVerdictResult =
 export type ClaimVerdictSource = "llm-knowledge" | "exa-web" | "unverified";
 
 export interface ClaimVerdict {
+  claimId: string;
   claim: string;
   verdict: ClaimVerdictResult;
   confidence: number;
@@ -211,12 +225,19 @@ export interface ClaimVerdict {
 }
 
 export interface LLMPreVerdict {
+  claimId: string;
   claim: string;
   verifiable: boolean;
   confidence: number;
   verdict: "supported" | "refuted" | "uncertain" | "not-verifiable";
   explanation: string;
   needsWebSearch: boolean;
+}
+
+export interface UnverifiedClaim {
+  claimId: string;
+  claim: string;
+  reason: "needs-web" | "not-verifiable" | "cap-exceeded";
 }
 
 export type VerificationStatus =
@@ -231,7 +252,7 @@ export interface VerificationRun {
   status: VerificationStatus;
   llmResolved: ClaimVerdict[];
   webVerified: ClaimVerdict[];
-  unverified: string[];
+  unverified: UnverifiedClaim[];
   stats: {
     totalClaims: number;
     llmChecked: number;

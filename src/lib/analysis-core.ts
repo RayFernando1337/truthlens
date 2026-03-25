@@ -1,4 +1,5 @@
 import type {
+  AnalysisProvenance,
   AnalysisMode,
   AnalysisRequest,
   AnalysisSnapshot,
@@ -10,7 +11,7 @@ import type {
 
 type AnalysisBody = Omit<
   AnalysisSnapshot,
-  "mode" | "windowStart" | "windowEnd" | "segmentIds" | "timestamp"
+  "mode" | "windowStart" | "windowEnd" | "segmentIds" | "provenance" | "timestamp"
 >;
 
 type SummaryBody = Omit<
@@ -66,6 +67,10 @@ function formatRunningSummary(summary?: SessionSummary): string {
 export function buildAnalysisPrompt(request: AnalysisRequest): string {
   return [
     `Analysis mode: ${request.mode}`,
+    "Mode semantics:",
+    "- streaming = sliding-window analysis of the provided recent segments only; use runningSummary as off-window context when present.",
+    "- full = whole-session pass for this moment; treat the provided segments as the full raw transcript span for the pass, with runningSummary as optional summary-backed context for earlier material.",
+    "- batch = one-pass analysis of the submitted pasted text or extracted article; do not invent rolling-window semantics.",
     "",
     "Running summary:",
     formatRunningSummary(request.runningSummary),
@@ -77,8 +82,20 @@ export function buildAnalysisPrompt(request: AnalysisRequest): string {
     formatPriorPulses(request.priorPulses),
     "",
     "Return a complete structured analysis for the provided segments only.",
+    "Every evidenceTable row must include the exact supporting quote from the provided text.",
     `The trustTrajectory array must contain exactly ${request.segments.length} values.`,
   ].join("\n");
+}
+
+function getAnalysisHorizon(mode: AnalysisMode): AnalysisProvenance["horizon"] {
+  switch (mode) {
+    case "streaming":
+      return "sliding-window";
+    case "full":
+      return "full-transcript";
+    case "batch":
+      return "batch-document";
+  }
 }
 
 function getWindowStart(
@@ -97,16 +114,39 @@ function getWindowEnd(
   return segments[segments.length - 1]?.endMs;
 }
 
+function buildAnalysisProvenance(request: AnalysisRequest): AnalysisProvenance {
+  return {
+    horizon: getAnalysisHorizon(request.mode),
+    usesRunningSummary: request.runningSummary !== undefined,
+    summarySegmentsCovered: request.runningSummary?.segmentsCovered ?? 0,
+    analyzedSegmentCount: request.segments.length,
+  };
+}
+
+function assertTrustTrajectoryLength(
+  trustTrajectory: number[],
+  segmentCount: number
+): void {
+  if (trustTrajectory.length !== segmentCount) {
+    throw new Error(
+      `Analysis contract violation: expected trustTrajectory length ${segmentCount}, received ${trustTrajectory.length}`
+    );
+  }
+}
+
 export function finalizeAnalysisSnapshot(
   body: AnalysisBody,
   request: AnalysisRequest
 ): AnalysisSnapshot {
+  assertTrustTrajectoryLength(body.trustTrajectory, request.segments.length);
+
   return {
     ...body,
     mode: request.mode,
     windowStart: getWindowStart(request.mode, request.segments),
     windowEnd: getWindowEnd(request.mode, request.segments),
     segmentIds: request.segments.map((segment) => segment.segmentId),
+    provenance: buildAnalysisProvenance(request),
     timestamp: Date.now(),
   };
 }

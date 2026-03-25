@@ -68,6 +68,7 @@ export async function verifyClaim(candidate: ClaimCandidate): Promise<ClaimVerdi
       };
 
   return {
+    claimId: candidate.claimId,
     claim: candidate.text,
     verdict: answer.verdict,
     confidence: answer.confidence,

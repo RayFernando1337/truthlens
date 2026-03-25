@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke:readiness": "bun run src/lib/readiness-smoke-checks.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.35",

@@ -11,6 +11,7 @@ import type {
   ClaimVerdict,
   ClaimVerdictResult,
   LLMPreVerdict,
+  UnverifiedClaim,
   VerificationRun,
 } from "@/lib/types";
 
@@ -24,6 +25,18 @@ function buildPreVerifyPrompt(claims: ClaimCandidate[]): string {
   return claims
     .map((claim) => `[${claim.claimId}] ${claim.text}`)
     .join("\n");
+}
+
+function buildFallbackPreVerdict(claim: ClaimCandidate): LLMPreVerdict {
+  return {
+    claimId: claim.claimId,
+    claim: claim.text,
+    verifiable: claim.verifiable,
+    confidence: 0,
+    verdict: claim.verifiable ? "uncertain" : "not-verifiable",
+    explanation: "The model did not return a structured result for this claim.",
+    needsWebSearch: claim.verifiable,
+  };
 }
 
 function mergeTriageResult(
@@ -57,6 +70,7 @@ function mapPreVerdictToFinal(
 
 function toClaimVerdict(result: LLMPreVerdict): ClaimVerdict {
   return {
+    claimId: result.claimId,
     claim: result.claim,
     verdict: mapPreVerdictToFinal(result.verdict),
     confidence: result.confidence,
@@ -65,9 +79,53 @@ function toClaimVerdict(result: LLMPreVerdict): ClaimVerdict {
   };
 }
 
+function buildNeedsWebUnverified(
+  llmResults: LLMPreVerdict[],
+  webVerified: ClaimVerdict[]
+): UnverifiedClaim[] {
+  const webVerifiedIds = new Set(webVerified.map((verdict) => verdict.claimId));
+
+  return llmResults
+    .filter((result) => result.needsWebSearch && !webVerifiedIds.has(result.claimId))
+    .map((result) => ({
+      claimId: result.claimId,
+      claim: result.claim,
+      reason: "needs-web",
+    }));
+}
+
+function toUnverifiedClaims(
+  claims: ClaimCandidate[],
+  reason: UnverifiedClaim["reason"]
+): UnverifiedClaim[] {
+  return claims.map((claim) => ({
+    claimId: claim.claimId,
+    claim: claim.text,
+    reason,
+  }));
+}
+
+function getVerificationStatus(params: {
+  cappedClaims: ClaimCandidate[];
+  webVerified: ClaimVerdict[];
+  llmResolved: ClaimVerdict[];
+  notVerifiableClaims: ClaimCandidate[];
+  unresolvedNeedsWeb: UnverifiedClaim[];
+}): VerificationRun["status"] {
+  if (params.cappedClaims.length > 0) return "cap-exceeded";
+  if (params.webVerified.length > 0) return "web-verified";
+  if (params.llmResolved.length > 0) return "model-assessed";
+  if (params.notVerifiableClaims.length > 0 || params.unresolvedNeedsWeb.length > 0) {
+    return "skipped";
+  }
+  return "queued";
+}
+
 export async function runPreVerification(
   claims: ClaimCandidate[]
 ): Promise<LLMPreVerdict[]> {
+  if (claims.length === 0) return [];
+
   const { results } = await generateTypedObject({
     model,
     schema: llmPreVerdictBatchSchema,
@@ -75,7 +133,8 @@ export async function runPreVerification(
     prompt: `Claims to assess:\n${buildPreVerifyPrompt(claims)}`,
   });
 
-  return results;
+  const resultsById = new Map(results.map((result) => [result.claimId, result]));
+  return claims.map((claim) => resultsById.get(claim.claimId) ?? buildFallbackPreVerdict(claim));
 }
 
 export async function runClaimTriage(
@@ -98,34 +157,43 @@ export function buildVerificationRun(params: {
   sessionId: string;
   llmResults: LLMPreVerdict[];
   webVerified: ClaimVerdict[];
-  skippedClaims: ClaimCandidate[];
-  capped: number;
+  notVerifiableClaims: ClaimCandidate[];
+  cappedClaims: ClaimCandidate[];
 }): VerificationRun {
   const llmResolved = params.llmResults
     .filter((result) => !result.needsWebSearch)
     .map(toClaimVerdict);
-  const unresolved = params.llmResults
-    .filter((result) => result.needsWebSearch)
-    .map((result) => result.claim);
-  const status = params.webVerified.length > 0
-    ? "web-verified"
-    : llmResolved.length > 0
-      ? "model-assessed"
-      : params.skippedClaims.length > 0
-        ? "skipped"
-        : "queued";
+  const unresolvedNeedsWeb = buildNeedsWebUnverified(
+    params.llmResults,
+    params.webVerified
+  );
+  const skippedNotVerifiable = toUnverifiedClaims(
+    params.notVerifiableClaims,
+    "not-verifiable"
+  );
+  const cappedClaims = toUnverifiedClaims(params.cappedClaims, "cap-exceeded");
+  const status = getVerificationStatus({
+    cappedClaims: params.cappedClaims,
+    webVerified: params.webVerified,
+    llmResolved,
+    notVerifiableClaims: params.notVerifiableClaims,
+    unresolvedNeedsWeb,
+  });
 
   return {
     sessionId: params.sessionId,
     status,
     llmResolved,
     webVerified: params.webVerified,
-    unverified: [...unresolved, ...params.skippedClaims.map((claim) => claim.text)],
+    unverified: [...unresolvedNeedsWeb, ...skippedNotVerifiable, ...cappedClaims],
     stats: {
-      totalClaims: params.llmResults.length + params.skippedClaims.length,
+      totalClaims:
+        params.llmResults.length +
+        params.notVerifiableClaims.length +
+        params.cappedClaims.length,
       llmChecked: params.llmResults.length,
       webSearched: params.webVerified.length,
-      capped: params.capped,
+      capped: params.cappedClaims.length,
     },
     timestamp: Date.now(),
   };

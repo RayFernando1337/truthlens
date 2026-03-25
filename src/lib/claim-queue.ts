@@ -48,7 +48,8 @@ export function prepareClaimQueue(
   maxClaims = MAX_DEFAULT_WEB_CLAIMS
 ): {
   queued: ClaimCandidate[];
-  skipped: ClaimCandidate[];
+  notVerifiable: ClaimCandidate[];
+  cappedClaims: ClaimCandidate[];
   capped: number;
 } {
   const deduped = new Map<string, ClaimCandidate>();
@@ -61,10 +62,11 @@ export function prepareClaimQueue(
   }
 
   const sorted = [...deduped.values()].sort((a, b) => b.priority - a.priority);
-  const queued = sorted.filter((claim) => claim.verifiable).slice(0, maxClaims);
-  const queuedIds = new Set(queued.map((claim) => claim.claimId));
-  const skipped = sorted.filter((claim) => !queuedIds.has(claim.claimId));
-  const capped = Math.max(sorted.filter((claim) => claim.verifiable).length - queued.length, 0);
+  const verifiable = sorted.filter((claim) => claim.verifiable);
+  const queued = verifiable.slice(0, maxClaims);
+  const cappedClaims = verifiable.slice(maxClaims);
+  const notVerifiable = sorted.filter((claim) => !claim.verifiable);
+  const capped = cappedClaims.length;
 
-  return { queued, skipped, capped };
+  return { queued, notVerifiable, cappedClaims, capped };
 }
