@@ -116,6 +116,56 @@ This is what a great teacher does. They don't give you the answer. They show you
 
 ---
 
+## Canonical Domain Model (from Truth Terminal Architecture)
+
+All types, schemas, routes, and UI selectors share one flat domain model. No optional-vs-required drift. No duplicate shapes. One source of truth.
+
+- **`TruthSession`** -- session id, `mode` (`streaming` | `batch`), `inputKind` (`voice` | `paste` | `url`), lifecycle timestamps, optional source metadata. The top-level container.
+- **`SourceAsset`** -- URL extraction metadata: title, excerpt, original URL. Preserved from `/api/extract` so future persistence, sharing, and clips don't require a data-model rewrite.
+- **`TranscriptSegment`** -- stable `segmentId`, text, ordinal index, optional `startMs`/`endMs`. This replaces loose chunk strings. The shared unit for voice, paste, and URL.
+- **`SegmentPulse`** -- L1 output for a segment: `claims`, `flags`, `tone`, `confidence`. Keyed to `segmentId`.
+- **`AnalysisSnapshot`** -- unified analysis result for a specific window or full pass. Includes rhetorical analysis, patterns, trust trajectory, AND provenance about what window/horizon produced it.
+- **`SessionSummary`** -- rolling summary used as analysis context only. Never the user-facing source of truth.
+- **`ClaimCandidate`** -- normalized claim text tied to one or more segment ids, priority, dedupe key, verification eligibility.
+- **`ClaimVerdict`** -- final verification state: verdict, source, confidence, explanation, citations.
+- **`VerificationRun`** -- queue metadata, per-session caps, status, counts. Distinguishes `queued` | `model-assessed` | `web-verified` | `skipped` | `cap-exceeded`.
+- **`TruthPanelView`** -- derived view model ONLY. Computed from the above via selectors. Never stored as source-of-truth state.
+
+### State Ownership (prototype defaults)
+
+- Source-of-truth session state stays **client-side**. Extract a `useTruthSession` reducer/hook from `page.tsx` instead of adding Zustand/Redux.
+- Pipeline scheduling lives in `src/lib/pipeline-policy.ts` (the adaptive scheduler), imported by the hook.
+- Do not add backend persistence yet. If refresh survival is needed, persist a lightweight session envelope in `localStorage` after contracts are stable.
+- All model responses are **schema-validated JSON** via Zod `generateObject`. No freeform markdown in the pipeline.
+
+### Orchestration Extraction
+
+`page.tsx` is currently a 545-line hidden state machine. Extract a `useTruthSession` hook that owns:
+
+- Session init and resets
+- Segment append/flush (voice and paste)
+- Request IDs and stale-response protection (ignore responses from superseded analysis calls)
+- Pipeline status per stage (`idle` | `running` | `success` | `error`)
+- Batch vs streaming policy differences
+- Derived selectors that feed TruthPanel
+
+New files: `src/hooks/useTruthSession.ts`, `src/lib/pipeline-policy.ts`
+
+`page.tsx` becomes a thin composition shell: render TranscriptInput + TruthPanel, wire up the hook, done.
+
+---
+
+## Code Hygiene (from ESLint research)
+
+Enforced via ESLint so agents respect these constraints during implementation:
+
+- **`max-lines: 300`** (skip blanks, skip comments) -- the community and AI-optimized sweet spot. Override for schemas/configs/generated files.
+- **`max-lines-per-function: 50`** -- companion rule, keeps functions focused.
+- **File structure:** if a folder exceeds ~12-15 files, create sub-folders. No standard ESLint rule exists; enforce via review.
+- **All new types in `types.ts`, all new schemas in `schemas.ts`, all new prompts in `prompts.ts`** -- no scattering contracts across route files.
+
+---
+
 ## What Changed From v1
 
 The original plan had the right cost-optimization ideas (adaptive scheduling, sliding window, LLM pre-verify, Exa). This v2 keeps all of those but adds three insights from the scratchpad and user feedback:
@@ -1022,14 +1072,19 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 - **`src/app/components/TruthPanel.tsx`** -- Replaces InsightsPanel, AnalysisPanel, PatternsPanel, and PulseFeed. Single component: sticky trust chart + stats bar + flag feed + progressive disclosure sections (Analysis, Verdicts, Patterns).
 
+### New hooks and modules
+
+- **`src/hooks/useTruthSession.ts`** -- Extracted from page.tsx. Owns session state, segment append/flush, request IDs, stale-response protection, pipeline status, derived selectors.
+- **`src/lib/pipeline-policy.ts`** -- Scheduling policy for both sliding-window and full-transcript pass cadences. Imported by useTruthSession.
+
 ### Modified files
 
-- **[src/app/api/analyze/deep/route.ts](src/app/api/analyze/deep/route.ts)** -- Becomes the unified analysis endpoint. Remove Tavily. Remove `claims` param. Accept `runningSummary` and `mode` params. Return merged schema (rhetoric + patterns + trajectory). For batch mode, accept full text directly.
-- **[src/app/page.tsx](src/app/page.tsx)** -- (a) Remove `viewMode` state, Debug mode, tab system, and `showArch`. (b) Replace separate `analysisResult` + `patternsResult` with single `analysis: UnifiedAnalysis`. (c) Replace `triggerL2`/`triggerL3` with single `triggerAnalysis`. (d) Add adaptive scheduler, sliding-window state, verification state. (e) Add batch mode path for paste/URL. (f) Render `TruthPanel` instead of conditional Insights/Debug views.
+- **[src/app/api/analyze/deep/route.ts](src/app/api/analyze/deep/route.ts)** -- Becomes the unified analysis endpoint. Remove Tavily. Remove `claims` param. Accept `runningSummary`, `mode` (`streaming` | `full` | `batch`), and `segments` (with stable IDs). Return `AnalysisSnapshot` with provenance.
+- **[src/app/page.tsx](src/app/page.tsx)** -- Becomes a thin composition shell. Remove all state management, Debug mode, tabs, `showArch`. Import `useTruthSession` hook. Render TranscriptInput + TruthPanel. Wire up hook. Done.
 - **[src/app/components/TranscriptInput.tsx](src/app/components/TranscriptInput.tsx)** -- Replace 3 demo buttons with single "Demo" button/dropdown. Remove voice timing copy. Simplify footer states.
-- **[src/lib/types.ts](src/lib/types.ts)** -- Add `UnifiedAnalysis`, `LLMPreVerdict`, `ClaimVerdict`, `VerificationResult`, `SessionSummary`. Remove `TavilySource`. Remove `PatternsResult` and `AnalysisResult` (replaced by `UnifiedAnalysis`). Keep `PulseResult`, `PulseEntry`, `PulseFlag`.
-- **[src/lib/schemas.ts](src/lib/schemas.ts)** -- Replace `analysisSchema` + `patternsSchema` with `unifiedAnalysisSchema`. Add verification schemas.
-- **[src/lib/prompts.ts](src/lib/prompts.ts)** -- Replace `L2_SYSTEM_PROMPT` + `L3_SYSTEM_PROMPT` with single `ANALYSIS_SYSTEM_PROMPT`. Add `LLM_PRE_VERIFY_PROMPT` and `SUMMARY_PROMPT`.
+- **[src/lib/types.ts](src/lib/types.ts)** -- Add canonical domain model: `TruthSession`, `SourceAsset`, `TranscriptSegment`, `SegmentPulse`, `AnalysisSnapshot`, `SessionSummary`, `ClaimCandidate`, `ClaimVerdict`, `VerificationRun`. Add enriched fields: `emotionalAppeals`, `namedFallacies`, `cognitiveBiases`, `speakerIntent`, `quotedEvidence`, `flagRevisions`. Remove `TavilySource`, `PatternsResult`, `AnalysisResult`.
+- **[src/lib/schemas.ts](src/lib/schemas.ts)** -- Define shared `rhetoricalCoreSchema` reused by all analysis responses. Replace `analysisSchema` + `patternsSchema` with `analysisSnapshotSchema`. Add verification schemas.
+- **[src/lib/prompts.ts](src/lib/prompts.ts)** -- Replace `L2_SYSTEM_PROMPT` + `L3_SYSTEM_PROMPT` with single `ANALYSIS_SYSTEM_PROMPT`. Add `LLM_PRE_VERIFY_PROMPT` and `SUMMARY_PROMPT`. Update `L1_SYSTEM_PROMPT` for spoken content awareness.
 
 ### Removed files
 
@@ -1053,3 +1108,33 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 **Phase 3 (Persistence):** Deferred. If needed during prototype, localStorage for session history. Backend persistence TBD when prototype stabilizes.
 
 **Phase 4 (Scale):** YouTube transcript ingestion for podcast URLs. Clip extraction (90s vertical format). Brave Search fallback. Tiered verification caps.
+
+---
+
+## Scope Guardrails
+
+Explicitly defer these until core contracts are working:
+
+- Full backend persistence or database adoption
+- YouTube clip extraction and vertical format export
+- Gemini topic segmentation (Phase 5 -- after core pipeline is stable)
+- Elaborate event sourcing or job infrastructure
+- A forest of tiny service files before boundaries are proven
+- Any UI beyond TruthPanel + TranscriptInput (no settings, no onboarding, no account pages)
+
+---
+
+## Definition of Done
+
+This plan is successful when:
+
+- `page.tsx` is a thin composition shell, not a 545-line state machine. All orchestration lives in `useTruthSession`.
+- One analysis schema (`AnalysisSnapshot`) and one prompt family power both streaming and batch analysis.
+- Verification has its own contracts, statuses, and UI section -- fully decoupled from analysis.
+- Every user-visible flag, chart point, or verdict can be traced back to a stable `segmentId` or claim ID.
+- The UI has one primary composition root (`TruthPanel`) instead of duplicated Insights and Debug panels.
+- The 2-second glance test passes: a user mid-conversation can look down and understand (a) trust rising or falling, (b) what was weird, (c) why -- without clicking anything.
+- The trust chart never stalls during streaming. Flags appear within one chunk of detection.
+- Full-transcript passes fire at 45s / 3m / 5m / 10m / then every 5m, plus at stop and on demand.
+- No file exceeds 300 lines (skip blanks/comments). No function exceeds 50 lines.
+- `soul.md` principles are reflected in every prompt, label, and color choice.
