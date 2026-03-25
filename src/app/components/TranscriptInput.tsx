@@ -328,11 +328,8 @@ export default function TranscriptInput({
           </div>
         ) : busy ? (
           <div className="flex items-center gap-3">
-            <div className="relative h-0.5 flex-1 bg-[#222]">
-              <div className="absolute inset-y-0 left-0 w-full animate-pulse bg-[#e5e5e5]/20" />
-            </div>
-            <span className="text-[10px] text-[#666]">Analyzing&hellip;</span>
-          </div>
+            <div className="relative h-0.5 flex-1 bg-[#222]"><div className="absolute inset-y-0 left-0 w-full animate-pulse bg-[#e5e5e5]/20" /></div>
+            <span className="text-[10px] text-[#666]">Analyzing&hellip;</span></div>
         ) : (
           <button
             onClick={handleAction}

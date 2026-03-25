@@ -50,20 +50,12 @@ export function useTruthSession() {
   const [queryResult, setQueryResult] = useState<PostAnalysisQueryResult | null>(null);
 
   const mem = useRef({
-    segments: [] as TranscriptSegment[],
-    pulses: [] as SegmentPulse[],
-    chunkId: 0,
-    analysisReq: 0,
-    summaryReq: 0,
-    verifyReq: 0,
-    rollingAt: null as number | null,
-    fullPassElapsed: null as number | null,
-    sessionStart: 0,
-    summary: null as SessionSummary | null,
-    snap: null as AnalysisSnapshot | null,
+    segments: [] as TranscriptSegment[], pulses: [] as SegmentPulse[],
+    chunkId: 0, analysisReq: 0, summaryReq: 0, verifyReq: 0,
+    rollingAt: null as number | null, fullPassElapsed: null as number | null,
+    sessionStart: 0, lastSummarizedCount: 0, era: 0,
+    summary: null as SessionSummary | null, snap: null as AnalysisSnapshot | null,
     session: null as TruthSession | null,
-    lastSummarizedCount: 0,
-    era: 0,
   });
 
   const setStage = useCallback(
@@ -334,17 +326,12 @@ export function useTruthSession() {
   const isAnalysisLoading = pipeline.analysis === "running";
 
   return {
-    session, snapshot, runningSummary, verificationRun, verificationError,
-    topicSegments, queryResult,
-    pipelineStatus: pipeline, flagCount, isAnalysisLoading,
-    pulseEntries,
-    voiceTranscript, voiceChunkSeverities,
-    isRecording, voiceError,
+    session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult,
+    pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
+    voiceTranscript, voiceChunkSeverities, isRecording, voiceError,
     isProcessing, isFetchingUrl, processingChunk, chunkProgress,
-    handleAnalyze, handleFetchUrl,
-    handleStartRecording, handleStopRecording,
-    triggerVerification, triggerTopicSegmentation,
-    submitQuery, seekTranscriptChunk,
+    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording,
+    triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk,
   };
 }
 
