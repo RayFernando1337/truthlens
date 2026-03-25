@@ -3,6 +3,8 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import type { ChunkSeverity } from "@/lib/pulse-utils";
 
+type DemoKey = "generic" | "andreessen" | "lennypod";
+
 const DEMO_GENERIC = `Our new AI platform processes data 10x faster than any competitor on the market. We've seen this across thousands of deployments.
 
 Industry analysts predict that by 2027, every Fortune 500 company will have adopted this technology. The transformation is inevitable.
@@ -51,8 +53,6 @@ The way that you would actually do computing and the way that you would do calcu
 
 The way that you would do it is you would actually have a room full of people. And by the way, groups, you can have hundreds or thousands or tens of thousands of people.`;
 
-type DemoKey = "generic" | "andreessen" | "lennypod";
-
 const DEMOS: Record<DemoKey, { label: string; transcript: string }> = {
   generic: { label: "Tech pitch", transcript: DEMO_GENERIC },
   andreessen: { label: "Andreessen", transcript: DEMO_ANDREESSEN },
@@ -82,7 +82,6 @@ export default function TranscriptInput({
   onStartRecording,
   onStopRecording,
   chunkProgress,
-  insightsMode,
   voiceChunkSeverities,
 }: {
   onAnalyze: (text: string) => void;
@@ -95,12 +94,10 @@ export default function TranscriptInput({
   onStartRecording: () => void;
   onStopRecording: () => void;
   chunkProgress: { current: number; total: number } | null;
-  /** When true, voice chunks show severity borders from pulse flags */
-  insightsMode?: boolean;
-  /** Per voice chunk index; length should match voiceTranscript when provided */
   voiceChunkSeverities?: ChunkSeverity[];
 }) {
   const [text, setText] = useState("");
+  const [demoOpen, setDemoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
   const [showJumpToLive, setShowJumpToLive] = useState(false);
@@ -163,6 +160,7 @@ export default function TranscriptInput({
 
   function loadDemo(key: DemoKey) {
     setText(DEMOS[key].transcript);
+    setDemoOpen(false);
   }
 
   const busy = isProcessing || isFetchingUrl;
@@ -181,19 +179,32 @@ export default function TranscriptInput({
           Input
         </span>
         <div className="flex items-center gap-3">
-          {!isRecording &&
-            (Object.entries(DEMOS) as [DemoKey, (typeof DEMOS)[DemoKey]][]).map(
-              ([key, { label }]) => (
-                <button
-                  key={key}
-                  onClick={() => loadDemo(key)}
-                  disabled={busy}
-                  className="text-[11px] uppercase tracking-wider text-[#666] transition-colors hover:text-[#e5e5e5] disabled:opacity-30"
-                >
-                  {label}
-                </button>
-              )
-            )}
+          {!isRecording && (
+            <div className="relative">
+              <button
+                onClick={() => setDemoOpen((o) => !o)}
+                disabled={busy}
+                className="text-[11px] uppercase tracking-wider text-[#666] transition-colors hover:text-[#e5e5e5] disabled:opacity-30"
+              >
+                Demo {demoOpen ? "\u25B4" : "\u25BE"}
+              </button>
+              {demoOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1 min-w-[140px] border border-[#333] bg-[#141414] py-1 shadow-lg">
+                  {(Object.entries(DEMOS) as [DemoKey, (typeof DEMOS)[DemoKey]][]).map(
+                    ([key, { label }]) => (
+                      <button
+                        key={key}
+                        onClick={() => loadDemo(key)}
+                        className="block w-full px-4 py-1.5 text-left text-[11px] text-[#888] transition-colors hover:bg-[#1a1a1a] hover:text-[#e5e5e5]"
+                      >
+                        {label}
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={isRecording ? onStopRecording : onStartRecording}
             disabled={busy && !isRecording}
@@ -224,9 +235,6 @@ export default function TranscriptInput({
                 <span className="text-[11px] uppercase tracking-wider text-[#ff4400]">
                   Listening
                 </span>
-                <span className="text-[10px] text-[#444]">
-                  &middot; chunks every 4s
-                </span>
               </div>
             )}
             {showJumpButton && (
@@ -251,10 +259,9 @@ export default function TranscriptInput({
               ) : (
                 <div className="space-y-2">
                   {voiceTranscript.map((chunk, i) => {
-                    const borderClass =
-                      insightsMode && voiceChunkSeverities
-                        ? `border-l-2 pl-2 ${SEVERITY_BORDER[severityForIndex(i)]}`
-                        : "";
+                    const borderClass = voiceChunkSeverities
+                      ? `border-l-2 pl-2 ${SEVERITY_BORDER[severityForIndex(i)]}`
+                      : "";
                     return (
                       <p
                         key={i}

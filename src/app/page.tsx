@@ -2,7 +2,7 @@
 
 import { useTruthSession } from "@/hooks/useTruthSession";
 import TranscriptInput from "./components/TranscriptInput";
-import InsightsPanel from "./components/InsightsPanel";
+import TruthPanel from "./components/TruthPanel";
 
 export default function Home() {
   const s = useTruthSession();
@@ -18,7 +18,9 @@ export default function Home() {
             </span>
           )}
           {s.flagCount > 0 && (
-            <span className="text-[10px] tabular-nums text-[#ff4400]">{s.flagCount} flag{s.flagCount !== 1 ? "s" : ""}</span>
+            <span className="text-[10px] tabular-nums text-[#ff4400]">
+              {s.flagCount} flag{s.flagCount !== 1 ? "s" : ""}
+            </span>
           )}
         </div>
       </header>
@@ -36,33 +38,20 @@ export default function Home() {
             onStartRecording={s.handleStartRecording}
             onStopRecording={s.handleStopRecording}
             chunkProgress={s.chunkProgress}
-            insightsMode
             voiceChunkSeverities={s.voiceChunkSeverities}
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col bg-[#141414]">
-          {(s.pipelineStatus.verification === "running" || s.verificationError) && (
-            <div className="border-b border-[#222] px-4 py-2">
-              {s.pipelineStatus.verification === "running" ? (
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#666]">
-                  <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
-                  Checking outside support...
-                </div>
-              ) : (
-                <p className="text-[11px] leading-relaxed text-[#ffb199]">
-                  Verification paused: {s.verificationError}
-                </p>
-              )}
-            </div>
-          )}
-          <InsightsPanel
-            entries={s.pulseEntries}
+          <TruthPanel
+            pulseEntries={s.pulseEntries}
+            snapshot={s.snapshot}
+            verificationRun={s.verificationRun}
+            verificationError={s.verificationError}
+            pipelineStatus={s.pipelineStatus}
             processingChunk={s.processingChunk}
-            analysisResult={s.analysisResult}
-            patternsResult={s.patternsResult}
-            isAnalysisLoading={s.isAnalysisLoading}
-            isPatternsLoading={s.isAnalysisLoading}
+            isStreaming={s.isRecording || s.isProcessing}
             onSeekTranscriptChunk={s.seekTranscriptChunk}
+            onTriggerVerification={s.triggerVerification}
           />
         </div>
       </div>

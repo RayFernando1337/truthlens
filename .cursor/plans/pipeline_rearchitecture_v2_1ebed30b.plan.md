@@ -85,13 +85,13 @@ todos:
     status: completed
   - id: p4-truth-panel
     content: "[Phase 4] Create TruthPanel.tsx -- sticky trust chart hero (EMA live score + analysis overlay), stats bar (claims/flagged/verified), flag feed (vertical, color-coded, clickable, chyron-style one-liners), progressive disclosure (Analysis/Verdicts/Patterns). Batch mode: analysis open by default."
-    status: pending
+    status: completed
   - id: p4-simplify-input
     content: "[Phase 4] Simplify TranscriptInput.tsx -- 3 demo buttons to 1 dropdown, remove voice timing copy, clean footer states"
-    status: pending
+    status: completed
   - id: p4-delete-old-components
     content: "[Phase 4] Delete InsightsPanel, AnalysisPanel, PatternsPanel, PulseFeed, ConfidenceMeter, ArchitectureDiagram"
-    status: pending
+    status: in_progress
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
     status: pending

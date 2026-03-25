@@ -8,7 +8,6 @@ import type {
 } from "@/lib/types";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { toAnalysisResult, toPatternsResult } from "@/lib/legacy-analysis";
 import {
   shouldRunRollingAnalysis, shouldRunFullPass, getSlidingWindowSize,
 } from "@/lib/pipeline-policy";
@@ -306,16 +305,6 @@ export function useTruthSession() {
       ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, []);
 
-  const analysisResult = useMemo(
-    () => (snapshot ? toAnalysisResult(snapshot) : null),
-    [snapshot],
-  );
-
-  const patternsResult = useMemo(
-    () => (snapshot ? toPatternsResult(snapshot) : null),
-    [snapshot],
-  );
-
   const flagCount = useMemo(
     () => pulseEntries.reduce((sum, e) => sum + e.result.flags.length, 0),
     [pulseEntries],
@@ -326,7 +315,7 @@ export function useTruthSession() {
   return {
     session, snapshot, runningSummary, verificationRun, verificationError,
     pipelineStatus: pipeline, flagCount, isAnalysisLoading,
-    pulseEntries, analysisResult, patternsResult,
+    pulseEntries,
     voiceTranscript, voiceChunkSeverities,
     isRecording, voiceError,
     isProcessing, isFetchingUrl, processingChunk, chunkProgress,
