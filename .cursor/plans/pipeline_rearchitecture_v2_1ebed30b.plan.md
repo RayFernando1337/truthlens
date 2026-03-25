@@ -2,53 +2,80 @@
 name: Pipeline Rearchitecture v2
 overview: Rearchitect TruthLens by merging L2+L3 into a single analysis pass inspired by scratchpad one-pass quality, fully decoupling verification, adding batch mode for paste/URL, and redesigning the UI as a "Truth Terminal" driven by user feedback priorities.
 todos:
+  # ── Phase 0: Tooling (DONE) ──────────────────────────────────────
+  - id: p0-eslint
+    content: "[Phase 0] Add max-lines:300 and max-lines-per-function:50 to eslint.config.mjs -- DONE"
+    status: completed
+  - id: p0-cursor-rules
+    content: "[Phase 0] Create .cursor/rules/soul.mdc (alwaysApply) and .cursor/rules/code-standards.mdc (alwaysApply) -- DONE"
+    status: completed
+  - id: p0-cursor-hooks
+    content: "[Phase 0] Create .cursor/hooks.json with afterFileEdit lint hook + .cursor/hooks/lint.sh -- DONE"
+    status: completed
+  # ── Phase 1: Types, Schemas, Prompts ─────────────────────────────
   - id: p1-types
-    content: "[Phase 1] Define UnifiedAnalysis, LLMPreVerdict, ClaimVerdict, VerificationResult, SessionSummary in types.ts; remove TavilySource, AnalysisResult, PatternsResult"
+    content: "[Phase 1] Define canonical domain model in types.ts: TruthSession, SourceAsset, TranscriptSegment (stable segmentId), SegmentPulse, AnalysisSnapshot (with provenance), SessionSummary, ClaimCandidate, ClaimVerdict, VerificationRun. Add enriched fields: emotionalAppeals[], namedFallacies[], cognitiveBiases[], speakerIntent, quotedEvidence, flagRevisions[]"
     status: pending
   - id: p1-schemas
-    content: "[Phase 1] Replace analysisSchema + patternsSchema with unifiedAnalysisSchema in schemas.ts; add verificationSchema, preverifySchema, summarySchema"
+    content: "[Phase 1] Define shared rhetoricalCoreSchema reused by all analysis responses. Replace analysisSchema + patternsSchema with analysisSnapshotSchema. Add verification, summary, and segment schemas"
     status: pending
   - id: p1-prompt-analysis
-    content: "[Phase 1] Write merged ANALYSIS_SYSTEM_PROMPT in prompts.ts combining L2+L3 prompts with scratchpad rhetorical analyzer structure; replace L2_SYSTEM_PROMPT + L3_SYSTEM_PROMPT"
+    content: "[Phase 1] Write merged ANALYSIS_SYSTEM_PROMPT in prompts.ts combining L2+L3 with scratchpad rhetorical analyzer structure (TL;DR, Core Points, What They Actually Want to Say, Evidence/Proof Table, Rhetorical Appeals, Unexamined Assumptions, Steelman, What's Missing) + patterns + trust trajectory"
     status: pending
   - id: p1-prompt-verify
-    content: "[Phase 1] Write LLM_PRE_VERIFY_PROMPT and SUMMARY_PROMPT in prompts.ts"
+    content: "[Phase 1] Write LLM_PRE_VERIFY_PROMPT and SUMMARY_PROMPT in prompts.ts. Summary prompt must track developing threads, not just compress."
     status: pending
+  - id: p1-prompt-spoken
+    content: "[Phase 1] Update L1_SYSTEM_PROMPT for spoken content: accept previous 2-3 chunks as context, calibrate for conversational hedging, add emotional-appeal/cognitive-bias/building flag types, raise confidence baseline for speech"
+    status: pending
+  # ── Phase 2A: Unified Analysis Backend (parallel with 2B) ───────
   - id: p2a-unified-route
-    content: "[Phase 2A] Rewrite deep/route.ts as unified /api/analyze endpoint -- remove Tavily, remove claims param, accept runningSummary + mode, return merged UnifiedAnalysis schema"
+    content: "[Phase 2A] Rewrite deep/route.ts as unified /api/analyze endpoint. Accept segments (with segmentIds), runningSummary, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Remove Tavily."
+    status: pending
+  - id: p2a-full-mode
+    content: "[Phase 2A] Add mode='full' to unified analysis endpoint -- accepts full transcript or high-fidelity summary, fires at 45s/3m/5m/10m then every 5m, plus at stop and on demand"
     status: pending
   - id: p2a-delete-patterns
     content: "[Phase 2A] Delete patterns/route.ts -- merged into unified analysis"
     status: pending
   - id: p2a-adaptive-scheduler
-    content: "[Phase 2A] Create src/lib/adaptive-scheduler.ts with getAnalysisInterval(n) and shouldRunAnalysis(n, lastRanAt)"
+    content: "[Phase 2A] Create src/lib/adaptive-scheduler.ts -- manages BOTH sliding-window intervals (getAnalysisInterval) AND full-transcript pass cadence (45s, 3m, 5m, 10m, then every 5m). Single module, two schedules."
     status: pending
   - id: p2a-summarize-route
-    content: "[Phase 2A] Create /api/analyze/summarize/route.ts for progressive summary maintenance (sliding window background updates)"
+    content: "[Phase 2A] Create /api/analyze/summarize/route.ts for progressive summary maintenance. Must track developing arguments (not just compress), note building threads."
     status: pending
+  # ── Phase 2B: Verification Backend (parallel with 2A) ───────────
   - id: p2b-exa-client
-    content: "[Phase 2B] Create src/lib/exa.ts with Exa JS SDK, verifyClaim() using Answer endpoint + outputSchema for structured verdicts"
+    content: "[Phase 2B] Create src/lib/exa.ts with Exa JS SDK, verifyClaim() using Answer endpoint + outputSchema for structured verdicts. Run bun add exa-js."
     status: pending
   - id: p2b-claim-queue
-    content: "[Phase 2B] Create src/lib/claim-queue.ts with priority filter (skip vague/prediction), fuzzy dedup, per-session cap (10 Exa calls)"
+    content: "[Phase 2B] Create src/lib/claim-queue.ts with priority filter (skip vague/prediction), fuzzy dedup, per-session cap (10 Exa calls configurable)"
     status: pending
   - id: p2b-preverify-route
     content: "[Phase 2B] Create /api/verify/pre-check/route.ts -- LLM-only knowledge-based claim verification via Nemotron (FREE)"
     status: pending
   - id: p2b-verify-route
-    content: "[Phase 2B] Create /api/verify/route.ts -- orchestrates claim queue, LLM pre-check, then Exa web search for uncertain claims"
+    content: "[Phase 2B] Create /api/verify/route.ts -- orchestrates claim queue, LLM pre-check, then Exa web search for uncertain claims only"
     status: pending
   - id: p2b-remove-tavily
     content: "[Phase 2B] Delete src/lib/tavily.ts, swap TAVILY_API_KEY for EXA_API_KEY in env"
     status: pending
-  - id: p3-page-orchestration
-    content: "[Phase 3] Rewrite page.tsx -- remove viewMode/Debug/tabs/showArch, replace triggerL2+triggerL3 with single triggerAnalysis, add adaptive scheduler + sliding-window state + verification triggers"
+  # ── Phase 3: Frontend Orchestration ──────────────────────────────
+  - id: p3-extract-hook
+    content: "[Phase 3] Extract useTruthSession hook from page.tsx: session state (TruthSession), segment append/flush, request IDs with stale-response protection, pipeline status per stage, batch vs streaming policy, derived selectors for TruthPanel"
+    status: pending
+  - id: p3-pipeline-policy
+    content: "[Phase 3] Create src/lib/pipeline-policy.ts: scheduling policy for sliding-window intervals AND full-transcript pass cadence (45s/3m/5m/10m/every 5m). Imported by useTruthSession."
+    status: pending
+  - id: p3-page-shell
+    content: "[Phase 3] Reduce page.tsx to thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, render TranscriptInput + TruthPanel, wire up hook. Target under 100 lines."
     status: pending
   - id: p3-wire-verify
-    content: "[Phase 3] Wire verification into page.tsx -- verification state, trigger at stop + every 10 min + user-triggered, pass verdicts to TruthPanel"
+    content: "[Phase 3] Wire verification into useTruthSession: verdicts state, trigger at stop + periodically for long sessions + user-triggered Verify button, pass to TruthPanel"
     status: pending
+  # ── Phase 4: UI Rebuild ──────────────────────────────────────────
   - id: p4-truth-panel
-    content: "[Phase 4] Create TruthPanel.tsx -- sticky trust chart hero, stats bar, flag feed, progressive disclosure sections (Analysis/Verdicts/Patterns)"
+    content: "[Phase 4] Create TruthPanel.tsx -- sticky trust chart hero (EMA live score + analysis overlay), stats bar (claims/flagged/verified), flag feed (vertical, color-coded, clickable, chyron-style one-liners), progressive disclosure (Analysis/Verdicts/Patterns). Batch mode: analysis open by default."
     status: pending
   - id: p4-simplify-input
     content: "[Phase 4] Simplify TranscriptInput.tsx -- 3 demo buttons to 1 dropdown, remove voice timing copy, clean footer states"
@@ -56,14 +83,28 @@ todos:
   - id: p4-delete-old-components
     content: "[Phase 4] Delete InsightsPanel, AnalysisPanel, PatternsPanel, PulseFeed, ConfidenceMeter, ArchitectureDiagram"
     status: pending
+  # ── Phase 5: Batch Mode + Post-Analysis ──────────────────────────
   - id: p5-batch-mode
-    content: "[Phase 5] Add batch mode path -- skip L1 chunking for paste/URL, single unified analysis call with mode=batch, analysis open by default in TruthPanel"
+    content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
     status: pending
+  - id: p5-add-gemini
+    content: "[Phase 5] Add google/gemini provider -- bun add @ai-sdk/google, create src/lib/gemini.ts model config for topic segmentation (separate from Nemotron)"
+    status: pending
+  - id: p5-topic-segments
+    content: "[Phase 5] Create /api/analyze/segments/route.ts -- Gemini 2.5 Pro + generateObject() with TopicSegment[] Zod schema, adapted from transcribe-groq v4.0 prompt pattern (4-step: analyze, identify boundaries, draft labels, review coverage). Fires at stop or on demand."
+    status: pending
+  - id: p5-post-queries
+    content: "[Phase 5] Post-analysis query support -- theme-based reorganization, targeted deep dives, cross-topic patterns via LLM queries against stored transcript"
+    status: pending
+  # ── Phase 6: Scale (future) ──────────────────────────────────────
   - id: p6-youtube
-    content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format)"
+    content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format using TopicSegment boundaries)"
     status: pending
   - id: p6-persistence
     content: "[Phase 6] Persistence layer TBD -- if needed, localStorage for session history; backend persistence deferred until prototype stabilizes"
+    status: pending
+  - id: p6-share
+    content: "[Phase 6] Gotcha screenshot / share unit -- exportable frame with trust chart + flag + speaker ID + branding watermark, optimized for Twitter/TikTok compression"
     status: pending
 isProject: false
 ---
