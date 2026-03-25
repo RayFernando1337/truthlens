@@ -135,7 +135,7 @@ export const analysisSnapshotSchema = rhetoricalCoreSchema.extend({
     z.object({
       segmentId: z.string(),
       originalType: pulseFlagTypeEnum,
-      revisedType: pulseFlagTypeEnum.optional(),
+      revisedType: pulseFlagTypeEnum.nullable(),
       action: flagRevisionActionEnum,
       reason: z.string(),
     })

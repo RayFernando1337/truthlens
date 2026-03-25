@@ -114,7 +114,7 @@ export interface PatternEntry {
 export interface FlagRevision {
   segmentId: string;
   originalType: PulseFlagType;
-  revisedType?: PulseFlagType;
+  revisedType: PulseFlagType | null;
   action: "upgrade" | "downgrade" | "dismiss" | "reclassify";
   reason: string;
 }
