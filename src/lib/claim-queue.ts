@@ -10,14 +10,6 @@ function createDedupeKey(text: string): string {
   return normalizeText(text).replace(/[^a-z0-9\s]/g, "");
 }
 
-function scorePriority(text: string): number {
-  let score = 1;
-  if (/\d/.test(text)) score += 2;
-  if (/[A-Z][a-z]+/.test(text)) score += 1;
-  if (text.length > 80) score += 1;
-  return score;
-}
-
 function createClaimCandidate(
   text: string,
   segmentIds: string[]
@@ -26,7 +18,7 @@ function createClaimCandidate(
     claimId: crypto.randomUUID(),
     text: text.trim(),
     segmentIds,
-    priority: scorePriority(text),
+    priority: 0,
     dedupeKey: createDedupeKey(text),
     verifiable: true,
   };

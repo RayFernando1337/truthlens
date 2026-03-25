@@ -27,40 +27,40 @@ todos:
     content: "[Phase 1] Update L1_SYSTEM_PROMPT for spoken content: accept previous 2-3 chunks as context, calibrate for conversational hedging, add emotional-appeal/cognitive-bias/building flag types, raise confidence baseline for speech"
     status: completed
   - id: p2a-unified-route
-    content: "[Phase 2A] Rewrite deep/route.ts as unified /api/analyze endpoint. Accept segments (with segmentIds), runningSummary, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Remove Tavily."
-    status: pending
+    content: "[Phase 2A] Create /api/analyze/route.ts as unified endpoint. Accept segments (with segmentIds), runningSummary, priorPulses, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Uses generateObject() not generateStructured(). -- DONE"
+    status: completed
   - id: p2a-full-mode
-    content: "[Phase 2A] Add mode='full' to unified analysis endpoint -- accepts full transcript or high-fidelity summary, fires at 45s/3m/5m/10m then every 5m, plus at stop and on demand"
-    status: pending
+    content: "[Phase 2A] Add mode='full' to unified analysis endpoint -- accepts full transcript or high-fidelity summary, fires at 45s/3m/5m/10m then every 5m, plus at stop and on demand -- DONE (mode supported, scheduling in pipeline-policy.ts)"
+    status: completed
   - id: p2a-delete-patterns
-    content: "[Phase 2A] Delete patterns/route.ts -- merged into unified analysis"
-    status: pending
+    content: "[Phase 2A] Delete patterns/route.ts and deep/route.ts -- merged into unified /api/analyze. Also deleted structured-generate.ts and tavily.ts. -- DONE"
+    status: completed
   - id: p2a-adaptive-scheduler
-    content: "[Phase 2A] Create src/lib/adaptive-scheduler.ts -- manages BOTH sliding-window intervals (getAnalysisInterval) AND full-transcript pass cadence (45s, 3m, 5m, 10m, then every 5m). Single module, two schedules."
-    status: pending
+    content: "[Phase 2A] Create src/lib/pipeline-policy.ts (NOT adaptive-scheduler.ts) -- manages BOTH sliding-window intervals (getAnalysisIntervalMs) AND full-transcript pass cadence (45s, 3m, 5m, 10m, then every 5m). Single module, two schedules. -- DONE"
+    status: completed
   - id: p2a-summarize-route
-    content: "[Phase 2A] Create /api/analyze/summarize/route.ts for progressive summary maintenance. Must track developing arguments (not just compress), note building threads."
-    status: pending
+    content: "[Phase 2A] Create /api/analyze/summarize/route.ts for progressive summary maintenance. Must track developing arguments (not just compress), note building threads. -- DONE"
+    status: completed
   - id: p2b-exa-client
-    content: "[Phase 2B] Create src/lib/exa.ts with Exa JS SDK, verifyClaim() using Answer endpoint + outputSchema for structured verdicts. Run bun add exa-js."
-    status: pending
+    content: "[Phase 2B] Create src/lib/exa.ts with Exa JS SDK, verifyClaim() using Answer endpoint + outputSchema for structured verdicts including confidence. Confidence MUST come from the model's structured output, not from citation counts. Run bun add exa-js. -- DONE"
+    status: completed
   - id: p2b-claim-queue
-    content: "[Phase 2B] Create src/lib/claim-queue.ts with priority filter (skip vague/prediction), fuzzy dedup, per-session cap (10 Exa calls configurable)"
-    status: pending
+    content: "[Phase 2B] Create src/lib/claim-queue.ts with dedupe + per-session cap (10 Exa calls configurable). Verifiability and priority MUST be determined by LLM triage (CLAIM_TRIAGE_PROMPT in prompts.ts), NOT regex heuristics. claim-queue.ts only handles normalization, dedup, and cap. -- DONE"
+    status: completed
   - id: p2b-preverify-route
-    content: "[Phase 2B] Create /api/verify/pre-check/route.ts -- LLM-only knowledge-based claim verification via Nemotron (FREE)"
-    status: pending
+    content: "[Phase 2B] Create /api/verify/pre-check/route.ts -- LLM-only knowledge-based claim verification via Nemotron (FREE) -- DONE"
+    status: completed
   - id: p2b-verify-route
-    content: "[Phase 2B] Create /api/verify/route.ts -- orchestrates claim queue, LLM pre-check, then Exa web search for uncertain claims only"
-    status: pending
+    content: "[Phase 2B] Create /api/verify/route.ts -- orchestrates LLM triage, then claim queue, then LLM pre-check, then Exa web search for uncertain claims only. Claims flow by claimId, NOT by string matching. -- DONE"
+    status: completed
   - id: p2b-remove-tavily
-    content: "[Phase 2B] Delete src/lib/tavily.ts, swap TAVILY_API_KEY for EXA_API_KEY in env"
-    status: pending
+    content: "[Phase 2B] Delete src/lib/tavily.ts, swap TAVILY_API_KEY for EXA_API_KEY in env -- DONE (tavily.ts deleted, structured-generate.ts deleted)"
+    status: completed
   - id: p3-extract-hook
     content: "[Phase 3] Extract useTruthSession hook from page.tsx: session state (TruthSession), segment append/flush, request IDs with stale-response protection, pipeline status per stage, batch vs streaming policy, derived selectors for TruthPanel"
     status: pending
   - id: p3-pipeline-policy
-    content: "[Phase 3] Create src/lib/pipeline-policy.ts: scheduling policy for sliding-window intervals AND full-transcript pass cadence (45s/3m/5m/10m/every 5m). Imported by useTruthSession."
+    content: "[Phase 3] Wire existing src/lib/pipeline-policy.ts into useTruthSession hook. File already exists from Phase 2A -- DO NOT recreate. Replace the fixed chunk-count constants in page.tsx (VOICE_ANALYSIS_FIRST_CHUNKS etc.) with policy-driven scheduling."
     status: pending
   - id: p3-page-shell
     content: "[Phase 3] Reduce page.tsx to thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, render TranscriptInput + TruthPanel, wire up hook. Target under 100 lines."
@@ -159,8 +159,9 @@ All types, schemas, routes, and UI selectors share one flat domain model. No opt
 - **`SegmentPulse`** -- L1 output for a segment: `claims`, `flags`, `tone`, `confidence`. Keyed to `segmentId`.
 - **`AnalysisSnapshot`** -- unified analysis result for a specific window or full pass. Includes rhetorical analysis, patterns, trust trajectory, AND provenance about what window/horizon produced it.
 - **`SessionSummary`** -- rolling summary used as analysis context only. Never the user-facing source of truth.
-- **`ClaimCandidate`** -- normalized claim text tied to one or more segment ids, priority, dedupe key, verification eligibility.
-- **`ClaimVerdict`** -- final verification state: verdict, source, confidence, explanation, citations.
+- **`ClaimCandidate`** -- normalized claim text tied to one or more segment ids, dedupe key. `priority` and `verifiable` are set by LLM triage (NOT regex heuristics). Optional `triageReason` and `triageConfidence` preserve the model's classification rationale.
+- **`ClaimTriageResult`** -- LLM triage output per claim: `claimId`, `verifiable`, `priority` (0-5), `confidence`, `reason`. Merged into `ClaimCandidate` by `claimId`.
+- **`ClaimVerdict`** -- final verification state: verdict, source, confidence (from model, not proxies), explanation, citations.
 - **`VerificationRun`** -- queue metadata, per-session caps, status, counts. Distinguishes `queued` | `model-assessed` | `web-verified` | `skipped` | `cap-exceeded`.
 - **`TruthPanelView`** -- derived view model ONLY. Computed from the above via selectors. Never stored as source-of-truth state.
 
@@ -296,31 +297,23 @@ flowchart TD
 
 L3 literally includes `fullAnalysis?: AnalysisResult` -- the entire L2 output nested inside L3. The scratchpad's one-pass analysis and rhetorical analyzer skill both prove a single prompt handles all of this.
 
-**New unified endpoint:** `POST /api/analyze/route.ts`
+**New unified endpoint:** `POST /api/analyze/route.ts` -- DONE
 
 ```typescript
-// Input
-{ chunks: string[], runningSummary?: string, mode: "streaming" | "batch" }
+// Input (AnalysisRequest)
+{ segments: TranscriptSegment[], runningSummary?: SessionSummary, priorPulses?: SegmentPulse[], mode: "streaming" | "full" | "batch" }
 
-// Output: UnifiedAnalysis (merged L2 + L3)
+// Output: AnalysisSnapshot (merged L2 + L3 + enriched fields)
 {
-  // From L2
-  tldr: string,
-  corePoints: string[],
-  underlyingStatement: string,
-  evidenceTable: EvidenceRow[],
-  appeals: Appeals,
-  assumptions: string[],
-  steelman: string,
-  missing: string[],
-  // From L3
-  patterns: PatternEntry[],
-  trustTrajectory: number[],
-  overallAssessment: string,
+  tldr, corePoints, speakerIntent, evidenceTable, appeals,
+  emotionalAppeals, namedFallacies, cognitiveBiases,
+  assumptions, steelman, missing,
+  patterns, trustTrajectory, overallAssessment, flagRevisions,
+  mode, windowStart?, windowEnd?, segmentIds, timestamp,
 }
 ```
 
-**Prompt:** Merge [L2_SYSTEM_PROMPT](src/lib/prompts.ts) and [L3_SYSTEM_PROMPT](src/lib/prompts.ts) into one, drawing from the scratchpad's rhetorical analyzer skill structure (sections 1-8: TL;DR, Core Points, What They Actually Want to Say, Evidence/Proof Table, Rhetorical Appeals, Unexamined Assumptions, Steelman, What's Missing) plus pattern detection and trust trajectory.
+**Prompt:** Single `ANALYSIS_SYSTEM_PROMPT` in [prompts.ts](src/lib/prompts.ts), drawing from the scratchpad's rhetorical analyzer skill structure plus pattern detection and trust trajectory. Uses `generateObject()` with `analysisSnapshotSchema`.
 
 **Impact:** 2-hour podcast goes from ~156 analysis calls (78 L2 + 78 L3) to ~78 unified calls. Same information, half the API calls.
 
@@ -533,23 +526,43 @@ The original plan's two-phase verification is sound. Keeping it with one refinem
 
 ```
 L1 flags claims (streaming) OR analysis extracts claims (batch)
+  --> LLM Claim Triage (src/lib/verification-core.ts, CLAIM_TRIAGE_PROMPT)
+      - Model classifies each claim as verifiable or not (opinions, predictions, advice -> skip)
+      - Model assigns priority 0-5 based on semantic importance
+      - NO regex heuristics for verifiability or priority -- the model decides
   --> Claim Queue (src/lib/claim-queue.ts)
-      - Priority filter: skip vague opinions, predictions
-      - Fuzzy dedup: skip near-duplicates
+      - Normalization + fuzzy dedup via alphanumeric key
       - Per-session cap: 10 Exa calls (configurable)
+      - Queue only handles dedup and cap, NOT classification
   --> LLM Pre-Verify (POST /api/verify/pre-check)
       - Nemotron evaluates from training knowledge (FREE)
       - ~80% resolved as supported/refuted/not-verifiable
   --> Exa Answer (POST /api/verify/route.ts)
-      - Only "uncertain" claims reach Exa
-      - Structured verdict via outputSchema
+      - Only "uncertain" claims reach Exa (NOT "unverifiable" -- these are different)
+      - Structured verdict via outputSchema, including model-assessed confidence
+      - Confidence comes from the model's structured output, NOT citation counts
       - $5/1k requests, 1,000 free/month
   --> Verdicts rendered in UI
 ```
 
-### Types (kept from v1)
+### Verification invariants (learned from implementation)
+
+1. **No regex/heuristic classification.** Verifiability and priority are semantic judgments. The LLM triage step owns them via CLAIM_TRIAGE_PROMPT. claim-queue.ts only normalizes, dedupes, and caps.
+2. **Claims flow by claimId, not string matching.** The LLM may echo claim text differently. All pipeline joins (triage merge, pre-verify to Exa routing) must use stable `claimId`, never exact string comparison on `claim.text`.
+3. **`uncertain` != `unverifiable`.** `uncertain` means "I don't know, web search would help" -> routes to Exa. `unverifiable` means "this cannot be objectively fact-checked" -> skipped. Never collapse these.
+4. **Confidence from the model, not proxies.** Exa outputSchema includes a confidence field. Pre-verify returns model confidence. Never fabricate confidence from citation counts, text length, or other proxy metrics.
+
+### Types
 
 ```typescript
+interface ClaimTriageResult {
+  claimId: string;
+  verifiable: boolean;
+  priority: number;       // 0-5, model-assigned
+  confidence: number;     // 0.0-1.0
+  reason: string;
+}
+
 interface LLMPreVerdict {
   claim: string;
   verifiable: boolean;
@@ -568,11 +581,14 @@ interface ClaimVerdict {
   citations?: Array<{ title: string; url: string; snippet: string }>;
 }
 
-interface VerificationResult {
+interface VerificationRun {
+  sessionId: string;
+  status: "queued" | "model-assessed" | "web-verified" | "skipped" | "cap-exceeded";
   llmResolved: ClaimVerdict[];
   webVerified: ClaimVerdict[];
   unverified: string[];
-  stats: { llmChecked: number; webSearched: number; totalClaims: number };
+  stats: { totalClaims: number; llmChecked: number; webSearched: number; capped: number };
+  timestamp: number;
 }
 ```
 
@@ -999,48 +1015,39 @@ flowchart LR
     P5 --> P6
 ```
 
-### Phase 1: Types & Contracts (1 engineer, ~1-2 hours)
+### Phase 1: Types & Contracts -- DONE
 
-Foundation layer. Everything else depends on these type definitions, schemas, and prompts. All 4 tasks are parallelizable within the phase.
+Foundation layer. Canonical domain model in `types.ts`, shared `rhetoricalCoreSchema` in `schemas.ts`, merged prompts including `CLAIM_TRIAGE_PROMPT`. All request/response schemas defined.
 
-- `p1-types` -- Define `UnifiedAnalysis`, `LLMPreVerdict`, `ClaimVerdict`, `VerificationResult`, `SessionSummary` in [types.ts](src/lib/types.ts). Remove `TavilySource`, `AnalysisResult`, `PatternsResult`.
-- `p1-schemas` -- Replace `analysisSchema` + `patternsSchema` with `unifiedAnalysisSchema` in [schemas.ts](src/lib/schemas.ts). Add verification and summary schemas.
-- `p1-prompt-analysis` -- Write merged `ANALYSIS_SYSTEM_PROMPT` in [prompts.ts](src/lib/prompts.ts) combining L2+L3 with scratchpad rhetorical analyzer structure.
-- `p1-prompt-verify` -- Write `LLM_PRE_VERIFY_PROMPT` and `SUMMARY_PROMPT` in [prompts.ts](src/lib/prompts.ts).
+### Phase 2A: Unified Analysis Backend -- DONE
 
-**Files touched:** `types.ts`, `schemas.ts`, `prompts.ts`
+New `/api/analyze/route.ts` (unified, uses `generateObject()`). New `/api/analyze/summarize/route.ts`. New `pipeline-policy.ts`. Deleted `deep/route.ts`, `patterns/route.ts`, `structured-generate.ts`, `tavily.ts`.
 
-### Phase 2A: Unified Analysis Backend (1 engineer, ~2-3 hours)
-
-Depends on Phase 1. Parallelizable with Phase 2B.
-
-- `p2a-unified-route` -- Rewrite [deep/route.ts](src/app/api/analyze/deep/route.ts) as unified endpoint. Remove Tavily imports. Accept `runningSummary` + `mode`. Return `UnifiedAnalysis`.
-- `p2a-delete-patterns` -- Delete [patterns/route.ts](src/app/api/analyze/patterns/route.ts).
-- `p2a-adaptive-scheduler` -- Create `src/lib/adaptive-scheduler.ts` with `getAnalysisInterval(n)` and `shouldRunAnalysis(n, lastRanAt)`.
-- `p2a-summarize-route` -- Create `/api/analyze/summarize/route.ts` for progressive summary maintenance.
-
-**Files touched:** `deep/route.ts` (rewrite), `patterns/route.ts` (delete), new `adaptive-scheduler.ts`, new `summarize/route.ts`
-
-### Phase 2B: Verification Backend (1 engineer, ~2-3 hours)
+### Phase 2B: Verification Backend (1 engineer, ~2-3 hours) -- DONE
 
 Depends on Phase 1. Parallelizable with Phase 2A.
 
-- `p2b-exa-client` -- Create `src/lib/exa.ts` with Exa JS SDK, `verifyClaim()` using Answer endpoint + `outputSchema`. Run `bun add exa-js`.
-- `p2b-claim-queue` -- Create `src/lib/claim-queue.ts` with priority filter, fuzzy dedup, per-session cap.
-- `p2b-preverify-route` -- Create `/api/verify/pre-check/route.ts` for LLM-only claim verification.
-- `p2b-verify-route` -- Create `/api/verify/route.ts` orchestrating claim queue + pre-check + Exa fallback.
-- `p2b-remove-tavily` -- Delete `src/lib/tavily.ts`. Swap `TAVILY_API_KEY` for `EXA_API_KEY` in env.
+- `p2b-exa-client` -- Create `src/lib/exa.ts` with Exa JS SDK, `verifyClaim()` using Answer endpoint + `outputSchema` including confidence field. Confidence must come from the model, not citation counts. Run `bun add exa-js`. **DONE.**
+- `p2b-claim-queue` -- Create `src/lib/claim-queue.ts` for normalization, dedup, and cap only. Verifiability and priority are determined by LLM triage (`runClaimTriage` in `verification-core.ts`, driven by `CLAIM_TRIAGE_PROMPT`). No regex heuristics. **DONE.**
+- `p2b-claim-triage` -- Create LLM-driven claim classification via `CLAIM_TRIAGE_PROMPT` in `prompts.ts` and `runClaimTriage()` in `verification-core.ts`. Model decides verifiable/not and priority 0-5. **DONE.**
+- `p2b-preverify-route` -- Create `/api/verify/pre-check/route.ts` for LLM-only claim verification. **DONE.**
+- `p2b-verify-route` -- Create `/api/verify/route.ts` orchestrating triage -> queue -> pre-check -> Exa. Claims joined by `claimId`, not string matching. `uncertain` claims route to Exa; `unverifiable` claims are skipped (these are different). **DONE.**
+- `p2b-remove-tavily` -- Delete `src/lib/tavily.ts` and `src/lib/structured-generate.ts`. Swap `TAVILY_API_KEY` for `EXA_API_KEY` in env. **DONE.**
 
-**Files touched:** new `exa.ts`, new `claim-queue.ts`, new `verify/pre-check/route.ts`, new `verify/route.ts`, `tavily.ts` (delete)
+**Files touched:** new `exa.ts`, new `claim-queue.ts`, new `verification-core.ts`, new `verify/pre-check/route.ts`, new `verify/route.ts`, `tavily.ts` (deleted), `structured-generate.ts` (deleted)
 
-### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours)
+### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- NEXT
 
-Depends on Phase 2A + 2B (needs both API contracts stable). Sequential -- single engineer rewires the main page.
+Depends on Phase 2A + 2B (DONE). Sequential -- single engineer rewires the main page.
 
-- `p3-page-orchestration` -- Rewrite [page.tsx](src/app/page.tsx). Remove `viewMode`/Debug/tabs/`showArch`. Replace `triggerL2`+`triggerL3` with single `triggerAnalysis`. Replace `analysisResult` + `patternsResult` state with single `analysis: UnifiedAnalysis | null`. Add adaptive scheduler using `getAnalysisInterval`. Add sliding-window refs (`runningSummary`, `recentChunks`). Replace `voiceLastL2AtChunkCountRef` + `voiceLastL3AtChunkCountRef` with single `lastAnalysisAtRef`.
-- `p3-wire-verify` -- Wire verification into page.tsx. Add `verdicts: VerificationResult | null` state. Trigger at stop + every 10 min for long sessions + user-triggered via "Verify" button. Pass verdicts to TruthPanel.
+NOTE: `page.tsx` already talks to `/api/analyze` and the new pulse contract via a compatibility bridge (`legacy-analysis.ts`). The L2/L3 split is gone from the client. What remains for Phase 3:
 
-**Files touched:** `page.tsx` (major rewrite)
+- `p3-extract-hook` -- Extract `useTruthSession` hook from `page.tsx`. Move session state (`TruthSession`), segment management, pipeline status, and scheduling into the hook. Use `AnalysisSnapshot` directly instead of the `toAnalysisResult`/`toPatternsResult` shim.
+- `p3-pipeline-policy` -- Wire `pipeline-policy.ts` into `useTruthSession` for adaptive scheduling. Replace the current fixed chunk-count constants (`VOICE_ANALYSIS_FIRST_CHUNKS`, etc.) with policy-driven decisions.
+- `p3-page-shell` -- Reduce `page.tsx` to thin composition shell: remove `viewMode`/Debug/tabs/`showArch`, import `useTruthSession`, render TranscriptInput + TruthPanel. Target under 100 lines.
+- `p3-wire-verify` -- Wire `/api/verify` into `useTruthSession`. Add `verdicts: VerificationRun | null` state. Trigger at stop + periodically for long sessions + user-triggered Verify button. Pass verdicts to TruthPanel.
+
+**Files touched:** new `src/hooks/useTruthSession.ts`, `page.tsx` (major rewrite), delete `legacy-analysis.ts` once TruthPanel replaces old panels
 
 ### Phase 4: UI Rebuild (1-2 engineers, ~3-4 hours)
 
@@ -1058,7 +1065,7 @@ Depends on Phase 3 + 4 (page orchestration and TruthPanel must exist).
 
 - `p5-batch-mode` -- Add batch path in page.tsx: for paste/URL, skip L1 chunking, send full text to unified analysis with `mode: "batch"`. Extract claims from analysis output for verification. In TruthPanel, open analysis by default when batch result arrives.
 
-**Files touched:** `page.tsx` (add batch branch), `TruthPanel.tsx` (batch-open logic), `deep/route.ts` (batch mode handler)
+**Files touched:** `page.tsx` / `useTruthSession.ts` (add batch branch), `TruthPanel.tsx` (batch-open logic), `/api/analyze/route.ts` (batch mode already supported via `mode` param)
 
 ### Phase 6: Persistence & Scale (future)
 
@@ -1094,10 +1101,15 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 ### New files
 
-- **`src/lib/exa.ts`** -- Exa client with `verifyClaim()` using Answer endpoint + `outputSchema`
-- **`src/lib/claim-queue.ts`** -- Priority filter, fuzzy dedup, per-session cap
-- **`src/lib/adaptive-scheduler.ts`** -- `getAnalysisInterval(n)`, `shouldRunAnalysis(n, lastRanAt)`
-- **`src/app/api/verify/route.ts`** -- Orchestrates LLM pre-check then Exa web search
+- **`src/lib/exa.ts`** -- Exa client with `verifyClaim()` using Answer endpoint + `outputSchema` (confidence from model, not citation counts)
+- **`src/lib/claim-queue.ts`** -- Normalization, dedup, and per-session cap only (NO verifiability/priority heuristics -- that's LLM triage)
+- **`src/lib/verification-core.ts`** -- LLM claim triage (`runClaimTriage`), pre-verification (`runPreVerification`), and verification run assembly
+- **`src/lib/pipeline-policy.ts`** -- `getAnalysisIntervalMs(n)`, `shouldRunRollingAnalysis(n, lastRanAt, now)`, `shouldRunFullPass(elapsed, lastAt)`. Single module, two schedules. (NOT adaptive-scheduler.ts)
+- **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
+- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateObject()` for schema-validated structured output
+- **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 4 TruthPanel replaces them
+- **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
+- **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search
 - **`src/app/api/verify/pre-check/route.ts`** -- LLM-only claim verification
 - **`src/app/api/analyze/summarize/route.ts`** -- Progressive summary maintenance
 
@@ -1112,7 +1124,7 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 ### Modified files
 
-- **[src/app/api/analyze/deep/route.ts](src/app/api/analyze/deep/route.ts)** -- Becomes the unified analysis endpoint. Remove Tavily. Remove `claims` param. Accept `runningSummary`, `mode` (`streaming` | `full` | `batch`), and `segments` (with stable IDs). Return `AnalysisSnapshot` with provenance.
+- **[src/app/api/analyze/route.ts](src/app/api/analyze/route.ts)** -- Unified analysis endpoint (DONE). Replaced `deep/route.ts`. Accepts `segments`, `runningSummary`, `priorPulses`, `mode`. Returns `AnalysisSnapshot` with provenance.
 - **[src/app/page.tsx](src/app/page.tsx)** -- Becomes a thin composition shell. Remove all state management, Debug mode, tabs, `showArch`. Import `useTruthSession` hook. Render TranscriptInput + TruthPanel. Wire up hook. Done.
 - **[src/app/components/TranscriptInput.tsx](src/app/components/TranscriptInput.tsx)** -- Replace 3 demo buttons with single "Demo" button/dropdown. Remove voice timing copy. Simplify footer states.
 - **[src/lib/types.ts](src/lib/types.ts)** -- Add canonical domain model: `TruthSession`, `SourceAsset`, `TranscriptSegment`, `SegmentPulse`, `AnalysisSnapshot`, `SessionSummary`, `ClaimCandidate`, `ClaimVerdict`, `VerificationRun`. Add enriched fields: `emotionalAppeals`, `namedFallacies`, `cognitiveBiases`, `speakerIntent`, `quotedEvidence`, `flagRevisions`. Remove `TavilySource`, `PatternsResult`, `AnalysisResult`.
@@ -1121,8 +1133,10 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 ### Removed files
 
-- **`src/lib/tavily.ts`** -- Replaced by `src/lib/exa.ts`
-- **`src/app/api/analyze/patterns/route.ts`** -- Merged into unified analysis endpoint
+- **`src/lib/tavily.ts`** -- DELETED. Replaced by `src/lib/exa.ts`
+- **`src/lib/structured-generate.ts`** -- DELETED. Replaced by `src/lib/generate-object.ts` (uses AI SDK `generateObject()`)
+- **`src/app/api/analyze/deep/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
+- **`src/app/api/analyze/patterns/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
 - **`src/app/components/InsightsPanel.tsx`** -- Replaced by `TruthPanel.tsx`
 - **`src/app/components/AnalysisPanel.tsx`** -- Replaced by `TruthPanel.tsx`
 - **`src/app/components/PatternsPanel.tsx`** -- Replaced by `TruthPanel.tsx`
@@ -1134,13 +1148,17 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 ## Migration Path
 
-**Phase 1 (this PR):** Merge L2+L3 + adaptive scheduling + sliding window + UI radical simplification (TruthPanel). Remove Tavily, add Exa. Verification pipeline. This alone gets from less than 1 to ~100+ two-hour sessions/month on free tier, and from 9 components to 4.
+NOTE: This section uses a different numbering than the detailed phase breakdown above. The detailed Phases 0-6 in the todo list and execution plan are the canonical phases. This summary maps to them as follows:
 
-**Phase 2:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default).
+**Phases 0-2B (DONE):** Types, contracts, prompts. Unified `/api/analyze` endpoint (merged L2+L3). Scheduling via `pipeline-policy.ts`. Verification pipeline with LLM triage + Exa. Tavily removed. Legacy UI on compatibility bridge.
 
-**Phase 3 (Persistence):** Deferred. If needed during prototype, localStorage for session history. Backend persistence TBD when prototype stabilizes.
+**Phase 3 (NEXT):** Extract `useTruthSession` hook from `page.tsx`. Wire verification into client. Thin composition shell.
 
-**Phase 4 (Scale):** YouTube transcript ingestion for podcast URLs. Clip extraction (90s vertical format). Brave Search fallback. Tiered verification caps.
+**Phase 4:** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed. TranscriptInput simplification.
+
+**Phase 5:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default). Topic segmentation via Gemini. Post-analysis queries.
+
+**Phase 6:** YouTube transcript ingestion. Persistence. Share/clip extraction.
 
 ---
 

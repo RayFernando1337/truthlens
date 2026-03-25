@@ -9,24 +9,34 @@ const exaVerdictSchema = {
       type: "string",
       enum: ["supported", "refuted", "partially-supported", "unverifiable"],
     },
+    confidence: {
+      type: "number",
+      description:
+        "How confident you are in this verdict given the search results (0.0-1.0).",
+    },
     explanation: {
       type: "string",
       description: "A concise explanation grounded in the search results.",
     },
   },
-  required: ["verdict", "explanation"],
+  required: ["verdict", "confidence", "explanation"],
 } as const;
 
 let cachedClient: Exa | null = null;
 
-function isStructuredAnswer(
-  value: unknown
-): value is Pick<ClaimVerdict, "verdict" | "explanation"> {
+interface ExaVerdictAnswer {
+  verdict: ClaimVerdict["verdict"];
+  confidence: number;
+  explanation: string;
+}
+
+function isStructuredAnswer(value: unknown): value is ExaVerdictAnswer {
   if (!value || typeof value !== "object") return false;
 
   const candidate = value as Record<string, unknown>;
   return (
     typeof candidate.verdict === "string" &&
+    typeof candidate.confidence === "number" &&
     typeof candidate.explanation === "string"
   );
 }
