@@ -25,6 +25,10 @@ Use **bun** exclusively. Never npm, npx, or yarn.
 - Do not scatter contracts across route files
 - One shared `rhetoricalCoreSchema` reused by all analysis responses
 
+## Naming Conventions
+
+- Domain enum string literals (flag types, pattern types, verdict statuses) use **kebab-case**: `emotional-appeal`, `narrative-arc`, `cherry-picking`. Never camelCase or snake_case for these values.
+
 ## Architecture
 
 - Schema-validated JSON via Zod `generateObject()`. No freeform markdown in the pipeline.

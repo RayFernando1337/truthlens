@@ -2,7 +2,6 @@
 name: Pipeline Rearchitecture v2
 overview: Rearchitect TruthLens by merging L2+L3 into a single analysis pass inspired by scratchpad one-pass quality, fully decoupling verification, adding batch mode for paste/URL, and redesigning the UI as a "Truth Terminal" driven by user feedback priorities.
 todos:
-  # ── Phase 0: Tooling (DONE) ──────────────────────────────────────
   - id: p0-eslint
     content: "[Phase 0] Add max-lines:300 and max-lines-per-function:50 to eslint.config.mjs -- DONE"
     status: completed
@@ -12,23 +11,21 @@ todos:
   - id: p0-cursor-hooks
     content: "[Phase 0] Create .cursor/hooks.json with afterFileEdit lint hook + .cursor/hooks/lint.sh -- DONE"
     status: completed
-  # ── Phase 1: Types, Schemas, Prompts ─────────────────────────────
   - id: p1-types
     content: "[Phase 1] Define canonical domain model in types.ts: TruthSession, SourceAsset, TranscriptSegment (stable segmentId), SegmentPulse, AnalysisSnapshot (with provenance), SessionSummary, ClaimCandidate, ClaimVerdict, VerificationRun. Add enriched fields: emotionalAppeals[], namedFallacies[], cognitiveBiases[], speakerIntent, quotedEvidence, flagRevisions[]"
-    status: pending
+    status: completed
   - id: p1-schemas
     content: "[Phase 1] Define shared rhetoricalCoreSchema reused by all analysis responses. Replace analysisSchema + patternsSchema with analysisSnapshotSchema. Add verification, summary, and segment schemas"
-    status: pending
+    status: completed
   - id: p1-prompt-analysis
     content: "[Phase 1] Write merged ANALYSIS_SYSTEM_PROMPT in prompts.ts combining L2+L3 with scratchpad rhetorical analyzer structure (TL;DR, Core Points, What They Actually Want to Say, Evidence/Proof Table, Rhetorical Appeals, Unexamined Assumptions, Steelman, What's Missing) + patterns + trust trajectory"
-    status: pending
+    status: completed
   - id: p1-prompt-verify
     content: "[Phase 1] Write LLM_PRE_VERIFY_PROMPT and SUMMARY_PROMPT in prompts.ts. Summary prompt must track developing threads, not just compress."
-    status: pending
+    status: completed
   - id: p1-prompt-spoken
     content: "[Phase 1] Update L1_SYSTEM_PROMPT for spoken content: accept previous 2-3 chunks as context, calibrate for conversational hedging, add emotional-appeal/cognitive-bias/building flag types, raise confidence baseline for speech"
-    status: pending
-  # ── Phase 2A: Unified Analysis Backend (parallel with 2B) ───────
+    status: completed
   - id: p2a-unified-route
     content: "[Phase 2A] Rewrite deep/route.ts as unified /api/analyze endpoint. Accept segments (with segmentIds), runningSummary, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Remove Tavily."
     status: pending
@@ -44,7 +41,6 @@ todos:
   - id: p2a-summarize-route
     content: "[Phase 2A] Create /api/analyze/summarize/route.ts for progressive summary maintenance. Must track developing arguments (not just compress), note building threads."
     status: pending
-  # ── Phase 2B: Verification Backend (parallel with 2A) ───────────
   - id: p2b-exa-client
     content: "[Phase 2B] Create src/lib/exa.ts with Exa JS SDK, verifyClaim() using Answer endpoint + outputSchema for structured verdicts. Run bun add exa-js."
     status: pending
@@ -60,7 +56,6 @@ todos:
   - id: p2b-remove-tavily
     content: "[Phase 2B] Delete src/lib/tavily.ts, swap TAVILY_API_KEY for EXA_API_KEY in env"
     status: pending
-  # ── Phase 3: Frontend Orchestration ──────────────────────────────
   - id: p3-extract-hook
     content: "[Phase 3] Extract useTruthSession hook from page.tsx: session state (TruthSession), segment append/flush, request IDs with stale-response protection, pipeline status per stage, batch vs streaming policy, derived selectors for TruthPanel"
     status: pending
@@ -73,7 +68,6 @@ todos:
   - id: p3-wire-verify
     content: "[Phase 3] Wire verification into useTruthSession: verdicts state, trigger at stop + periodically for long sessions + user-triggered Verify button, pass to TruthPanel"
     status: pending
-  # ── Phase 4: UI Rebuild ──────────────────────────────────────────
   - id: p4-truth-panel
     content: "[Phase 4] Create TruthPanel.tsx -- sticky trust chart hero (EMA live score + analysis overlay), stats bar (claims/flagged/verified), flag feed (vertical, color-coded, clickable, chyron-style one-liners), progressive disclosure (Analysis/Verdicts/Patterns). Batch mode: analysis open by default."
     status: pending
@@ -83,7 +77,6 @@ todos:
   - id: p4-delete-old-components
     content: "[Phase 4] Delete InsightsPanel, AnalysisPanel, PatternsPanel, PulseFeed, ConfidenceMeter, ArchitectureDiagram"
     status: pending
-  # ── Phase 5: Batch Mode + Post-Analysis ──────────────────────────
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
     status: pending
@@ -96,7 +89,6 @@ todos:
   - id: p5-post-queries
     content: "[Phase 5] Post-analysis query support -- theme-based reorganization, targeted deep dives, cross-topic patterns via LLM queries against stored transcript"
     status: pending
-  # ── Phase 6: Scale (future) ──────────────────────────────────────
   - id: p6-youtube
     content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format using TopicSegment boundaries)"
     status: pending

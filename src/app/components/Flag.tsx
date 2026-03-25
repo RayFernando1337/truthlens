@@ -9,6 +9,9 @@ const FLAG_STYLES: Record<PulseFlag["type"], { bg: string; text: string }> = {
   attribution: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
   logic: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
   contradiction: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
+  "emotional-appeal": { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
+  "cognitive-bias": { bg: "bg-[#ffaa00]/15", text: "text-[#ffaa00]" },
+  building: { bg: "bg-[#444]/15", text: "text-[#666]" },
 };
 
 const FLAG_LABELS: Record<PulseFlag["type"], string> = {
@@ -18,6 +21,9 @@ const FLAG_LABELS: Record<PulseFlag["type"], string> = {
   attribution: "ATTRIBUTION",
   logic: "LOGIC",
   contradiction: "CONTRADICTION",
+  "emotional-appeal": "EMOTIONAL APPEAL",
+  "cognitive-bias": "COGNITIVE BIAS",
+  building: "DEVELOPING",
 };
 
 export default function Flag({ flag }: { flag: PulseFlag }) {

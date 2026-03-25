@@ -1,14 +1,60 @@
+// ─── Session ──────────────────────────────────────────
+
+export type SessionMode = "streaming" | "batch";
+export type InputKind = "voice" | "paste" | "url";
+
+export interface TruthSession {
+  sessionId: string;
+  mode: SessionMode;
+  inputKind: InputKind;
+  createdAt: number;
+  stoppedAt?: number;
+  sourceAsset?: SourceAsset;
+}
+
+export interface SourceAsset {
+  url: string;
+  title?: string;
+  excerpt?: string;
+}
+
+// ─── Transcript ───────────────────────────────────────
+
+export interface TranscriptSegment {
+  segmentId: string;
+  text: string;
+  index: number;
+  startMs?: number;
+  endMs?: number;
+}
+
+// ─── L1 Pulse ─────────────────────────────────────────
+
+export type PulseFlagType =
+  | "vague"
+  | "stat"
+  | "prediction"
+  | "attribution"
+  | "logic"
+  | "contradiction"
+  | "emotional-appeal"
+  | "cognitive-bias"
+  | "building";
+
 export interface PulseFlag {
-  type:
-    | "vague"
-    | "stat"
-    | "prediction"
-    | "attribution"
-    | "logic"
-    | "contradiction";
+  type: PulseFlagType;
   label: string;
 }
 
+export interface SegmentPulse {
+  segmentId: string;
+  claims: string[];
+  flags: PulseFlag[];
+  tone: string;
+  confidence: number;
+}
+
+/** @deprecated Use SegmentPulse keyed by segmentId. Kept for migration. */
 export interface PulseResult {
   claims: string[];
   flags: PulseFlag[];
@@ -16,15 +62,37 @@ export interface PulseResult {
   confidence: number;
 }
 
+/** @deprecated Will be replaced by TranscriptSegment + SegmentPulse. */
 export interface PulseEntry {
   id: string;
   chunk: string;
   result: PulseResult;
 }
 
+// ─── Enriched Analysis Fields ─────────────────────────
+
+export interface EmotionalAppeal {
+  type: string;
+  quote: string;
+  technique: string;
+}
+
+export interface NamedFallacy {
+  name: string;
+  quote: string;
+  impact: string;
+}
+
+export interface CognitiveBias {
+  name: string;
+  quote: string;
+  influence: string;
+}
+
 export interface EvidenceRow {
   claim: string;
   evidence: string;
+  quote?: string;
 }
 
 export interface Appeals {
@@ -33,6 +101,122 @@ export interface Appeals {
   logos: string;
 }
 
+export interface PatternEntry {
+  type: "escalation" | "contradiction" | "narrative-arc" | "cherry-picking";
+  description: string;
+}
+
+export interface FlagRevision {
+  segmentId: string;
+  originalType: PulseFlagType;
+  revisedType?: PulseFlagType;
+  action: "upgrade" | "downgrade" | "dismiss" | "reclassify";
+  reason: string;
+}
+
+// ─── Analysis Snapshot ────────────────────────────────
+
+export type AnalysisMode = "streaming" | "full" | "batch";
+
+export interface AnalysisSnapshot {
+  tldr: string;
+  corePoints: string[];
+  speakerIntent: string;
+  evidenceTable: EvidenceRow[];
+  appeals: Appeals;
+  emotionalAppeals: EmotionalAppeal[];
+  namedFallacies: NamedFallacy[];
+  cognitiveBiases: CognitiveBias[];
+  assumptions: string[];
+  steelman: string;
+  missing: string[];
+  patterns: PatternEntry[];
+  trustTrajectory: number[];
+  overallAssessment: string;
+  flagRevisions: FlagRevision[];
+  mode: AnalysisMode;
+  windowStart?: number;
+  windowEnd?: number;
+  segmentIds: string[];
+  timestamp: number;
+}
+
+// ─── Summary ──────────────────────────────────────────
+
+export interface SessionSummary {
+  text: string;
+  segmentsCovered: number;
+  lastSegmentId: string;
+  developingThreads: string[];
+  timestamp: number;
+}
+
+// ─── Verification ─────────────────────────────────────
+
+export interface ClaimCandidate {
+  claimId: string;
+  text: string;
+  segmentIds: string[];
+  priority: number;
+  dedupeKey: string;
+  verifiable: boolean;
+}
+
+export type ClaimVerdictResult =
+  | "supported"
+  | "refuted"
+  | "unverifiable"
+  | "partially-supported";
+
+export type ClaimVerdictSource = "llm-knowledge" | "exa-web" | "unverified";
+
+export interface ClaimVerdict {
+  claim: string;
+  verdict: ClaimVerdictResult;
+  confidence: number;
+  explanation: string;
+  source: ClaimVerdictSource;
+  citations?: Array<{ title: string; url: string; snippet: string }>;
+}
+
+export interface LLMPreVerdict {
+  claim: string;
+  verifiable: boolean;
+  confidence: number;
+  verdict: "supported" | "refuted" | "uncertain" | "not-verifiable";
+  explanation: string;
+  needsWebSearch: boolean;
+}
+
+export type VerificationStatus =
+  | "queued"
+  | "model-assessed"
+  | "web-verified"
+  | "skipped"
+  | "cap-exceeded";
+
+export interface VerificationRun {
+  sessionId: string;
+  status: VerificationStatus;
+  llmResolved: ClaimVerdict[];
+  webVerified: ClaimVerdict[];
+  unverified: string[];
+  stats: {
+    totalClaims: number;
+    llmChecked: number;
+    webSearched: number;
+    capped: number;
+  };
+  timestamp: number;
+}
+
+// ─── Pipeline ─────────────────────────────────────────
+
+export type PipelineStageStatus = "idle" | "running" | "success" | "error";
+
+// ─── Deprecated (remove after Phase 2A/2B migration) ──
+
+/** @deprecated Replaced by Exa verification in Phase 2B. */
 export interface TavilySource {
   query: string;
   title: string;
@@ -41,6 +225,7 @@ export interface TavilySource {
   score: number;
 }
 
+/** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
 export interface AnalysisResult {
   tldr: string;
   corePoints: string[];
@@ -50,19 +235,13 @@ export interface AnalysisResult {
   assumptions: string[];
   steelman: string;
   missing: string[];
-  /** Tavily sources that were searched to verify claims (populated by L2 route). */
   sources?: TavilySource[];
 }
 
-export interface PatternEntry {
-  type: "escalation" | "contradiction" | "narrative-arc" | "cherry-picking";
-  description: string;
-}
-
+/** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
 export interface PatternsResult {
   patterns: PatternEntry[];
   trustTrajectory: number[];
   overallAssessment: string;
-  /** Full-transcript rhetorical breakdown (merged into L3 since it has the complete context). */
   fullAnalysis?: AnalysisResult;
 }
