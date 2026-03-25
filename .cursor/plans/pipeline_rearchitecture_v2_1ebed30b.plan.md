@@ -96,10 +96,10 @@ todos:
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
     status: pending
   - id: p5-add-gemini
-    content: "[Phase 5] Add google/gemini provider -- bun add @ai-sdk/google, create src/lib/gemini.ts model config for topic segmentation (separate from Nemotron)"
+    content: "[Phase 5] Add Gemini Flash for topic segmentation via AI gateway -- use gateway('google/gemini-3-flash') from existing generate-object.ts pattern, no new dependency needed (separate model from Nemotron)"
     status: pending
   - id: p5-topic-segments
-    content: "[Phase 5] Create /api/analyze/segments/route.ts -- Gemini 2.5 Pro + generateObject() with TopicSegment[] Zod schema, adapted from transcribe-groq v4.0 prompt pattern (4-step: analyze, identify boundaries, draft labels, review coverage). Fires at stop or on demand."
+    content: "[Phase 5] Create /api/analyze/segments/route.ts -- Gemini 3 Flash via gateway('google/gemini-3-flash') + generateObject() with TopicSegment[] Zod schema, adapted from transcribe-groq v4.0 prompt pattern (4-step: analyze, identify boundaries, draft labels, review coverage). Fires at stop or on demand."
     status: pending
   - id: p5-post-queries
     content: "[Phase 5] Post-analysis query support -- theme-based reorganization, targeted deep dives, cross-topic patterns via LLM queries against stored transcript"
@@ -407,7 +407,7 @@ After the real-time session, the transcript becomes queryable raw material. This
 
 The topic segmentation approach is adapted from the proven timestamp generation system in [transcribe-groq](https://github.com/RayFernando1337/transcribe-groq/blob/main/convex/utils/timestamps.ts). That system uses:
 
-- `google('gemini-2.5-pro')` via Vercel AI SDK `generateObject()` with Zod schema validation
+- `google('gemini-2.5-pro')` via Vercel AI SDK `generateObject()` with Zod schema validation (TruthLens will use `gateway('google/gemini-3-flash')` instead -- the latest Flash model via AI gateway)
 - A 4-step prompt process: Initial Analysis -> Identify Key Moments -> Draft Descriptions -> Format & Review
 - Content-density over fixed numbers (~1 key moment every 5-10 minutes, flexible)
 - Coverage validation (ensures the full duration is analyzed)
@@ -415,7 +415,7 @@ The topic segmentation approach is adapted from the proven timestamp generation 
 
 For TruthLens, adapt as follows:
 
-- **Model:** `google('gemini-2.5-pro')` for the topic segmentation pass (Nemotron stays for L1/unified analysis). Gemini handles long transcripts well and thinking mode helps with structural reasoning.
+- **Model:** `gateway('google/gemini-3-flash')` for the topic segmentation pass (Nemotron stays for L1/unified analysis). Gemini 3 Flash is the latest frontier-class Flash model -- supports structured outputs, thinking, and 1M token context window. No new dependency needed; the AI gateway already powers the existing `generate-object.ts` helper. Gemini handles long transcripts well and thinking mode helps with structural reasoning.
 - **Input:** Full transcript (or high-fidelity progressive summary for sessions >30 min) + accumulated L1 flags with chunk indices
 - **Output schema (Zod-validated):**
 
@@ -457,7 +457,7 @@ interface TopicSegment {
 
 These segments become natural clip boundaries (Sterling's 90s vertical format), chapter markers for podcast navigation, and grouping keys for theme-based reorganization.
 
-**Implementation:** A dedicated `/api/analyze/segments/route.ts` that accepts the full transcript + L1 flag data. Fires once at session stop or on demand. Uses Gemini, not Nemotron. Returns `TopicSegment[]`. For the prototype, this is Phase 5 scope -- not needed for the real-time experience but critical for the post-analysis and clip/share use cases.
+**Implementation:** A dedicated `/api/analyze/segments/route.ts` that accepts the full transcript + L1 flag data. Fires once at session stop or on demand. Uses `gateway('google/gemini-3-flash')` (Gemini 3 Flash -- frontier-class performance, 1M context, structured output + thinking support), not Nemotron. No new package needed since the AI gateway is already in the project. Returns `TopicSegment[]`. For the prototype, this is Phase 5 scope -- not needed for the real-time experience but critical for the post-analysis and clip/share use cases.
 
 ### Batch Mode (Paste / URL)
 
@@ -1135,8 +1135,10 @@ Phase 4 kickoff is intentionally carrying the remaining user-facing tasks that w
 Depends on Phase 3 + 4 (page orchestration and TruthPanel must exist).
 
 - `p5-batch-mode` -- Add batch path in page.tsx: for paste/URL, skip L1 chunking, send full text to unified analysis with `mode: "batch"`. Extract claims from analysis output for verification. In TruthPanel, open analysis by default when batch result arrives.
+- `p5-add-gemini` -- Add Gemini 3 Flash for topic segmentation via `gateway('google/gemini-3-flash')`. No new dependency needed -- the AI gateway already powers the existing `generate-object.ts` helper. Create a `generateSegments()` function (or extend `generateTypedObject`) that uses the Gemini model with thinking enabled for structural reasoning over long transcripts.
+- `p5-topic-segments` -- Create `/api/analyze/segments/route.ts` using Gemini 3 Flash + `generateObject()` with `TopicSegment[]` Zod schema. Fires at stop or on demand.
 
-**Files touched:** `page.tsx` / `useTruthSession.ts` (add batch branch), `TruthPanel.tsx` (batch-open logic), `/api/analyze/route.ts` (batch mode already supported via `mode` param)
+**Files touched:** `page.tsx` / `useTruthSession.ts` (add batch branch), `TruthPanel.tsx` (batch-open logic), `/api/analyze/route.ts` (batch mode already supported via `mode` param), new `/api/analyze/segments/route.ts`, `generate-object.ts` (add Gemini model config)
 
 ### Phase 6: Persistence & Scale (future)
 
@@ -1180,7 +1182,7 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
 - **`src/lib/readiness-smoke-checks.ts`** -- Repeatable readiness validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`, including a quiet expected-failure check so stderr does not imply a false negative on green runs
 - **`src/lib/readiness-smoke-mocks.ts`** -- Shared test doubles used by the readiness smoke runner so contract checks do not depend on live model/web credentials
-- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` for schema-validated structured output
+- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` for schema-validated structured output. Phase 5 will add a Gemini model config using `gateway("google/gemini-3-flash")` for topic segmentation -- same gateway pattern, different model
 - **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 3/4 complete
 - **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
 - **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search, now with actionable error logging keyed by `sessionId`
@@ -1223,7 +1225,7 @@ NOTE: This section uses a different numbering than the detailed phase breakdown 
 
 **Phase 4 (NEXT):** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed, surfaces verification and manual verify controls, removes the `legacy-analysis.ts` bridge, and simplifies TranscriptInput.
 
-**Phase 5:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default). Topic segmentation via Gemini. Post-analysis queries.
+**Phase 5:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default). Topic segmentation via Gemini 3 Flash (`gateway('google/gemini-3-flash')` -- no new dependency). Post-analysis queries.
 
 **Phase 6:** YouTube transcript ingestion. Persistence. Share/clip extraction.
 
@@ -1263,7 +1265,7 @@ Explicitly defer these until core contracts are working:
 
 - Full backend persistence or database adoption
 - YouTube clip extraction and vertical format export
-- Gemini topic segmentation (Phase 5 -- after core pipeline is stable)
+- Gemini 3 Flash topic segmentation (Phase 5 -- after core pipeline is stable)
 - Elaborate event sourcing or job infrastructure
 - A forest of tiny service files before boundaries are proven
 - Any UI beyond TruthPanel + TranscriptInput (no settings, no onboarding, no account pages)
