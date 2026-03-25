@@ -310,7 +310,47 @@ v2 halves v1's analysis calls and reduces tokens further by eliminating the L3 `
 
 ### Design Philosophy
 
-"Less, but better." -- Dieter Rams
+The product is a **peripheral monitor**, not a report reader.
+
+During live use, the user stays focused on the speaker and gets three answers at a glance:
+
+1. Is trust rising or falling? (the line)
+2. What was the weird thing that just happened? (the latest flag)
+3. Was it rhetoric, a logic issue, or a factual claim? (the flag type)
+
+The UI should only ask for a click when the user wants more than that.
+
+**The 2-second glance test:** A user in the middle of a debate can look down for under 2 seconds and understand: (a) that last line was sketchy, (b) here is the exact reason, (c) I can ignore the rest until I want detail.
+
+### Disclosure Rules
+
+Always visible during streaming:
+
+- Trust chart (sticky, never leaves viewport)
+- Stats bar (claims / flagged / verified)
+- Latest flags (newest on top, above the fold)
+- Transcript with severity bars (left panel)
+
+Hidden by default during streaming (tap to expand):
+
+- Full rhetorical breakdown (TLDR, evidence, appeals, assumptions, steelman)
+- Full claim verdict list
+- Pattern taxonomy (escalation, contradiction, etc.)
+
+Open by default in batch mode (paste/URL result):
+
+- Deep analysis
+- Verdicts
+- Patterns
+
+**Critical constraint:** Deep analysis must never auto-expand during live listening. It competes with the conversation. Flags and the line are enough. Analysis is there when the user is ready, not when the system decides.
+
+### Visual Constraints
+
+- Flag rows must be one-line scannable: severity icon, flag type, quoted fragment, and why it matters.
+- The chart must update every chunk (~4s) so the screen never feels stale.
+- New flags must appear above the fold; users should not hunt for the latest weird moment.
+- The trust chart shape tells the story before any text is read -- the line going down IS the information.
 
 The current UI has **27-28 distinct interactive elements**, **~40 section templates**, and **two parallel view modes** (Insights + Debug with 3 tabs) that show the **same data in different layouts**. The TrustChart is rendered twice. The deep analysis appears in 3 places. There is a modal architecture diagram accessible from the header.
 
@@ -556,7 +596,7 @@ When the user taps "Verdicts" during or after streaming:
 +----------------------------------------------+
 ```
 
-Each verdict: icon (* supported, x refuted, ? unverified) + quoted claim + one-line explanation + source. Unverified claims get a "Verify" button for on-demand web search (uses Exa, counts against session cap).
+Each verdict: icon (\* supported, x refuted, ? unverified) + quoted claim + one-line explanation + source. Unverified claims get a "Verify" button for on-demand web search (uses Exa, counts against session cap).
 
 ---
 
@@ -673,7 +713,7 @@ Depends on all prior phases being stable.
 Time -->
 
 Engineer A:  [--- Phase 1 ---][--- Phase 2A ---][--- Phase 3 ----------][ Phase 5 ]
-Engineer B:                   [--- Phase 2B ---]                        
+Engineer B:                   [--- Phase 2B ---]
 Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 ```
 
