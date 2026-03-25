@@ -261,10 +261,14 @@ This is the "in the conversation" experience. Fast, lightweight, keeps up.
 
 The WHOLE transcript -- minute 1 + minute 2 + ... + minute N -- analyzed as a single unit. This is where the comprehensive rhetorical analysis gets its richest data because it can see the full arc, not just the recent window.
 
-**When it fires:**
-- At **stop** (recording ends or paste finishes)
-- Every **10 minutes** for long sessions (a 2-hour podcast gets ~12 full passes)
-- **On demand** (user taps "Full Analysis")
+**When it fires (adaptive cadence, dense early, expanding later):**
+- **45 seconds** (~11 chunks) -- first full pass. Even a TikTok-length clip gets the comprehensive treatment.
+- **3 minutes** (~45 chunks) -- second pass. Short clips and YouTube videos are fully analyzed.
+- **5 minutes** (~75 chunks) -- third pass. Sterling's "truth meter declining over 5 minutes" moment. The arc is now visible.
+- **10 minutes** (~150 chunks) -- fourth pass. Cross-topic patterns and gradual escalation emerge.
+- **Every 5 minutes after that** -- steady cadence for long sessions. A 2-hour podcast gets ~22 full passes total.
+- At **stop** (recording ends) -- final definitive pass.
+- **On demand** (user taps "Full Analysis").
 
 **What it does differently from the sliding window pass:**
 - Sees the complete argument arc -- setup, development, climax, conclusion
