@@ -243,32 +243,137 @@ L3 literally includes `fullAnalysis?: AnalysisResult` -- the entire L2 output ne
 
 ---
 
-## Design Decision 2: Two Modes
+## Design Decision 2: Three Analysis Horizons
 
-### Streaming Mode (Voice / Podcast)
+The transcript is a growing asset. Real-time analysis is one lens on it. The system should support three temporal horizons, each serving a different need.
 
-The real-time experience users love. Pipeline:
+### Horizon 1: Real-Time (Sliding Window)
+
+What's happening RIGHT NOW. The peripheral monitor. Updates every ~4 seconds.
 
 1. **L1 Pulse** -- every chunk (~4s), fast. Extracts claims, flags, tone, confidence. Feeds the live flag ticker and trust chart.
-2. **Unified Analysis** -- adaptive schedule (from v1 plan). Sliding window: last 20 chunks + running summary (~2,500 tokens constant). Produces full rhetorical breakdown + patterns.
-3. **Progressive Summary** -- background updates running summary as chunks accumulate.
-4. **Verification** -- triggered at stop + every 10 minutes + user-triggered.
+2. **Unified Analysis** -- adaptive schedule. Sliding window: last 20 chunks + running summary (~2,500 tokens constant). Produces rhetorical breakdown + patterns for the recent window.
+3. **Progressive Summary** -- background updates running summary as chunks accumulate. Tracks developing threads, not just compressing.
+
+This is the "in the conversation" experience. Fast, lightweight, keeps up.
+
+### Horizon 2: Full-Transcript Passes (Key Moments)
+
+The WHOLE transcript -- minute 1 + minute 2 + ... + minute N -- analyzed as a single unit. This is where the comprehensive rhetorical analysis gets its richest data because it can see the full arc, not just the recent window.
+
+**When it fires:**
+- At **stop** (recording ends or paste finishes)
+- Every **10 minutes** for long sessions (a 2-hour podcast gets ~12 full passes)
+- **On demand** (user taps "Full Analysis")
+
+**What it does differently from the sliding window pass:**
+- Sees the complete argument arc -- setup, development, climax, conclusion
+- Detects patterns that only emerge over time (gradual escalation across 30 minutes, a contradiction between minute 5 and minute 40)
+- Produces the definitive TLDR, evidence table, and steelman (not a partial view)
+- Generates the final trust trajectory with full context
+
+**Cost:** A full-transcript pass on a 2-hour podcast (~180k tokens) is expensive. Mitigation: use the progressive summary as input rather than raw transcript for sessions longer than ~30 minutes. The summary at that point is high-quality because it's been refined across many updates. For sessions under 30 minutes, send the full raw transcript.
+
+**The unified analysis endpoint handles both:** `mode: "streaming"` uses sliding window. `mode: "full"` uses full transcript or high-fidelity summary. `mode: "batch"` is for paste/URL (same as full, but no streaming preceded it).
+
+### Horizon 3: Post-Analysis Queries (On-Demand, After Session)
+
+After the real-time session, the transcript becomes queryable raw material. This is NOT real-time -- it happens when the user is reviewing, exploring, or preparing to share. No competition with the live conversation.
+
+**Topic segmentation / chapters:**
+- Detect where the conversation shifts topics. "Minutes 12-18: AI job displacement. Minutes 18-24: education system. Minutes 24-31: UBI proposal."
+- These become natural chapter markers AND clip boundaries (maps directly to Sterling's 90-second clip use case).
+- Implementation: a dedicated query to the LLM with the full transcript (or summary + chunk boundaries), asking for topic shifts with timestamps.
+
+**Theme-based reorganization:**
+- Regroup everything said about a specific topic across the entire session, regardless of chronological order. "Everything they said about AI, collected from minutes 3, 12-18, 27, and 45."
+- Useful for research, debate prep, and creating topic-specific summaries.
+
+**Targeted deep dives:**
+- "What rhetorical techniques did they use specifically when talking about jobs?"
+- "Show me every unsupported claim about economic data."
+- "Compare how they talked about AI in the first 10 minutes vs the last 10 minutes."
+- These are ad-hoc LLM queries against the stored transcript. The user asks, the LLM answers with evidence from the text.
+
+**Cross-topic pattern detection:**
+- "They used the same appeal-to-authority technique when discussing both AI and climate."
+- "Their confidence increased when discussing their own expertise but decreased on policy specifics."
+- These patterns only emerge when you look across topics, not within a single segment.
+
+**Implementation:** Post-analysis doesn't need a dedicated API route in Phase 1. The unified analysis endpoint with `mode: "full"` + a `query` parameter can handle targeted questions. Topic segmentation can be a separate lightweight call. For the prototype, the full transcript lives in client memory (no persistence needed). Future phases could add a "session review" UI surface.
 
 ### Batch Mode (Paste / URL)
 
-Currently paste mode awkwardly reuses the streaming pipeline (chunked L1 with fixed thresholds). The scratchpad proves we can do better:
+For articles and pasted text -- enters directly at Horizon 2 (full-transcript analysis):
 
 1. **Skip L1 chunking.** Send full text to the unified analysis endpoint with `mode: "batch"`.
 2. **One call** produces the complete rhetorical analysis (TLDR through steelman, plus patterns and trust trajectory).
 3. **Extract claims** from the analysis output (evidenceTable claims + any flagged items).
 4. **Run verification** once on all extracted claims.
-5. **Result:** Article analyzed in ~2 API calls (1 analysis + 1 verification batch) instead of the current N chunks x L1 + L2 at chunk 4 + L3 at chunk 6.
+5. **Result:** Article analyzed in ~2 API calls (1 analysis + 1 verification batch).
 
 For URLs, the existing `/api/extract/route.ts` handles article text extraction.
 
 ---
 
-## Design Decision 3: Verification Pipeline (kept from v1, refined)
+## Design Decision 3: Spoken Content Intelligence
+
+### The Problem
+
+Written text arrives pre-structured. Each paragraph is a complete thought. A 4-second chunk of polished prose is analyzable in isolation.
+
+Podcast speech is nothing like that. Speakers build up points across 2-3 minutes. They repeat the same idea in different words for emphasis. They hedge naturally ("I think," "it seems like"). They meander before landing. Two speakers co-construct claims through question-and-response. The point often only becomes clear minutes after the build-up started.
+
+If L1 treats each 4-second chunk as an independent unit, it will:
+- Flag conversational hedging as "vague" (false positive)
+- Flag a build-up chunk as incomplete when it's mid-thought (premature)
+- Miss that 3 "separate claims" are actually the same point repeated for emphasis (redundant flags)
+- Not understand that a question from the host + answer from the guest = one co-constructed claim
+
+This violates the soul: "the tool never cries wolf." Premature flags erode trust in the tool itself.
+
+### Solution: Three-Layer Context Awareness
+
+**L1 adjustments for spoken content:**
+- The L1 prompt must be calibrated for spoken register. Conversational hedging ("I think," "it seems like," "in my experience") is NOT vagueness -- it's natural speech. Only flag genuine epistemic vagueness where a concrete claim is made without specifics.
+- L1 should receive the **previous 2-3 chunks** as context (not just the current chunk), so it can recognize mid-thought continuations. Cost: ~200 extra tokens per call, negligible.
+- L1 confidence should be slightly higher by default for spoken content. The bar for flagging should be "genuinely problematic," not "imperfectly phrased."
+
+**Progressive summary tracks developing threads:**
+- The running summary maintained by `/api/analyze/summarize` should not just compress past content -- it should track **developing arguments** that aren't yet complete. Example: "Speaker is building toward a claim about AI job displacement. Setup phase, not yet landed."
+- This lets the unified analysis understand where the speaker is in their argument arc, not just what they've said.
+
+**Unified analysis retroactively re-evaluates L1 flags:**
+- When the unified analysis runs (every 16s-4min), it has the full sliding window. It can recognize that a "vague" flag from chunk 3 was actually the setup for a well-supported argument at chunk 8.
+- The analysis output should include a `flagRevisions` field: flags from earlier chunks that should be upgraded, downgraded, or dismissed in light of fuller context.
+- The UI updates the flag feed when revisions arrive -- a flag that was amber might turn green, or a "vague" might be reclassified as "building toward: [claim]."
+
+### Enriched Analysis Schema (from scratchpad review)
+
+Comparing the three scratchpad analysis frameworks against our current prompts reveals gaps:
+
+**What we should add to the unified analysis output (from scratchpad `route.ts` and rhetorical analyzer skill):**
+
+- `emotionalAppeals`: Array of named emotions with quotes -- not just "pathos" as a single blob, but `[{type: "fear", quote: "...", technique: "..."}]`. The 1-pass analysis identified Fear and Resentment as distinct techniques. Our current `appeals.pathos` string loses this granularity.
+- `namedFallacies`: Array of specific logical fallacy names with the triggering quote -- `[{name: "straw man", quote: "...", impact: "..."}]`. Our L1 "logic" flag doesn't name the fallacy. The 1-pass analysis said "Straw Man" with the exact text.
+- `cognitiveBiases`: Array of identified biases -- `[{name: "optimism bias", quote: "...", influence: "..."}]`. We don't extract these at all. The 1-pass analysis found this.
+- `speakerIntent`: The "What They Actually Want to Say" field from the rhetorical analyzer skill. Our current `underlyingStatement` is close but should be sharpened to match the skill's devastating one-liner format: *"I want you to feel X so you'll do Y."*
+- `quotedEvidence`: Every evidence table row should include the actual quote from the source, not just a paraphrase. The Yang analysis pinned every claim to specific words.
+
+**What L1 flags should capture (enhanced):**
+
+Current flag types: `vague`, `stat`, `prediction`, `attribution`, `logic`, `contradiction`
+
+Add:
+- `emotional-appeal`: Named emotional technique being used (fear, guilt, outrage, flattery)
+- `cognitive-bias`: Named bias detected (anchoring, false consensus, appeal to nature)
+- `building`: Not a problem flag -- an informational marker that the speaker is developing an argument not yet complete (for spoken content only)
+
+The `building` flag type is critical for podcasts. It tells the user "this isn't a red flag, this is a developing thought" and prevents premature alerts that erode trust in the tool.
+
+---
+
+## Design Decision 4: Verification Pipeline (kept from v1, refined)
 
 The original plan's two-phase verification is sound. Keeping it with one refinement: verification is now a completely independent pipeline, never mixed into the analysis prompt.
 
@@ -321,7 +426,7 @@ interface VerificationResult {
 
 ---
 
-## Design Decision 4: Adaptive Scheduling + Sliding Window (kept from v1)
+## Design Decision 5: Adaptive Scheduling + Sliding Window (kept from v1)
 
 Identical to v1 plan but now applied to ONE analysis endpoint instead of two separate L2/L3 endpoints. The math improves:
 
