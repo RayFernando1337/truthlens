@@ -91,7 +91,7 @@ todos:
     status: completed
   - id: p4-delete-old-components
     content: "[Phase 4] Delete InsightsPanel, AnalysisPanel, PatternsPanel, PulseFeed, ConfidenceMeter, ArchitectureDiagram"
-    status: in_progress
+    status: completed
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
     status: pending
