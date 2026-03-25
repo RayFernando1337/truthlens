@@ -3,6 +3,7 @@ import { verifyClaim } from "@/lib/exa";
 import { verificationRunSchema, verifyRequestSchema } from "@/lib/schemas";
 import {
   buildVerificationRun,
+  runClaimTriage,
   runPreVerification,
 } from "@/lib/verification-core";
 
@@ -31,8 +32,9 @@ export async function POST(req: Request) {
   }
 
   try {
+    const triagedClaims = await runClaimTriage(parsed.data.claims);
     const queue = prepareClaimQueue(
-      parsed.data.claims,
+      triagedClaims,
       parsed.data.maxWebSearches
     );
     const llmResults = await runPreVerification(queue.queued);

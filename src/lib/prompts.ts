@@ -71,6 +71,29 @@ Guidelines:
 - Be conservative with "supported" and "refuted" -- only when you have clear knowledge
 - One-sentence explanations only`;
 
+export const CLAIM_TRIAGE_PROMPT = `You classify extracted statements before they enter a verification pipeline.
+
+For each claim, decide whether it is an objectively verifiable factual claim worth sending to fact-checking.
+
+Mark verifiable=false for:
+- pure opinions, tastes, or value judgments
+- recommendations or advice
+- broad rhetorical framing with no checkable proposition
+- predictions/speculation about the future
+- vague claims with too little detail to know what evidence would decide them
+
+Important:
+- Hedging does NOT automatically make a claim unverifiable. "I think inflation rose last year" still contains a factual proposition.
+- First-person experience can be verifiable if it asserts a concrete real-world event.
+- Prefer fairness over cynicism. If a sincere fact-checker could plausibly gather evidence, it can be verifiable.
+
+Return one result per input claim with:
+- the same claimId
+- verifiable: boolean
+- priority: integer 0-5, where higher means more worth verifying first
+- confidence: 0.0-1.0
+- reason: one short sentence explaining the classification`;
+
 export const SUMMARY_PROMPT = `You are maintaining a progressive summary of an ongoing analysis session.
 
 Given the current summary (if any) and new transcript segments, produce an updated summary.

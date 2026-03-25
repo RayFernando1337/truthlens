@@ -10,23 +10,6 @@ function createDedupeKey(text: string): string {
   return normalizeText(text).replace(/[^a-z0-9\s]/g, "");
 }
 
-function isVerifiableClaim(text: string): boolean {
-  const normalized = normalizeText(text);
-  const excludedPatterns = [
-    /\bi think\b/,
-    /\bi believe\b/,
-    /\bin my opinion\b/,
-    /\bwill\b/,
-    /\bgoing to\b/,
-    /\bsoon\b/,
-    /\bpredict/i,
-    /\bprobably\b/,
-    /\bmight\b/,
-  ];
-
-  return !excludedPatterns.some((pattern) => pattern.test(normalized));
-}
-
 function scorePriority(text: string): number {
   let score = 1;
   if (/\d/.test(text)) score += 2;
@@ -45,7 +28,7 @@ function createClaimCandidate(
     segmentIds,
     priority: scorePriority(text),
     dedupeKey: createDedupeKey(text),
-    verifiable: isVerifiableClaim(text),
+    verifiable: true,
   };
 }
 

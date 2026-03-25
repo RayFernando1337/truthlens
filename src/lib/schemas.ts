@@ -172,6 +172,18 @@ export const llmPreVerdictBatchSchema = z.object({
   results: z.array(llmPreVerdictSchema),
 });
 
+export const claimTriageResultSchema = z.object({
+  claimId: z.string(),
+  verifiable: z.boolean(),
+  priority: z.number().int().min(0).max(5),
+  confidence: z.number().min(0).max(1),
+  reason: z.string(),
+});
+
+export const claimTriageBatchSchema = z.object({
+  results: z.array(claimTriageResultSchema),
+});
+
 export const claimVerdictSchema = z.object({
   claim: z.string(),
   verdict: z.enum(["supported", "refuted", "unverifiable", "partially-supported"]),
@@ -194,6 +206,8 @@ export const claimCandidateSchema = z.object({
   priority: z.number().min(0),
   dedupeKey: z.string(),
   verifiable: z.boolean(),
+  triageReason: z.string().optional(),
+  triageConfidence: z.number().min(0).max(1).optional(),
 });
 
 // ─── Summary ──────────────────────────────────────────

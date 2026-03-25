@@ -1,18 +1,43 @@
 import { model } from "@/lib/nemotron";
-import { LLM_PRE_VERIFY_PROMPT } from "@/lib/prompts";
+import { CLAIM_TRIAGE_PROMPT, LLM_PRE_VERIFY_PROMPT } from "@/lib/prompts";
 import { generateTypedObject } from "@/lib/generate-object";
-import { llmPreVerdictBatchSchema } from "@/lib/schemas";
+import {
+  claimTriageBatchSchema,
+  llmPreVerdictBatchSchema,
+} from "@/lib/schemas";
 import type {
   ClaimCandidate,
+  ClaimTriageResult,
   ClaimVerdict,
   LLMPreVerdict,
   VerificationRun,
 } from "@/lib/types";
 
+function buildClaimTriagePrompt(claims: ClaimCandidate[]): string {
+  return claims
+    .map((claim) => `${claim.claimId}: ${claim.text}`)
+    .join("\n");
+}
+
 function buildPreVerifyPrompt(claims: ClaimCandidate[]): string {
   return claims
     .map((claim, index) => `${index + 1}. ${claim.text}`)
     .join("\n");
+}
+
+function mergeTriageResult(
+  claim: ClaimCandidate,
+  triage: ClaimTriageResult | undefined
+): ClaimCandidate {
+  if (!triage) return claim;
+
+  return {
+    ...claim,
+    verifiable: triage.verifiable,
+    priority: triage.priority,
+    triageReason: triage.reason,
+    triageConfidence: triage.confidence,
+  };
 }
 
 function toClaimVerdict(result: LLMPreVerdict): ClaimVerdict {
@@ -41,6 +66,22 @@ export async function runPreVerification(
   });
 
   return results;
+}
+
+export async function runClaimTriage(
+  claims: ClaimCandidate[]
+): Promise<ClaimCandidate[]> {
+  if (claims.length === 0) return [];
+
+  const { results } = await generateTypedObject({
+    model,
+    schema: claimTriageBatchSchema,
+    system: CLAIM_TRIAGE_PROMPT,
+    prompt: `Claims to triage:\n${buildClaimTriagePrompt(claims)}`,
+  });
+  const triageById = new Map(results.map((result) => [result.claimId, result]));
+
+  return claims.map((claim) => mergeTriageResult(claim, triageById.get(claim.claimId)));
 }
 
 export function buildVerificationRun(params: {
