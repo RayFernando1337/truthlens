@@ -4,22 +4,22 @@ overview: Stabilize the rearchitecture foundations before Phase 2 by reconciling
 todos:
   - id: reconcile-plan
     content: Normalize the rearchitecture plan so names, endpoints, scheduling ownership, and phase boundaries are consistent.
-    status: pending
+    status: completed
   - id: align-contracts
     content: Make the canonical analysis, summary, and claim contracts match exactly between src/lib/types.ts and src/lib/schemas.ts.
-    status: pending
+    status: completed
   - id: align-l1
     content: Bring the pulse API, prompt contract, and severity policy into sync around TranscriptSegment context and neutral building semantics.
-    status: pending
+    status: completed
   - id: clear-lint-blockers
     content: Fix the current effect-hook lint errors that would destabilize continued architecture work.
-    status: pending
+    status: completed
   - id: build-phase2a
     content: Implement the unified /api/analyze and /api/analyze/summarize routes plus shared pipeline policy utilities.
-    status: pending
+    status: completed
   - id: build-phase2b
     content: Implement the claim queue, pre-check, Exa verification flow, and remove Tavily from the new architecture.
-    status: pending
+    status: completed
 isProject: false
 ---
 

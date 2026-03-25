@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AnalysisResult, TavilySource } from "@/lib/types";
+import type { AnalysisResult } from "@/lib/types";
 
 function Section({
   title,
@@ -142,55 +142,6 @@ export default function AnalysisPanel({
           ))}
         </ul>
       </Section>
-
-      {result.sources && result.sources.length > 0 && (
-        <Section title={`Tavily Sources (${result.sources.length})`} defaultOpen>
-          <div className="space-y-3">
-            {groupSourcesByQuery(result.sources).map(([query, items]) => (
-              <div key={query}>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#ffaa00]">
-                  Query: <span className="normal-case text-[#888]">{query}</span>
-                </p>
-                <div className="space-y-2">
-                  {items.map((s, j) => (
-                    <div
-                      key={j}
-                      className="border-l border-[#333] pl-3"
-                    >
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium text-[#4488ff] hover:underline"
-                      >
-                        {s.title || s.url}
-                      </a>
-                      <span className="ml-2 text-[9px] tabular-nums text-[#444]">
-                        score {Math.round(s.score * 100)}
-                      </span>
-                      <p className="mt-0.5 text-[11px] leading-relaxed text-[#666]">
-                        {s.snippet}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
     </div>
   );
-}
-
-function groupSourcesByQuery(
-  sources: TavilySource[]
-): [string, TavilySource[]][] {
-  const map = new Map<string, TavilySource[]>();
-  for (const s of sources) {
-    const list = map.get(s.query) ?? [];
-    list.push(s);
-    map.set(s.query, list);
-  }
-  return Array.from(map.entries());
 }

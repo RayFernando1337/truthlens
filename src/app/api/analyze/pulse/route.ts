@@ -1,23 +1,43 @@
 import { model } from "@/lib/nemotron";
-import { pulseSchema } from "@/lib/schemas";
+import { pulseRequestSchema, pulseSchema } from "@/lib/schemas";
 import { L1_SYSTEM_PROMPT } from "@/lib/prompts";
-import { generateStructured } from "@/lib/structured-generate";
+import { generateTypedObject } from "@/lib/generate-object";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { chunk } = await req.json();
+  let rawBody: unknown;
 
-  if (!chunk || typeof chunk !== "string") {
-    return Response.json({ error: "chunk is required" }, { status: 400 });
+  try {
+    rawBody = await req.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = pulseRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return Response.json({ error: parsed.error.message }, { status: 400 });
   }
 
   try {
-    const object = await generateStructured({
+    const previousContext = parsed.data.previousSegments
+      .map((segment) => `- [${segment.segmentId}] ${segment.text}`)
+      .join("\n");
+
+    const prompt = [
+      previousContext
+        ? `Previous segments for context:\n${previousContext}`
+        : "Previous segments for context:\nNone",
+      "",
+      `Current segment [${parsed.data.segment.segmentId}]:`,
+      parsed.data.segment.text,
+    ].join("\n");
+
+    const object = await generateTypedObject({
       model,
       schema: pulseSchema,
       system: L1_SYSTEM_PROMPT,
-      prompt: chunk,
+      prompt,
     });
 
     return Response.json(object);

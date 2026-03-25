@@ -2,14 +2,18 @@
 
 import { useState, useCallback, useRef, useMemo } from "react";
 import type {
+  AnalysisSnapshot,
   PulseEntry,
   PulseResult,
   AnalysisResult,
   PatternsResult,
+  SegmentPulse,
+  TranscriptSegment,
 } from "@/lib/types";
 import { severityFromPulse } from "@/lib/pulse-utils";
 import type { ChunkSeverity } from "@/lib/pulse-utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { toAnalysisResult, toPatternsResult } from "@/lib/legacy-analysis";
 import TranscriptInput from "./components/TranscriptInput";
 import PulseFeed from "./components/PulseFeed";
 import AnalysisPanel from "./components/AnalysisPanel";
@@ -20,17 +24,19 @@ import ArchitectureDiagram from "./components/ArchitectureDiagram";
 type Tab = "pulse" | "analysis" | "patterns";
 type ViewMode = "debug" | "insights";
 
-/** First deep analysis (L2) after this many voice chunks (~4s each). */
-const VOICE_L2_FIRST_CHUNKS = 8;
-/** Re-run L2 on every +N new chunks with full session so far (rolling tail). */
-const VOICE_L2_ROLL_EVERY = 4;
+const VOICE_ANALYSIS_FIRST_CHUNKS = 8;
+const VOICE_ANALYSIS_ROLL_EVERY = 4;
+const VOICE_FULL_FIRST_CHUNKS = 6;
+const VOICE_FULL_ROLL_EVERY = 4;
+const VOICE_FULL_STOP_MIN_CHUNKS = 4;
 
-/** First patterns (L3) after this many chunks — matches pasted-text (6) for demos. */
-const VOICE_L3_FIRST_CHUNKS = 6;
-/** Re-run L3 on every +N new chunks with full transcript (rolling tail). */
-const VOICE_L3_ROLL_EVERY = 4;
-/** On stop: still run L3 if you have at least this many chunks and no pass yet / final flush. */
-const VOICE_L3_STOP_MIN_CHUNKS = 4;
+function makeSegment(
+  segmentId: string,
+  text: string,
+  index: number
+): TranscriptSegment {
+  return { segmentId, text, index };
+}
 
 function splitIntoChunks(text: string): string[] {
   const paragraphs = text
@@ -83,26 +89,28 @@ export default function Home() {
   const [voiceTranscript, setVoiceTranscript] = useState<string[]>([]);
 
   const abortRef = useRef(false);
-  const voiceChunksRef = useRef<string[]>([]);
-  const voiceClaimsRef = useRef<string[]>([]);
+  const voiceSegmentsRef = useRef<TranscriptSegment[]>([]);
+  const pulseResultsRef = useRef<SegmentPulse[]>([]);
   const voiceChunkIdRef = useRef(0);
-  /** Chunk count when L2 last completed a request (0 = not yet). */
-  const voiceLastL2AtChunkCountRef = useRef(0);
-  /** Chunk count when L3 last completed a request (0 = not yet). */
-  const voiceLastL3AtChunkCountRef = useRef(0);
+  const voiceLastAnalysisAtChunkCountRef = useRef(0);
+  const voiceLastFullAtChunkCountRef = useRef(0);
 
-  const triggerL2 = useCallback(
-    async (chunks: string[], allClaims: string[]) => {
+  const triggerStreamingAnalysis = useCallback(
+    async (segments: TranscriptSegment[], priorPulses: SegmentPulse[]) => {
       setIsAnalysisLoading(true);
       try {
-        const res = await fetch("/api/analyze/deep", {
+        const res = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chunks, claims: allClaims }),
+          body: JSON.stringify({
+            mode: "streaming",
+            segments,
+            priorPulses,
+          }),
         });
         if (res.ok) {
-          const data: AnalysisResult = await res.json();
-          setAnalysisResult(data);
+          const data: AnalysisSnapshot = await res.json();
+          setAnalysisResult(toAnalysisResult(data));
         }
       } finally {
         setIsAnalysisLoading(false);
@@ -111,22 +119,30 @@ export default function Home() {
     []
   );
 
-  const triggerL3 = useCallback(async (chunks: string[]) => {
-    setIsPatternsLoading(true);
-    try {
-      const res = await fetch("/api/analyze/patterns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: chunks.join("\n\n") }),
-      });
-      if (res.ok) {
-        const data: PatternsResult = await res.json();
-        setPatternsResult(data);
+  const triggerFullAnalysis = useCallback(
+    async (
+      segments: TranscriptSegment[],
+      mode: "full" | "batch" = "full",
+      priorPulses?: SegmentPulse[]
+    ) => {
+      setIsPatternsLoading(true);
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, segments, priorPulses }),
+        });
+        if (res.ok) {
+          const data: AnalysisSnapshot = await res.json();
+          setAnalysisResult(toAnalysisResult(data));
+          setPatternsResult(toPatternsResult(data));
+        }
+      } finally {
+        setIsPatternsLoading(false);
       }
-    } finally {
-      setIsPatternsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // --- Voice chunk handler: runs L1 on each transcribed chunk ---
   const handleVoiceChunk = useCallback(
@@ -135,7 +151,10 @@ export default function Home() {
       setActiveTab("pulse");
 
       const chunkId = voiceChunkIdRef.current++;
-      voiceChunksRef.current.push(text);
+      const segmentId = `voice-${chunkId}`;
+      const previousSegments = voiceSegmentsRef.current.slice(-3);
+      const segment = makeSegment(segmentId, text, voiceSegmentsRef.current.length);
+      voiceSegmentsRef.current.push(segment);
 
       setProcessingChunk(text);
 
@@ -143,18 +162,18 @@ export default function Home() {
         const res = await fetch("/api/analyze/pulse", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chunk: text }),
+          body: JSON.stringify({ segment, previousSegments }),
         });
 
         if (res.ok) {
           const result: PulseResult = await res.json();
           const entry: PulseEntry = {
-            id: `voice-${chunkId}`,
+            id: segmentId,
             chunk: text,
             result,
           };
           setPulseEntries((prev) => [...prev, entry]);
-          voiceClaimsRef.current.push(...result.claims);
+          pulseResultsRef.current.push({ ...result, segmentId });
         }
       } catch {
         // continue listening
@@ -162,35 +181,33 @@ export default function Home() {
 
       setProcessingChunk(null);
 
-      const n = voiceChunksRef.current.length;
-      const allChunks = [...voiceChunksRef.current];
-      const allClaims = [...voiceClaimsRef.current];
+      const n = voiceSegmentsRef.current.length;
+      const allSegments = [...voiceSegmentsRef.current];
+      const priorPulses = [...pulseResultsRef.current];
 
-      // L2 rolling tail: first at VOICE_L2_FIRST_CHUNKS, then every +VOICE_L2_ROLL_EVERY chunks (full session).
-      if (n >= VOICE_L2_FIRST_CHUNKS) {
-        const lastL2 = voiceLastL2AtChunkCountRef.current;
-        if (lastL2 === 0) {
-          voiceLastL2AtChunkCountRef.current = n;
-          void triggerL2(allChunks, allClaims);
-        } else if (n - lastL2 >= VOICE_L2_ROLL_EVERY) {
-          voiceLastL2AtChunkCountRef.current = n;
-          void triggerL2(allChunks, allClaims);
+      if (n >= VOICE_ANALYSIS_FIRST_CHUNKS) {
+        const lastAnalysis = voiceLastAnalysisAtChunkCountRef.current;
+        if (lastAnalysis === 0) {
+          voiceLastAnalysisAtChunkCountRef.current = n;
+          void triggerStreamingAnalysis(allSegments, priorPulses);
+        } else if (n - lastAnalysis >= VOICE_ANALYSIS_ROLL_EVERY) {
+          voiceLastAnalysisAtChunkCountRef.current = n;
+          void triggerStreamingAnalysis(allSegments, priorPulses);
         }
       }
 
-      // L3 rolling tail: first at VOICE_L3_FIRST_CHUNKS, then every +VOICE_L3_ROLL_EVERY chunks (full transcript).
-      if (n >= VOICE_L3_FIRST_CHUNKS) {
-        const lastL3 = voiceLastL3AtChunkCountRef.current;
-        if (lastL3 === 0) {
-          voiceLastL3AtChunkCountRef.current = n;
-          void triggerL3(allChunks);
-        } else if (n - lastL3 >= VOICE_L3_ROLL_EVERY) {
-          voiceLastL3AtChunkCountRef.current = n;
-          void triggerL3(allChunks);
+      if (n >= VOICE_FULL_FIRST_CHUNKS) {
+        const lastFull = voiceLastFullAtChunkCountRef.current;
+        if (lastFull === 0) {
+          voiceLastFullAtChunkCountRef.current = n;
+          void triggerFullAnalysis(allSegments, "full", priorPulses);
+        } else if (n - lastFull >= VOICE_FULL_ROLL_EVERY) {
+          voiceLastFullAtChunkCountRef.current = n;
+          void triggerFullAnalysis(allSegments, "full", priorPulses);
         }
       }
     },
-    [triggerL2, triggerL3]
+    [triggerFullAnalysis, triggerStreamingAnalysis]
   );
 
   const { isRecording, error: voiceError, startRecording, stopRecording } =
@@ -214,11 +231,11 @@ export default function Home() {
     setAnalysisResult(null);
     setPatternsResult(null);
     setVoiceTranscript([]);
-    voiceChunksRef.current = [];
-    voiceClaimsRef.current = [];
+    voiceSegmentsRef.current = [];
+    pulseResultsRef.current = [];
     voiceChunkIdRef.current = 0;
-    voiceLastL2AtChunkCountRef.current = 0;
-    voiceLastL3AtChunkCountRef.current = 0;
+    voiceLastAnalysisAtChunkCountRef.current = 0;
+    voiceLastFullAtChunkCountRef.current = 0;
     setActiveTab("pulse");
     startRecording();
   }, [startRecording]);
@@ -226,26 +243,26 @@ export default function Home() {
   const handleStopRecording = useCallback(async () => {
     await stopRecording();
 
-    const n = voiceChunksRef.current.length;
-    const chunks = [...voiceChunksRef.current];
-    const claims = [...voiceClaimsRef.current];
+    const n = voiceSegmentsRef.current.length;
+    const segments = [...voiceSegmentsRef.current];
+    const priorPulses = [...pulseResultsRef.current];
 
-    // L2: short sessions that never hit the rolling threshold
-    if (n >= 5 && n < VOICE_L2_FIRST_CHUNKS) {
-      void triggerL2(chunks, claims);
-      voiceLastL2AtChunkCountRef.current = n;
-    } else if (n >= VOICE_L2_FIRST_CHUNKS && n > voiceLastL2AtChunkCountRef.current) {
-      // Final flush so the last partial window is included
-      voiceLastL2AtChunkCountRef.current = n;
-      void triggerL2(chunks, claims);
+    if (n >= 5 && n < VOICE_ANALYSIS_FIRST_CHUNKS) {
+      void triggerStreamingAnalysis(segments, priorPulses);
+      voiceLastAnalysisAtChunkCountRef.current = n;
+    } else if (
+      n >= VOICE_ANALYSIS_FIRST_CHUNKS &&
+      n > voiceLastAnalysisAtChunkCountRef.current
+    ) {
+      voiceLastAnalysisAtChunkCountRef.current = n;
+      void triggerStreamingAnalysis(segments, priorPulses);
     }
 
-    // L3: enough material and transcript grew since last patterns pass (or first-time short stop)
-    if (n >= VOICE_L3_STOP_MIN_CHUNKS && n > voiceLastL3AtChunkCountRef.current) {
-      voiceLastL3AtChunkCountRef.current = n;
-      void triggerL3(chunks);
+    if (n >= VOICE_FULL_STOP_MIN_CHUNKS && n > voiceLastFullAtChunkCountRef.current) {
+      voiceLastFullAtChunkCountRef.current = n;
+      void triggerFullAnalysis(segments, "full", priorPulses);
     }
-  }, [stopRecording, triggerL2, triggerL3]);
+  }, [stopRecording, triggerFullAnalysis, triggerStreamingAnalysis]);
 
   // --- Text paste handler (existing) ---
   const handleAnalyze = useCallback(
@@ -255,68 +272,85 @@ export default function Home() {
       setAnalysisResult(null);
       setPatternsResult(null);
       setVoiceTranscript([]);
+      voiceSegmentsRef.current = [];
+      pulseResultsRef.current = [];
       setIsProcessing(true);
       setActiveTab("pulse");
 
       const chunks = splitIntoChunks(text);
       setChunkProgress({ current: 0, total: chunks.length });
 
-      const processedChunks: string[] = [];
-      const allClaims: string[] = [];
+      const segments = chunks.map((chunk, index) =>
+        makeSegment(`chunk-${index}`, chunk, index)
+      );
+      const processedSegments: TranscriptSegment[] = [];
+      pulseResultsRef.current = [];
 
-      for (let i = 0; i < chunks.length; i++) {
+      for (let i = 0; i < segments.length; i++) {
         if (abortRef.current) break;
 
-        const chunk = chunks[i];
-        setProcessingChunk(chunk);
-        setChunkProgress({ current: i + 1, total: chunks.length });
+        const segment = segments[i];
+        const previousSegments = processedSegments.slice(-3);
+        setProcessingChunk(segment.text);
+        setChunkProgress({ current: i + 1, total: segments.length });
 
         try {
           const res = await fetch("/api/analyze/pulse", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chunk }),
+            body: JSON.stringify({ segment, previousSegments }),
           });
 
           if (res.ok) {
             const result: PulseResult = await res.json();
             const entry: PulseEntry = {
-              id: `chunk-${i}`,
-              chunk,
+              id: segment.segmentId,
+              chunk: segment.text,
               result,
             };
             setPulseEntries((prev) => [...prev, entry]);
-            allClaims.push(...result.claims);
+            pulseResultsRef.current.push({
+              ...result,
+              segmentId: segment.segmentId,
+            });
           }
         } catch {
           // continue processing remaining chunks
         }
 
-        processedChunks.push(chunk);
+        processedSegments.push(segment);
 
-        if (processedChunks.length === 4) {
-          triggerL2(processedChunks, allClaims);
+        if (processedSegments.length === 4) {
+          void triggerStreamingAnalysis(processedSegments, [...pulseResultsRef.current]);
         }
 
-        if (processedChunks.length === 6) {
-          triggerL3(processedChunks);
+        if (processedSegments.length === 6) {
+          void triggerFullAnalysis(
+            processedSegments,
+            "full",
+            [...pulseResultsRef.current]
+          );
         }
       }
 
-      if (processedChunks.length >= 3 && processedChunks.length < 4) {
-        triggerL2(processedChunks, allClaims);
+      if (processedSegments.length >= 3 && processedSegments.length < 4) {
+        void triggerStreamingAnalysis(processedSegments, [...pulseResultsRef.current]);
       }
-      if (processedChunks.length >= 6) {
+      if (processedSegments.length >= 6) {
         // already triggered
-      } else if (processedChunks.length >= 2) {
-        triggerL3(processedChunks);
+      } else if (processedSegments.length >= 2) {
+        void triggerFullAnalysis(
+          processedSegments,
+          "full",
+          [...pulseResultsRef.current]
+        );
       }
 
       setProcessingChunk(null);
       setIsProcessing(false);
       setChunkProgress(null);
     },
-    [triggerL2, triggerL3]
+    [triggerFullAnalysis, triggerStreamingAnalysis]
   );
 
   // --- URL fetch handler ---
@@ -327,6 +361,8 @@ export default function Home() {
       setAnalysisResult(null);
       setPatternsResult(null);
       setVoiceTranscript([]);
+      voiceSegmentsRef.current = [];
+      pulseResultsRef.current = [];
 
       try {
         const res = await fetch("/api/extract", {

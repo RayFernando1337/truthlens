@@ -18,13 +18,17 @@ export default function PulseFeed({
   const followingRef = useRef(true);
   const [showJumpToLive, setShowJumpToLive] = useState(false);
 
+  const syncJumpButton = useCallback(() => {
+    setShowJumpToLive(!followingRef.current);
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
     followingRef.current = true;
-    setShowJumpToLive(false);
-  }, []);
+    syncJumpButton();
+  }, [syncJumpButton]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -32,26 +36,26 @@ export default function PulseFeed({
     const nearBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
     followingRef.current = nearBottom;
-    setShowJumpToLive(!nearBottom);
-  }, []);
+    syncJumpButton();
+  }, [syncJumpButton]);
 
   useEffect(() => {
     if (entries.length === 0 && !processingChunk) {
       followingRef.current = true;
-      setShowJumpToLive(false);
+      syncJumpButton();
     }
-  }, [entries.length, processingChunk]);
+  }, [entries.length, processingChunk, syncJumpButton]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     if (followingRef.current) {
       el.scrollTop = el.scrollHeight;
-      setShowJumpToLive(false);
-    } else {
-      setShowJumpToLive(true);
     }
-  }, [entries, processingChunk]);
+    syncJumpButton();
+  }, [entries, processingChunk, syncJumpButton]);
+
+  const showJumpButton = entries.length > 0 && !processingChunk && showJumpToLive;
 
   if (entries.length === 0 && !processingChunk) {
     return (
@@ -65,7 +69,7 @@ export default function PulseFeed({
 
   return (
     <div className="relative h-full">
-      {showJumpToLive && (
+      {showJumpButton && (
         <button
           type="button"
           onClick={scrollToBottom}

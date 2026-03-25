@@ -9,6 +9,13 @@ const HIGH_SEVERITY_TYPES: ReadonlySet<PulseFlag["type"]> = new Set([
   "attribution",
 ]);
 
+const WARNING_TYPES: ReadonlySet<PulseFlag["type"]> = new Set([
+  "vague",
+  "prediction",
+  "emotional-appeal",
+  "cognitive-bias",
+]);
+
 /**
  * Visual severity for transcript borders / pulse strip dots.
  * ok = no flags, warn = vague/prediction, flag = strong skepticism signals
@@ -16,7 +23,8 @@ const HIGH_SEVERITY_TYPES: ReadonlySet<PulseFlag["type"]> = new Set([
 export function severityFromFlags(flags: PulseFlag[]): ChunkSeverity {
   if (flags.length === 0) return "ok";
   if (flags.some((f) => HIGH_SEVERITY_TYPES.has(f.type))) return "flag";
-  return "warn";
+  if (flags.some((f) => WARNING_TYPES.has(f.type))) return "warn";
+  return "ok";
 }
 
 export function severityFromPulse(result: PulseResult | undefined): ChunkSeverity {

@@ -23,25 +23,24 @@ const TIERS = [
   },
   {
     id: "l2",
-    label: "L2 · Deep",
+    label: "L2 · Unified Analysis",
     model: "Nemotron 3 Super 49B",
     protocol: "REST",
-    endpoint: "/api/analyze/deep",
+    endpoint: "/api/analyze",
     color: "#ffaa00",
-    desc: "Rhetorical breakdown + Tavily search verification",
+    desc: "Sliding-window rhetorical analysis with trust trajectory",
     trigger: "8 chunks, then every +4",
     latency: "5-15s",
-    search: "Tavily (advanced depth, top 3 claims)",
   },
   {
     id: "l3",
-    label: "L3 · Full Analysis",
+    label: "L3 · Summary + Verify",
     model: "Nemotron 3 Super 49B",
     protocol: "REST",
-    endpoint: "/api/analyze/patterns",
+    endpoint: "/api/analyze/summarize + /api/verify",
     color: "#ff4400",
-    desc: "Full-transcript rhetorical analysis + pattern detection",
-    trigger: "6 chunks, then every +4",
+    desc: "Rolling session summary plus Exa-backed verification",
+    trigger: "Periodic + on stop",
     latency: "10-30s",
   },
 ] as const;
@@ -50,8 +49,8 @@ const STACK = [
   { label: "Frontend", value: "Next.js 16 + Vercel AI SDK" },
   { label: "Inference", value: "Nemotron 3 Super on Nebius Token Factory" },
   { label: "ASR", value: "NVIDIA Riva NIM via gRPC" },
-  { label: "Search", value: "Tavily (agentic search)" },
-  { label: "Structured Output", value: "Zod schema validation + retry" },
+  { label: "Search", value: "Exa Answer + citations" },
+  { label: "Structured Output", value: "AI SDK generateObject + Zod" },
 ];
 
 export default function ArchitectureDiagram({
@@ -79,7 +78,7 @@ export default function ArchitectureDiagram({
           TruthLens Architecture
         </h2>
         <p className="mt-1 text-[11px] text-[#666]">
-          3-tier concurrent analysis &middot; 1 model &middot; 2 API keys
+          Unified analysis pipeline &middot; structured outputs &middot; verification split out
         </p>
 
         {/* Flow diagram */}
@@ -142,11 +141,6 @@ export default function ArchitectureDiagram({
                     </span>
                   </div>
                 )}
-                {"search" in tier && (
-                  <p className="mt-1.5 border-t border-[#222] pt-1.5 text-[9px] text-[#ffaa00]">
-                    + {tier.search}
-                  </p>
-                )}
               </div>
             ))}
           </div>
@@ -176,8 +170,10 @@ export default function ArchitectureDiagram({
             {[
               "POST /api/transcribe",
               "POST /api/analyze/pulse",
-              "POST /api/analyze/deep",
-              "POST /api/analyze/patterns",
+              "POST /api/analyze",
+              "POST /api/analyze/summarize",
+              "POST /api/verify/pre-check",
+              "POST /api/verify",
               "POST /api/extract",
             ].map((route) => (
               <span
@@ -192,7 +188,7 @@ export default function ArchitectureDiagram({
 
         <p className="mt-5 text-[10px] text-[#444]">
           All tiers run concurrently. One model (Nemotron 3 Super 49B on Nebius
-          Token Factory). ASR via NVIDIA Riva NIM. Search via Tavily. Two API keys total.
+          Token Factory). ASR via NVIDIA Riva NIM. Web verification via Exa.
         </p>
       </div>
     </div>

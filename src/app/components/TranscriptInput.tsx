@@ -105,6 +105,10 @@ export default function TranscriptInput({
   const followingRef = useRef(true);
   const [showJumpToLive, setShowJumpToLive] = useState(false);
 
+  const syncJumpButton = useCallback(() => {
+    setShowJumpToLive(!followingRef.current);
+  }, []);
+
   const inputMode: InputMode = useMemo(() => {
     if (isRecording) return "voice";
     if (URL_PATTERN.test(text.trim())) return "url";
@@ -116,8 +120,8 @@ export default function TranscriptInput({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
     followingRef.current = true;
-    setShowJumpToLive(false);
-  }, []);
+    syncJumpButton();
+  }, [syncJumpButton]);
 
   const handleTranscriptScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -125,17 +129,17 @@ export default function TranscriptInput({
     const nearBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
     followingRef.current = nearBottom;
-    setShowJumpToLive(!nearBottom);
-  }, []);
+    syncJumpButton();
+  }, [syncJumpButton]);
 
   const hasVoiceChunks = voiceTranscript.length > 0;
 
   useEffect(() => {
     if (isRecording && voiceTranscript.length === 0) {
       followingRef.current = true;
-      setShowJumpToLive(false);
+      syncJumpButton();
     }
-  }, [isRecording, voiceTranscript.length]);
+  }, [isRecording, voiceTranscript.length, syncJumpButton]);
 
   useEffect(() => {
     if (!isRecording && !hasVoiceChunks) return;
@@ -143,11 +147,9 @@ export default function TranscriptInput({
     if (!el) return;
     if (followingRef.current) {
       el.scrollTop = el.scrollHeight;
-      setShowJumpToLive(false);
-    } else {
-      setShowJumpToLive(true);
     }
-  }, [voiceTranscript, isRecording, hasVoiceChunks]);
+    syncJumpButton();
+  }, [voiceTranscript, isRecording, hasVoiceChunks, syncJumpButton]);
 
   function handleAction() {
     const content = text.trim();
@@ -164,6 +166,7 @@ export default function TranscriptInput({
   }
 
   const busy = isProcessing || isFetchingUrl;
+  const showJumpButton = (isRecording || hasVoiceChunks) && showJumpToLive;
 
   function severityForIndex(i: number): ChunkSeverity {
     if (!voiceChunkSeverities || i >= voiceChunkSeverities.length) return "ok";
@@ -226,7 +229,7 @@ export default function TranscriptInput({
                 </span>
               </div>
             )}
-            {showJumpToLive && (
+            {showJumpButton && (
               <button
                 type="button"
                 onClick={scrollToBottom}

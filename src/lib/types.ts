@@ -54,6 +54,11 @@ export interface SegmentPulse {
   confidence: number;
 }
 
+export interface PulseRequest {
+  segment: TranscriptSegment;
+  previousSegments?: TranscriptSegment[];
+}
+
 /** @deprecated Use SegmentPulse keyed by segmentId. Kept for migration. */
 export interface PulseResult {
   claims: string[];
@@ -141,6 +146,13 @@ export interface AnalysisSnapshot {
   timestamp: number;
 }
 
+export interface AnalysisRequest {
+  mode: AnalysisMode;
+  segments: TranscriptSegment[];
+  runningSummary?: SessionSummary;
+  priorPulses?: SegmentPulse[];
+}
+
 // ─── Summary ──────────────────────────────────────────
 
 export interface SessionSummary {
@@ -149,6 +161,11 @@ export interface SessionSummary {
   lastSegmentId: string;
   developingThreads: string[];
   timestamp: number;
+}
+
+export interface SummaryRequest {
+  currentSummary?: SessionSummary;
+  segments: TranscriptSegment[];
 }
 
 // ─── Verification ─────────────────────────────────────
@@ -160,6 +177,20 @@ export interface ClaimCandidate {
   priority: number;
   dedupeKey: string;
   verifiable: boolean;
+  triageReason?: string;
+  triageConfidence?: number;
+}
+
+export interface PreVerifyRequest {
+  claims: ClaimCandidate[];
+}
+
+export interface ClaimTriageResult {
+  claimId: string;
+  verifiable: boolean;
+  priority: number;
+  confidence: number;
+  reason: string;
 }
 
 export type ClaimVerdictResult =
@@ -210,20 +241,17 @@ export interface VerificationRun {
   timestamp: number;
 }
 
+export interface VerifyRequest {
+  sessionId: string;
+  claims: ClaimCandidate[];
+  maxWebSearches?: number;
+}
+
 // ─── Pipeline ─────────────────────────────────────────
 
 export type PipelineStageStatus = "idle" | "running" | "success" | "error";
 
 // ─── Deprecated (remove after Phase 2A/2B migration) ──
-
-/** @deprecated Replaced by Exa verification in Phase 2B. */
-export interface TavilySource {
-  query: string;
-  title: string;
-  url: string;
-  snippet: string;
-  score: number;
-}
 
 /** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
 export interface AnalysisResult {
@@ -235,7 +263,6 @@ export interface AnalysisResult {
   assumptions: string[];
   steelman: string;
   missing: string[];
-  sources?: TavilySource[];
 }
 
 /** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
