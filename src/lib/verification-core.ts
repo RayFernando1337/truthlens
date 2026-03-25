@@ -1,4 +1,3 @@
-import { model } from "@/lib/nemotron";
 import { CLAIM_TRIAGE_PROMPT, LLM_PRE_VERIFY_PROMPT } from "@/lib/prompts";
 import { generateTypedObject } from "@/lib/generate-object";
 import {
@@ -127,7 +126,6 @@ export async function runPreVerification(
   if (claims.length === 0) return [];
 
   const { results } = await generateTypedObject({
-    model,
     schema: llmPreVerdictBatchSchema,
     system: LLM_PRE_VERIFY_PROMPT,
     prompt: `Claims to assess:\n${buildPreVerifyPrompt(claims)}`,
@@ -143,7 +141,6 @@ export async function runClaimTriage(
   if (claims.length === 0) return [];
 
   const { results } = await generateTypedObject({
-    model,
     schema: claimTriageBatchSchema,
     system: CLAIM_TRIAGE_PROMPT,
     prompt: `Claims to triage:\n${buildClaimTriagePrompt(claims)}`,

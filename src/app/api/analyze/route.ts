@@ -1,4 +1,3 @@
-import { model } from "@/lib/nemotron";
 import {
   analysisModelSchema,
   analysisRequestSchema,
@@ -29,7 +28,6 @@ export async function POST(req: Request) {
 
   try {
     const body = await generateTypedObject({
-      model,
       schema: analysisModelSchema,
       system: ANALYSIS_SYSTEM_PROMPT,
       prompt: buildAnalysisPrompt(parsed.data),

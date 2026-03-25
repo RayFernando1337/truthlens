@@ -1,4 +1,3 @@
-import { model } from "@/lib/nemotron";
 import {
   sessionSummarySchema,
   sessionSummaryUpdateSchema,
@@ -29,7 +28,6 @@ export async function POST(req: Request) {
 
   try {
     const body = await generateTypedObject({
-      model,
       schema: sessionSummaryUpdateSchema,
       system: SUMMARY_PROMPT,
       prompt: buildSummaryPrompt(parsed.data),

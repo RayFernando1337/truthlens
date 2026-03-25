@@ -1,4 +1,3 @@
-import { model } from "@/lib/nemotron";
 import { pulseRequestSchema, pulseSchema } from "@/lib/schemas";
 import { L1_SYSTEM_PROMPT } from "@/lib/prompts";
 import { generateTypedObject } from "@/lib/generate-object";
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
     ].join("\n");
 
     const object = await generateTypedObject({
-      model,
       schema: pulseSchema,
       system: L1_SYSTEM_PROMPT,
       prompt,

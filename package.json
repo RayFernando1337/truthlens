@@ -10,7 +10,6 @@
     "smoke:readiness": "bun run src/lib/readiness-smoke-checks.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.35",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@mozilla/readability": "^0.6.0",
