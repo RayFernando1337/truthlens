@@ -75,10 +75,10 @@ todos:
     content: "[Phase 3] Wire existing src/lib/pipeline-policy.ts into useTruthSession hook. File already exists from Phase 2A -- DO NOT recreate. Replace the fixed chunk-count constants in page.tsx (VOICE_ANALYSIS_FIRST_CHUNKS etc.) with policy-driven scheduling."
     status: completed
   - id: p3-page-shell
-    content: "[Phase 3] Reduce page.tsx to a thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, and keep orchestration out of the page. Current repo result: DONE for the shell (<100 lines), but the right-side surface still points at InsightsPanel until TruthPanel lands in Phase 4."
+    content: "[Phase 3] Reduce page.tsx to a thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, and keep orchestration out of the page. Current repo result: DONE for the shell (<100 lines); the page now renders TranscriptInput + TruthPanel."
     status: completed
   - id: p3-wire-verify
-    content: "[Phase 3] Wire verification into useTruthSession and the live client path. Current repo result: DONE for state + automatic triggering after full analysis passes, but verdict rendering and the manual Verify affordance are intentionally deferred to Phase 4 TruthPanel work."
+    content: "[Phase 3] Wire verification into useTruthSession and the live client path. Current repo result: DONE for state + automatic triggering after full analysis passes; verdict rendering and the manual Verify affordance are now shipped in the current TruthPanel flow."
     status: completed
   - id: p3-wire-summary
     content: "[Phase 3] Wire /api/analyze/summarize into useTruthSession: maintain runningSummary in client state, feed it back into /api/analyze, and stop treating summarize as backend-only scaffolding"
@@ -1091,11 +1091,11 @@ Depends on Phase 2A + 2B existing. This is the phase where we turn lessons learn
 
 **Phase 3 readiness result:** Ready to begin. Backend contracts are now aligned, smoke-checked, and documented; what remains is client rewire and UI migration.
 
-### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- COMPLETE, COMPATIBILITY BRIDGE STILL PRESENT
+### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- COMPLETE
 
 Depends on Phase 2A + 2B + 2C. Sequential -- single engineer rewires the main page.
 
-Reality check: Phase 3 orchestration is now in the repo. `useTruthSession` exists, `pipeline-policy.ts` is wired, `page.tsx` is a thin shell, and the live client calls `/api/analyze/summarize` and `/api/verify`. The remaining gap is not orchestration anymore -- it is the deliberate UI compatibility bridge. `page.tsx` still renders `InsightsPanel`, verdicts are not surfaced yet, and `legacy-analysis.ts` still adapts `AnalysisSnapshot` into the old panel props. Those remaining user-facing tasks now belong to the Phase 4 UI migration.
+Reality check: Phase 3 orchestration is fully in the repo. `useTruthSession` exists, `pipeline-policy.ts` is wired, `page.tsx` is a thin shell, and the live client calls `/api/analyze/summarize` and `/api/verify`. The orchestration boundary is now stable enough that later work is new surface area, not leftover migration glue.
 
 Shipped in the repo as part of Phase 3:
 
@@ -1104,50 +1104,55 @@ Shipped in the repo as part of Phase 3:
 - The live client path now calls `/api/analyze/summarize` and `/api/verify`.
 - `pipeline-policy.ts` now drives scheduling instead of the old fixed threshold constants.
 
-The original Phase 3 bullets are retained here for historical traceability, but they are functionally complete enough to unblock Phase 4:
+The original Phase 3 bullets are retained here for historical traceability, but they are complete:
 
 - `p3-extract-hook` -- Extract `useTruthSession` hook from `page.tsx`. Move session state (`TruthSession`), segment management, pipeline status, and scheduling into the hook. Use `AnalysisSnapshot` directly instead of the `toAnalysisResult`/`toPatternsResult` shim.
 - `p3-pipeline-policy` -- Wire `pipeline-policy.ts` into `useTruthSession` for adaptive scheduling. Replace the current fixed chunk-count constants (`VOICE_ANALYSIS_FIRST_CHUNKS`, etc.) with policy-driven decisions.
-- `p3-page-shell` -- Reduce `page.tsx` to thin composition shell: remove `viewMode`/Debug/tabs/`showArch`, import `useTruthSession`, render TranscriptInput + the current right-side panel surface. Final `TruthPanel` swap belongs to Phase 4.
-- `p3-wire-verify` -- Wire `/api/verify` into `useTruthSession`. `verificationRun` state and automatic triggers are live; final verdict presentation and manual Verify affordance belong to Phase 4.
+- `p3-page-shell` -- Reduce `page.tsx` to thin composition shell: remove `viewMode`/Debug/tabs/`showArch`, import `useTruthSession`, and render `TranscriptInput` + `TruthPanel`.
+- `p3-wire-verify` -- Wire `/api/verify` into `useTruthSession`. `verificationRun` state and automatic triggers are live.
 - `p3-wire-summary` -- Wire `/api/analyze/summarize` into `useTruthSession`. Maintain `runningSummary`, feed it into `/api/analyze`, and stop treating summarize as backend-only scaffolding.
 
-**Files touched:** new `src/hooks/useTruthSession.ts`, `page.tsx` (major rewrite), `api-client.ts` (verify/summarize live client path), keep `legacy-analysis.ts` only until TruthPanel replaces the old panels
+**Files touched:** new `src/hooks/useTruthSession.ts`, `page.tsx` (major rewrite), `api-client.ts` (verify/summarize live client path)
 
-### Phase 4: UI Rebuild (1-2 engineers, ~3-4 hours)
+### Phase 4: UI Rebuild (1-2 engineers, ~3-4 hours) -- COMPLETE
 
 Can start scaffolding after Phase 1 (types defined). Final wiring after Phase 3 (page.tsx props stable). The TruthPanel build and TranscriptInput simplification are parallelizable.
 
-- `p4-truth-panel` -- Create `src/app/components/TruthPanel.tsx`. Sticky trust chart (SVG, EMA-based live score + analysis overlay). Stats bar. Flag feed (vertical, color-coded, clickable). Progressive disclosure: Analysis / Verdicts / Patterns sections. This is where the current `InsightsPanel` surface is retired and where `snapshot`, `runningSummary`, `verificationRun`, `pipelineStatus`, and `triggerVerification` are finally rendered directly instead of through compatibility selectors.
-- `p4-simplify-input` -- Simplify [TranscriptInput.tsx](src/app/components/TranscriptInput.tsx). 3 demo buttons to 1 dropdown. Remove voice timing copy. Clean footer states.
-- `p4-delete-old-components` -- Delete `InsightsPanel.tsx`, `AnalysisPanel.tsx`, `PatternsPanel.tsx`, `PulseFeed.tsx`, `ConfidenceMeter.tsx`, `ArchitectureDiagram.tsx`, and `legacy-analysis.ts` once TruthPanel has taken over their responsibilities.
+Reality check: Phase 4 is in the repo. `TruthPanel` is now the primary composition root, `TranscriptInput` is simplified, verification results and manual retry controls are surfaced in the current UI, and the old compatibility panels are gone.
 
-Phase 4 kickoff is intentionally carrying the remaining user-facing tasks that were previously hidden behind stale Phase 3 prose:
+- `p4-truth-panel` -- DONE. `src/app/components/TruthPanel.tsx` plus its section/extras files now render analysis, verdicts, patterns, topic segments, and post-analysis query output directly.
+- `p4-simplify-input` -- DONE. `TranscriptInput.tsx` uses one demo dropdown, calmer footer states, and the current paste / URL / voice split.
+- `p4-delete-old-components` -- DONE. `InsightsPanel.tsx`, `AnalysisPanel.tsx`, `PatternsPanel.tsx`, `PulseFeed.tsx`, `ConfidenceMeter.tsx`, `ArchitectureDiagram.tsx`, and `legacy-analysis.ts` are removed.
 
-- Surface `verificationRun` in the UI instead of keeping it hook-only state.
-- Add a user-triggered Verify / retry affordance in the TruthPanel verdicts section.
-- Replace the `analysisResult` / `patternsResult` compatibility selectors with direct `AnalysisSnapshot` rendering.
+**Files touched:** `src/app/components/TruthPanel.tsx`, `TruthPanelSections.tsx`, `TruthPanelExtras.tsx`, `TranscriptInput.tsx`, `page.tsx`, and deletion of the legacy panel stack + `legacy-analysis.ts`
 
-**Files touched:** new `TruthPanel.tsx`, `TranscriptInput.tsx` (simplify), 6 files deleted
-
-### Phase 5: Batch Mode (1 engineer, ~2 hours)
+### Phase 5: Batch Mode (1 engineer, ~2 hours) -- COMPLETE, PHASE 6 READY
 
 Depends on Phase 3 + 4 (page orchestration and TruthPanel must exist).
 
-- `p5-batch-mode` -- Add batch path in page.tsx: for paste/URL, skip L1 chunking, send full text to unified analysis with `mode: "batch"`. Extract claims from analysis output for verification. In TruthPanel, open analysis by default when batch result arrives.
-- `p5-add-gemini` -- Add Gemini 3 Flash for topic segmentation via `gateway('google/gemini-3-flash')`. No new dependency needed -- the AI gateway already powers the existing `generate-object.ts` helper. Create a `generateSegments()` function (or extend `generateTypedObject`) that uses the Gemini model with thinking enabled for structural reasoning over long transcripts.
-- `p5-topic-segments` -- Create `/api/analyze/segments/route.ts` using Gemini 3 Flash + `generateObject()` with `TopicSegment[]` Zod schema. Fires at stop or on demand.
+Reality check: batch mode, topic segmentation, and post-analysis query support are all in the repo. Paste/URL flows skip L1 and use unified batch analysis, `TruthPanel` opens analysis by default for batch results, `generate-object.ts` already exposes Gemini via `modelId: "gemini"`, `/api/analyze/segments` exists, and `/api/analyze/query` supports targeted deep dives on stored transcript context.
 
-**Files touched:** `page.tsx` / `useTruthSession.ts` (add batch branch), `TruthPanel.tsx` (batch-open logic), `/api/analyze/route.ts` (batch mode already supported via `mode` param), new `/api/analyze/segments/route.ts`, `generate-object.ts` (add Gemini model config)
+- `p5-batch-mode` -- DONE in `useTruthSession.ts` / `page.tsx`: paste/URL runs `mode: "batch"` analysis and extracts claims for verification.
+- `p5-add-gemini` -- DONE in `generate-object.ts` via `gateway("google/gemini-3-flash")`.
+- `p5-topic-segments` -- DONE in `/api/analyze/segments/route.ts`.
+- `p5-post-queries` -- DONE in `/api/analyze/query/route.ts`, `TruthPanel`, and `useTruthSession.ts`.
 
-### Phase 6: Persistence & Scale (future)
+**Files touched:** `page.tsx`, `useTruthSession.ts`, `TruthPanel.tsx`, `TruthPanelSections.tsx`, `TruthPanelExtras.tsx`, `TranscriptInput.tsx`, `/api/analyze/query/route.ts`, `/api/analyze/segments/route.ts`, `generate-object.ts`
+
+**Phase 6 readiness result:** The code boundary is clean enough to start, provided Phase 6 stays constrained to local persistence plus ingestion/share work and does not reopen the core analysis contracts.
+
+### Phase 6: Persistence & Scale (future) -- NEXT
 
 Depends on all prior phases being stable.
 
-- `p6-youtube` -- YouTube transcript ingestion for podcast URLs. Clip extraction (90s vertical format). Brave Search fallback.
-- `p6-persistence` -- Persistence layer TBD. If needed during prototype: localStorage for session history. Backend persistence deferred until prototype stabilizes.
+This phase is intentionally narrower than "scale" sounds. The goal is to preserve and reuse the current prototype outputs, not to reopen the core analysis pipeline.
 
-**Files touched:** new ingestion routes, TBD persistence
+- `p6-persistence` -- Add lightweight local session history only. Store restorable sessions in `localStorage` with source metadata, transcript segments, `AnalysisSnapshot`, `VerificationRun`, `TopicSegment[]`, query results, and timestamps. No backend database, auth, sync, or background jobs in this phase.
+- `p6-youtube` -- Add transcript-first ingestion for podcast/YouTube URLs. Reuse the existing extract entry point where possible, preserve source/provenance metadata, and only fall back to generic readable-page extraction when a transcript is unavailable.
+- `p6-share` -- Add a static share unit / gotcha screenshot driven by existing `TruthPanel` data (trust chart + flag/verdict + source attribution). `TopicSegment` boundaries can seed chapter markers and clip candidates, but actual video rendering/export stays deferred.
+- `p6-readiness` -- Keep the client boundary clean: no new analysis schema forks, no duplicate verification path, and no persistence layer beyond local history until the prototype shape stabilizes.
+
+**Files touched:** expected new `src/lib/session-history.ts`; `src/hooks/useTruthSession.ts` for serialize/restore flows; `src/app/api/extract/route.ts` or new `src/app/api/extract/youtube/route.ts`; `src/app/components/TruthPanel.tsx` / `TruthPanelExtras.tsx` for share affordances; small `src/lib/types.ts` / `src/lib/schemas.ts` updates only if persistence payloads need explicit contracts
 
 ### Parallelization Summary
 
@@ -1182,25 +1187,31 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
 - **`src/lib/readiness-smoke-checks.ts`** -- Repeatable readiness validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`, including a quiet expected-failure check so stderr does not imply a false negative on green runs
 - **`src/lib/readiness-smoke-mocks.ts`** -- Shared test doubles used by the readiness smoke runner so contract checks do not depend on live model/web credentials
-- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` for schema-validated structured output. Phase 5 will add a Gemini model config using `gateway("google/gemini-3-flash")` for topic segmentation -- same gateway pattern, different model
-- **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 3/4 complete
+- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` plus the shipped Gemini config `gateway("google/gemini-3-flash")` for topic segmentation
 - **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
+- **`src/app/api/analyze/segments/route.ts`** -- Gemini-backed topic segmentation endpoint for post-analysis grouping and clip boundaries
+- **`src/app/api/analyze/query/route.ts`** -- Post-analysis query endpoint for theme-based regrouping and targeted deep dives
 - **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search, now with actionable error logging keyed by `sessionId`
 - **`src/app/api/verify/pre-check/route.ts`** -- LLM-only claim verification with parity error logging
 - **`src/app/api/analyze/summarize/route.ts`** -- Progressive summary maintenance
+- **`src/hooks/useTruthSession.ts`** -- Current orchestration root for streaming + batch flows, including request guards across analysis, summary, verification, topic segmentation, and post-analysis queries
+- **`src/app/page.tsx`** -- Thin composition shell rendering `TranscriptInput` + `TruthPanel`
+- **`src/app/components/TruthPanel.tsx` / `TruthPanelSections.tsx` / `TruthPanelExtras.tsx`** -- Active UI surface for analysis, verdicts, patterns, topic segments, and query results
+- **`src/app/components/TranscriptInput.tsx`** -- Simplified paste / URL / voice input with live transcript display
 
-### Legacy surfaces still present on purpose
+### Legacy surfaces removed
 
-- **`src/app/page.tsx`** -- Now a thin orchestration shell. It still renders `InsightsPanel`, so the final panel migration is not done, but the state machine is no longer living in the page itself and it now surfaces verification loading/error states without starting the full TruthPanel migration.
-- **`src/app/components/InsightsPanel.tsx`**, **`AnalysisPanel.tsx`**, **`PatternsPanel.tsx`**, **`PulseFeed.tsx`**, **`ConfidenceMeter.tsx`**, **`ArchitectureDiagram.tsx`** -- Still present until TruthPanel migration is complete.
-- **`src/lib/types.ts` / `src/lib/schemas.ts` / `src/lib/prompts.ts`** -- Canonical contracts exist, including the minimal typed client error/result contract used to surface non-OK verification responses, but deprecated compatibility exports remain until old UI code is removed.
+- **`src/app/components/InsightsPanel.tsx`**, **`AnalysisPanel.tsx`**, **`PatternsPanel.tsx`**, **`PulseFeed.tsx`**, **`ConfidenceMeter.tsx`**, **`ArchitectureDiagram.tsx`** -- Deleted during the Phase 4 migration
+- **`src/lib/legacy-analysis.ts`** -- Deleted; the main page no longer depends on compatibility selectors
+- **Compatibility bridge status** -- No legacy panel bridge remains on the main `page.tsx` path
 
 ### Planned remaining file changes
 
-- **`src/app/components/TruthPanel.tsx`** -- To be created in Phase 4. Replaces InsightsPanel, AnalysisPanel, PatternsPanel, and PulseFeed with one composition root and finally consumes `snapshot`, `runningSummary`, `verificationRun`, and `triggerVerification` directly.
-- **`src/app/page.tsx`** -- Already reduced to a thin composition shell in Phase 3. Phase 4 swaps the right-side surface from `InsightsPanel` to `TruthPanel`.
-- **`src/app/components/TranscriptInput.tsx`** -- To be simplified in Phase 4 (demo affordance cleanup, footer cleanup, calmer copy).
-- **`src/lib/legacy-analysis.ts`** -- To be deleted in Phase 4 when TruthPanel replaces the compatibility bridge.
+- **`src/lib/session-history.ts`** -- New helper for local session persistence / restore payloads
+- **`src/hooks/useTruthSession.ts`** -- Phase 6 will add session serialization, restore, and source metadata handling
+- **`src/app/api/extract/route.ts`** or **`src/app/api/extract/youtube/route.ts`** -- Transcript-first podcast / YouTube ingestion
+- **`src/app/components/TruthPanel.tsx`** / **`TruthPanelExtras.tsx`** -- Share affordance and static export entry point
+- **`src/lib/types.ts` / `src/lib/schemas.ts`** -- Only if Phase 6 persistence payloads need explicit local-storage contracts
 
 ### Already removed
 
@@ -1208,6 +1219,8 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/structured-generate.ts`** -- DELETED. Replaced by `src/lib/generate-object.ts` (uses AI SDK structured output via `generateText()` + `Output.object()`)
 - **`src/app/api/analyze/deep/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
 - **`src/app/api/analyze/patterns/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
+- **`src/app/components/InsightsPanel.tsx`**, **`AnalysisPanel.tsx`**, **`PatternsPanel.tsx`**, **`PulseFeed.tsx`**, **`ConfidenceMeter.tsx`**, **`ArchitectureDiagram.tsx`** -- DELETED during the Phase 4 TruthPanel migration
+- **`src/lib/legacy-analysis.ts`** -- DELETED during the Phase 4 TruthPanel migration
 
 ---
 
@@ -1217,58 +1230,61 @@ NOTE: This section uses a different numbering than the detailed phase breakdown 
 
 **Phases 0-1 (DONE):** Types, contracts, prompts, and rules. Canonical domain model exists. Kebab-case enum naming is now codified in `.cursor/rules/code-standards.mdc`.
 
-**Phases 2A-2B (BACKEND COMPLETE):** Unified `/api/analyze`, `/api/analyze/summarize`, `pipeline-policy.ts`, and verification routes/libs exist. Tavily is removed. The live client now calls summarize and verify, but the UI still presents them through a compatibility bridge instead of a dedicated TruthPanel surface.
+**Phases 2A-2B (BACKEND COMPLETE):** Unified `/api/analyze`, `/api/analyze/summarize`, `pipeline-policy.ts`, and verification routes/libs exist. Tavily is removed. The live client path still depends on these routes, and they remain the stable backend foundation for later phases.
 
-**Phase 2C (COMPLETE):** Verification identity invariants, analysis contract parity, and repeatable route smoke checks are now in place. The backend runway for Phase 3 was ready; these same checks now remain part of the Phase 4 kickoff checklist.
+**Phase 2C (COMPLETE):** Verification identity invariants, analysis contract parity, and repeatable route smoke checks are now in place. The backend runway for Phase 3 was ready; these same checks continue to serve as the baseline validation set before Phase 6 work.
 
-**Phase 3 (COMPLETE, COMPATIBILITY BRIDGE STILL PRESENT):** `useTruthSession` is extracted, summarize and verify are wired into the live client path, fixed thresholds are replaced with policy-driven scheduling, and `page.tsx` is a thin shell. The remaining work is UI migration, not orchestration.
+**Phase 3 (COMPLETE):** `useTruthSession` is extracted, summarize and verify are wired into the live client path, fixed thresholds are replaced with policy-driven scheduling, and `page.tsx` is a thin shell. This remains the orchestration foundation for every later surface.
 
-**Phase 4 (NEXT):** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed, surfaces verification and manual verify controls, removes the `legacy-analysis.ts` bridge, and simplifies TranscriptInput.
+**Phase 4 (COMPLETE):** TruthPanel replaced InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed, surfaced verification and manual verify controls, removed the `legacy-analysis.ts` bridge, and simplified TranscriptInput.
 
-**Phase 5:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default). Topic segmentation via Gemini 3 Flash (`gateway('google/gemini-3-flash')` -- no new dependency). Post-analysis queries.
+**Phase 5 (COMPLETE):** Batch mode for paste/URL shipped. Gemini 3 Flash topic segmentation shipped via `gateway('google/gemini-3-flash')`. Post-analysis queries shipped through `/api/analyze/query` and the current TruthPanel flow.
 
-**Phase 6:** YouTube transcript ingestion. Persistence. Share/clip extraction.
+**Phase 6 (NEXT):** Local session history, transcript-first YouTube/podcast ingestion, and a static share unit. Backend persistence and actual video rendering remain deferred.
 
 ---
 
-## Phase 4 Readiness Checklist
+## Phase 6 Readiness Checklist
 
-Before Phase 4 begins, confirm all of the following:
+Before Phase 6 begins, confirm all of the following:
 
+- **The plan matches the repo.** No section still describes Phase 4 or Phase 5 work as future-state.
+- **The current UI boundary is clean.** `page.tsx` renders `TranscriptInput` + `TruthPanel`; no legacy panel bridge remains.
+- **Request guards cover the multi-request analysis paths.** `useTruthSession` protects analysis, summary, verification, topic segmentation, and post-analysis query flows from stale responses after resets or superseded requests.
 - **Verification identity is stable end-to-end.** `claimId` survives triage, pre-check, Exa routing, and final verdict/unverified storage. No positional joins.
-- **Analysis contract parity is explicit.** Types, Zod schemas, prompts, and this plan agree on evidence quote semantics, provenance fields, and trust trajectory length expectations.
+- **Analysis and post-analysis contract parity are explicit.** Types, Zod schemas, prompts, and this plan agree on evidence quote semantics, provenance fields, trust trajectory length expectations, topic segments, and query result shape.
 - **Route smoke checks exist and are trustworthy.** We can manually or automatically validate `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify` with representative payloads, and the runner does not print contract failures while still exiting 0.
-- **The plan matches the repo.** No section claims `TruthPanel` already exists, and no section still says the client does not call summarize or verify.
-- **Compatibility bridges are documented.** `legacy-analysis.ts` and the old panel stack are acknowledged as temporary so nobody mistakes them for the target architecture.
-- **Rules and prompts reflect implementation lessons.** Kebab-case enum literals remain enforced in rules. Prompt changes that depend on new inputs are matched by route/request changes.
-- **Phase boundaries are still clean.** Batch mode stays Phase 5. Topic segmentation stays Phase 5. We do not pull them into Phase 4 under the banner of "while we're here."
-- **Verification failures are diagnosable.** `/api/verify` logs actionable errors and the client can surface non-OK responses instead of silently collapsing them into `null`.
+- **Batch UX is already real.** Paste/URL analysis, topic segmentation, and post-analysis queries all work from the shipped TruthPanel flow.
+- **URL extraction baseline is stable before YouTube work begins.** `/api/extract` still returns readable article text so transcript-specific ingestion starts from a known-good path.
+- **Phase 6 scope stays constrained.** Local history is acceptable; backend persistence, auth, jobs, and video rendering remain deferred.
+- **Known code hygiene debt is explicit.** Lint still warns on `TranscriptInput.tsx`, `useVoiceInput.ts`, `api/extract/route.ts`, and `api/verify/route.ts`.
 
-Current repo status: the Phase 4 boundary is now clean in code. `/api/verify` and `/api/verify/pre-check` log actionable failures, the client preserves non-OK verification responses instead of collapsing them into `null`, and `bun run smoke:readiness` now exits green without printing the expected invalid-trajectory contract error as a false alarm.
+Current repo status: after this plan sync and hook hardening, the Phase 6 boundary is clean in code. Phases 4 and 5 are shipped, no legacy panel bridge remains, and the remaining work is new surface area rather than unresolved pipeline migration.
 
-### Checks To Run Before Opening Phase 4 Work
+### Checks To Run Before Opening Phase 6 Work
 
 1. `bunx tsc --noEmit`
-2. `bun run lint` (currently expected to surface pre-existing max-lines warnings in untouched legacy UI files, but no blocking TypeScript or contract errors)
+2. `bun run lint` (currently expected to surface the existing max-lines warnings in `TranscriptInput.tsx`, `useVoiceInput.ts`, `api/extract/route.ts`, and `api/verify/route.ts`, but no blocking TypeScript or contract errors)
 3. `bun run smoke:readiness`
 4. Confirm the smoke runner output is truthful: no printed contract failure should coexist with a success exit code
-5. Confirm `/api/verify` failures are observable in logs and not swallowed in the client fetch layer
-6. Confirm there are no remaining client fetches to deleted `deep`/`patterns` routes
-7. Optional manual spot-check: `/api/analyze` in `streaming`, `full`, and `batch` modes if you need to inspect payload/response shape by hand
+5. Manual batch spot-check: paste text, confirm batch analysis opens by default, then generate topic segments and run a post-analysis query
+6. Manual race spot-check: trigger topic segmentation or a query, start a new session, and confirm stale results do not overwrite the active session
+7. Manual extract spot-check: `/api/extract` still returns readable article text before YouTube-specific ingestion work lands
 8. Optional manual spot-check: `/api/verify/pre-check` and `/api/verify`, including a capped run, if you need to inspect the UX-facing result structure by hand
 
 ---
 
 ## Scope Guardrails
 
-Explicitly defer these until core contracts are working:
+Phase 6 may add local history, transcript-first ingestion, and a static share unit. Explicitly defer:
 
 - Full backend persistence or database adoption
-- YouTube clip extraction and vertical format export
-- Gemini 3 Flash topic segmentation (Phase 5 -- after core pipeline is stable)
-- Elaborate event sourcing or job infrastructure
+- Auth, accounts, or cross-device sync
+- Job queues, event sourcing, or background worker infrastructure
+- Actual video rendering / vertical clip export
+- Any new analysis or verification route fork
 - A forest of tiny service files before boundaries are proven
-- Any UI beyond TruthPanel + TranscriptInput (no settings, no onboarding, no account pages)
+- Any UI beyond minimal history/share affordances layered onto `TruthPanel` + `TranscriptInput`
 
 ---
 
@@ -1286,6 +1302,6 @@ This plan is successful when:
 - The 2-second glance test passes: a user mid-conversation can look down and understand (a) trust rising or falling, (b) what was weird, (c) why -- without clicking anything.
 - The trust chart never stalls during streaming. Flags appear within one chunk of detection.
 - Full-transcript passes fire at 45s / 3m / 5m / 10m / then every 5m, plus at stop and on demand.
-- `/api/analyze/summarize` and `/api/verify` are not just implemented -- they are called by the live client path and reflected accurately in UI state/copy.
+- `/api/analyze/summarize`, `/api/verify`, `/api/analyze/segments`, and `/api/analyze/query` are not just implemented -- they are wired into current client flows and reflected accurately in UI state/copy.
 - No file exceeds 300 lines (skip blanks/comments). No function exceeds 50 lines.
 - `soul.md` principles are reflected in every prompt, label, and color choice.

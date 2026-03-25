@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
-import type {
-  AnalysisSnapshot, InputKind, PipelineStageStatus,
-  PostAnalysisQueryResult, PostQueryType, PulseEntry,
-  SegmentPulse, SessionSummary, TopicSegment,
-  TranscriptSegment, TruthSession, VerificationRun,
-} from "@/lib/types";
+import type { AnalysisSnapshot, InputKind, PipelineStageStatus, PostAnalysisQueryResult, PostQueryType, PulseEntry, SegmentPulse, SessionSummary, TopicSegment, TranscriptSegment, TruthSession, VerificationRun } from "@/lib/types";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import {
@@ -14,11 +9,7 @@ import {
 } from "@/lib/pipeline-policy";
 import { extractClaimCandidatesFromSnapshot } from "@/lib/claim-queue";
 import { makeSegment, splitIntoChunks } from "@/lib/segment-utils";
-import {
-  fetchPulse, fetchAnalysis, fetchSummary,
-  fetchVerification, fetchUrlExtract,
-  fetchTopicSegments, fetchPostAnalysisQuery,
-} from "@/lib/api-client";
+import { fetchPulse, fetchAnalysis, fetchSummary, fetchVerification, fetchUrlExtract, fetchTopicSegments, fetchPostAnalysisQuery } from "@/lib/api-client";
 // ─── Constants ────────────────────────────────────────
 type StageKey = "pulse" | "analysis" | "verification" | "summary";
 type Pipeline = Record<StageKey, PipelineStageStatus>;
@@ -52,17 +43,15 @@ export function useTruthSession() {
   const mem = useRef({
     segments: [] as TranscriptSegment[], pulses: [] as SegmentPulse[],
     chunkId: 0, analysisReq: 0, summaryReq: 0, verifyReq: 0,
+    topicReq: 0, queryReq: 0,
     rollingAt: null as number | null, fullPassElapsed: null as number | null,
     sessionStart: 0, lastSummarizedCount: 0, era: 0,
     summary: null as SessionSummary | null, snap: null as AnalysisSnapshot | null,
     session: null as TruthSession | null,
   });
 
-  const setStage = useCallback(
-    (key: StageKey, status: PipelineStageStatus) =>
-      setPipeline((prev) => ({ ...prev, [key]: status })),
-    [],
-  );
+  const setStage = useCallback((key: StageKey, status: PipelineStageStatus) =>
+    setPipeline((prev) => ({ ...prev, [key]: status })), []);
 
   const resetState = useCallback(() => {
     setPulseEntries([]);
@@ -85,6 +74,8 @@ export function useTruthSession() {
     m.analysisReq = 0;
     m.summaryReq = 0;
     m.verifyReq = 0;
+    m.topicReq = 0;
+    m.queryReq = 0;
     m.rollingAt = null;
     m.fullPassElapsed = null;
     m.lastSummarizedCount = 0;
@@ -144,26 +135,33 @@ export function useTruthSession() {
   const triggerTopicSegmentation = useCallback(async () => {
     const m = mem.current;
     if (m.segments.length === 0) return;
-    const flagData = m.pulses.map((p) => ({
-      segmentId: p.segmentId,
-      flags: p.flags.map((f) => f.type),
-    }));
+    const era = m.era;
+    const reqId = ++m.topicReq;
+    const flagData = m.pulses.map((p) => ({ segmentId: p.segmentId, flags: p.flags.map((f) => f.type) }));
     const result = await fetchTopicSegments(
       m.segments, flagData.length > 0 ? flagData : undefined, m.summary ?? undefined,
     );
+    if (era !== m.era || reqId !== m.topicReq) return;
     if (result) setTopicSegments(result);
   }, []);
 
   const submitQuery = useCallback(async (query: string, queryType: PostQueryType) => {
     const m = mem.current;
     if (m.segments.length === 0) return null;
+    const era = m.era;
+    const reqId = ++m.queryReq;
     setQueryResult(null);
     const result = await fetchPostAnalysisQuery(
-      query, queryType, m.segments, m.summary ?? undefined,
+      query,
+      queryType,
+      m.segments,
+      m.summary ?? undefined,
+      topicSegments ?? undefined,
     );
+    if (era !== m.era || reqId !== m.queryReq) return null;
     if (result) setQueryResult(result);
     return result;
-  }, []);
+  }, [topicSegments]);
 
   const runAnalysis = useCallback(
     async (mode: "streaming" | "full") => {
@@ -294,28 +292,22 @@ export function useTruthSession() {
     [resetState, setStage, triggerVerification, triggerTopicSegmentation],
   );
 
-  const handleFetchUrl = useCallback(
-    async (url: string) => {
-      setIsFetchingUrl(true);
-      const text = await fetchUrlExtract(url);
-      setIsFetchingUrl(false);
-      if (text) void handleAnalyze(text, "url");
-    },
-    [handleAnalyze],
-  );
+  const handleFetchUrl = useCallback(async (url: string) => {
+    setIsFetchingUrl(true);
+    const text = await fetchUrlExtract(url);
+    setIsFetchingUrl(false);
+    if (text) void handleAnalyze(text, "url");
+  }, [handleAnalyze]);
 
   // ─── Derived selectors ────────────────────────────
 
-  const voiceChunkSeverities = useMemo((): ChunkSeverity[] =>
-    voiceTranscript.map((_, i) => {
-      const e = pulseEntries.find((p) => p.id === `voice-${i}`);
-      return e ? severityFromPulse(e.result) : "ok";
-    }), [voiceTranscript, pulseEntries]);
+  const voiceChunkSeverities = useMemo((): ChunkSeverity[] => voiceTranscript.map((_, i) => {
+    const e = pulseEntries.find((p) => p.id === `voice-${i}`);
+    return e ? severityFromPulse(e.result) : "ok";
+  }), [voiceTranscript, pulseEntries]);
 
   const seekTranscriptChunk = useCallback((index: number) => {
-    document
-      .getElementById(`tl-transcript-chunk-${index}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    document.getElementById(`tl-transcript-chunk-${index}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, []);
 
   const flagCount = useMemo(
@@ -326,12 +318,9 @@ export function useTruthSession() {
   const isAnalysisLoading = pipeline.analysis === "running";
 
   return {
-    session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult,
-    pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
-    voiceTranscript, voiceChunkSeverities, isRecording, voiceError,
-    isProcessing, isFetchingUrl, processingChunk, chunkProgress,
-    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording,
-    triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk,
+    session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult, pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
+    voiceTranscript, voiceChunkSeverities, isRecording, voiceError, isProcessing, isFetchingUrl, processingChunk, chunkProgress,
+    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk,
   };
 }
 
