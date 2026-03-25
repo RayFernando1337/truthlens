@@ -59,11 +59,11 @@ todos:
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path -- skip L1 chunking for paste/URL, single unified analysis call with mode=batch, analysis open by default in TruthPanel"
     status: pending
-  - id: p6-convex
-    content: "[Phase 6] Convex persistence -- schema for verified claims, cross-user claim cache, usage tracking for paywall tiers"
-    status: pending
   - id: p6-youtube
     content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format)"
+    status: pending
+  - id: p6-persistence
+    content: "[Phase 6] Persistence layer TBD -- if needed, localStorage for session history; backend persistence deferred until prototype stabilizes"
     status: pending
 isProject: false
 ---
@@ -807,10 +807,10 @@ Depends on Phase 3 + 4 (page orchestration and TruthPanel must exist).
 
 Depends on all prior phases being stable.
 
-- `p6-convex` -- Convex schema for verified claims. Cross-user claim cache. Usage tracking for paywall tiers.
 - `p6-youtube` -- YouTube transcript ingestion for podcast URLs. Clip extraction (90s vertical format). Brave Search fallback.
+- `p6-persistence` -- Persistence layer TBD. If needed during prototype: localStorage for session history. Backend persistence deferred until prototype stabilizes.
 
-**Files touched:** new `convex/` directory, new ingestion routes
+**Files touched:** new ingestion routes, TBD persistence
 
 ### Parallelization Summary
 
@@ -876,6 +876,6 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 **Phase 2:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default).
 
-**Phase 3 (Convex):** Persist verified claims. Cross-user claim cache. Usage tracking for paywall tiers.
+**Phase 3 (Persistence):** Deferred. If needed during prototype, localStorage for session history. Backend persistence TBD when prototype stabilizes.
 
 **Phase 4 (Scale):** YouTube transcript ingestion for podcast URLs. Clip extraction (90s vertical format). Brave Search fallback. Tiered verification caps.
