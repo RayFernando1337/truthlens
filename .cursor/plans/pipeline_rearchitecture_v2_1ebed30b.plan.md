@@ -94,7 +94,7 @@ todos:
     status: completed
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
-    status: in_progress
+    status: completed
   - id: p5-add-gemini
     content: "[Phase 5] Add Gemini Flash for topic segmentation via AI gateway -- use gateway('google/gemini-3-flash') from existing generate-object.ts pattern, no new dependency needed (separate model from Nemotron)"
     status: completed
@@ -103,7 +103,7 @@ todos:
     status: completed
   - id: p5-post-queries
     content: "[Phase 5] Post-analysis query support -- theme-based reorganization, targeted deep dives, cross-topic patterns via LLM queries against stored transcript"
-    status: pending
+    status: completed
   - id: p6-youtube
     content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format using TopicSegment boundaries)"
     status: pending

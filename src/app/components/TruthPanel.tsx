@@ -139,37 +139,66 @@ function DisclosureTabs(
   );
 }
 
+function DisclosureBody(
+  { active, snapshot, verificationRun, verificationError, topicSegments, queryResult,
+    pipelineStatus, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
+  }: Pick<TruthPanelProps, "snapshot" | "verificationRun" | "verificationError" |
+    "topicSegments" | "queryResult" | "pipelineStatus" | "onTriggerVerification" |
+    "onTriggerTopicSegmentation" | "onSubmitQuery"> & { active: Disclosure | null },
+) {
+  switch (active) {
+    case "analysis": return snapshot
+      ? <AnalysisContent snapshot={snapshot} />
+      : <LoadingHint text={pipelineStatus.analysis === "running" ? "Analyzing\u2026" : "Appears after more content."} />;
+    case "verdicts": return (
+      <VerdictsContent run={verificationRun} error={verificationError}
+        onVerify={onTriggerVerification} isLoading={pipelineStatus.verification === "running"} />
+    );
+    case "patterns": return snapshot
+      ? <PatternsContent snapshot={snapshot} />
+      : <p className="px-4 py-3 text-[11px] text-[#444]">No patterns detected yet.</p>;
+    case "segments": return <TopicSegmentsContent segments={topicSegments} onGenerate={onTriggerTopicSegmentation} />;
+    case "query": return <QueryContent result={queryResult} onSubmit={onSubmitQuery} />;
+    default: return null;
+  }
+}
+
+function usePanelDerived(
+  entries: PulseEntry[], snapshot: AnalysisSnapshot | null,
+  verificationRun: VerificationRun | null, isStreaming: boolean,
+) {
+  const ema = useMemo(() => computeEMA(entries), [entries]);
+  const traj = snapshot?.trustTrajectory;
+  const hasTraj = !!traj && traj.length > 1;
+  const batch = entries.length === 0 && !!snapshot;
+  const flatFlags = useMemo<FlatFlag[]>(
+    () => entries.flatMap((e, i) => e.result.flags.map((f) => ({ flag: f, idx: i }))).reverse(), [entries],
+  );
+  const claims = useMemo(
+    () => batch ? (snapshot?.evidenceTable.length ?? 0) : entries.reduce((s, e) => s + e.result.claims.length, 0),
+    [entries, snapshot, batch],
+  );
+  const verified = verificationRun ? verificationRun.llmResolved.length + verificationRun.webVerified.length : 0;
+  const tabs = useMemo<readonly Disclosure[]>(
+    () => isStreaming ? ["analysis", "verdicts", "patterns"] : ["analysis", "verdicts", "patterns", "segments", "query"],
+    [isStreaming],
+  );
+  const scores = batch ? (traj ?? []) : (hasTraj ? traj! : ema);
+  const overlay = batch ? undefined : (hasTraj ? ema : traj);
+  const flagged = batch ? (snapshot?.namedFallacies.length ?? 0) + (snapshot?.patterns.length ?? 0) : flatFlags.length;
+  return { batch, flatFlags, claims, verified, tabs, scores, overlay, flagged };
+}
+
 export default function TruthPanel({
   pulseEntries: entries, snapshot, verificationRun, verificationError,
   topicSegments, queryResult, pipelineStatus, processingChunk, isStreaming,
   onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
 }: TruthPanelProps) {
   const [os, setOs] = useState({ tab: null as Disclosure | null, autoTs: null as number | null });
-  const ema = useMemo(() => computeEMA(entries), [entries]);
-  const trajectory = snapshot?.trustTrajectory;
-  const hasTrajectory = !!trajectory && trajectory.length > 1;
-  const batchMode = entries.length === 0 && !!snapshot;
-  const flatFlags = useMemo<FlatFlag[]>(
-    () => entries.flatMap((e, i) => e.result.flags.map((f) => ({ flag: f, idx: i }))).reverse(),
-    [entries],
-  );
-  const claimCount = useMemo(
-    () => batchMode ? (snapshot?.evidenceTable.length ?? 0) : entries.reduce((s, e) => s + e.result.claims.length, 0),
-    [entries, snapshot, batchMode],
-  );
-  const verifiedCount = verificationRun ? verificationRun.llmResolved.length + verificationRun.webVerified.length : 0;
+  const d = usePanelDerived(entries, snapshot, verificationRun, isStreaming);
   const autoOpen = !!snapshot && !isStreaming && os.tab === null && os.autoTs !== snapshot.timestamp;
   const active: Disclosure | null = autoOpen ? "analysis" : os.tab;
   const toggle = (tab: Disclosure) => setOs({ tab: active === tab ? null : tab, autoTs: snapshot?.timestamp ?? null });
-  const tabs = useMemo<readonly Disclosure[]>(
-    () => isStreaming ? ["analysis", "verdicts", "patterns"] : ["analysis", "verdicts", "patterns", "segments", "query"],
-    [isStreaming],
-  );
-  const chartScores = batchMode ? (trajectory ?? []) : (hasTrajectory ? trajectory! : ema);
-  const chartOverlay = batchMode ? undefined : (hasTrajectory ? ema : trajectory);
-  const flaggedCount = batchMode
-    ? (snapshot?.namedFallacies.length ?? 0) + (snapshot?.patterns.length ?? 0)
-    : flatFlags.length;
 
   if (entries.length === 0 && !processingChunk && !snapshot) return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -180,35 +209,20 @@ export default function TruthPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 border-b border-[#222] bg-[#141414]">
-        <TrustChart scores={chartScores} overlay={chartOverlay} />
-        <StatsBar claims={claimCount} flags={flaggedCount} verified={verifiedCount} />
+        <TrustChart scores={d.scores} overlay={d.overlay} />
+        <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {processingChunk && <LoadingHint text="Analyzing\u2026" />}
-        {!batchMode && <FlagFeed flags={flatFlags} onSeek={onSeekTranscriptChunk} />}
-        {!batchMode && flatFlags.length === 0 && entries.length > 0 && (
+        {!d.batch && <FlagFeed flags={d.flatFlags} onSeek={onSeekTranscriptChunk} />}
+        {!d.batch && d.flatFlags.length === 0 && entries.length > 0 && (
           <p className="px-4 py-3 text-[11px] text-[#00cc66]/70">No flags so far. The argument looks straight.</p>
         )}
-        <DisclosureTabs active={active} onToggle={toggle} tabs={tabs} />
-        {active === "analysis" && (snapshot
-          ? <AnalysisContent snapshot={snapshot} />
-          : <LoadingHint text={pipelineStatus.analysis === "running" ? "Analyzing\u2026" : "Appears after more content."} />
-        )}
-        {active === "verdicts" && (
-          <VerdictsContent run={verificationRun} error={verificationError}
-            onVerify={onTriggerVerification} isLoading={pipelineStatus.verification === "running"} />
-        )}
-        {active === "patterns" && (snapshot
-          ? <PatternsContent snapshot={snapshot} />
-          : <p className="px-4 py-3 text-[11px] text-[#444]">No patterns detected yet.</p>
-        )}
-        {active === "segments" && (
-          <TopicSegmentsContent segments={topicSegments}
-            onGenerate={onTriggerTopicSegmentation} />
-        )}
-        {active === "query" && (
-          <QueryContent result={queryResult} onSubmit={onSubmitQuery} />
-        )}
+        <DisclosureTabs active={active} onToggle={toggle} tabs={d.tabs} />
+        <DisclosureBody active={active} snapshot={snapshot} verificationRun={verificationRun}
+          verificationError={verificationError} topicSegments={topicSegments} queryResult={queryResult}
+          pipelineStatus={pipelineStatus} onTriggerVerification={onTriggerVerification}
+          onTriggerTopicSegmentation={onTriggerTopicSegmentation} onSubmitQuery={onSubmitQuery} />
       </div>
     </div>
   );
