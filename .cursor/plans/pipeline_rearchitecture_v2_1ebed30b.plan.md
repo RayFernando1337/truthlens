@@ -189,7 +189,7 @@ All types, schemas, routes, and UI selectors share one flat domain model. No opt
 
 ### Orchestration Extraction
 
-`page.tsx` is currently a 545-line hidden state machine. Extract a `useTruthSession` hook that owns:
+`page.tsx` is currently a ~580-line hidden state machine. Extract a `useTruthSession` hook that owns:
 
 - Session init and resets
 - Segment append/flush (voice and paste)
@@ -198,7 +198,9 @@ All types, schemas, routes, and UI selectors share one flat domain model. No opt
 - Batch vs streaming policy differences
 - Derived selectors that feed TruthPanel
 
-New files: `src/hooks/useTruthSession.ts`, `src/lib/pipeline-policy.ts`
+New file: `src/hooks/useTruthSession.ts`
+
+Already shipped and ready to wire in Phase 3: `src/lib/pipeline-policy.ts`
 
 `page.tsx` becomes a thin composition shell: render TranscriptInput + TruthPanel, wire up the hook, done.
 
@@ -511,13 +513,13 @@ This violates the soul: "the tool never cries wolf." Premature flags erode trust
 
 Comparing the three scratchpad analysis frameworks against our current prompts reveals gaps:
 
-**What we should add to the unified analysis output (from scratchpad `route.ts` and rhetorical analyzer skill):**
+**Canonical enriched analysis output (now reflected in `types.ts` / `schemas.ts`):**
 
 - `emotionalAppeals`: Array of named emotions with quotes -- not just "pathos" as a single blob, but `[{type: "fear", quote: "...", technique: "..."}]`. The 1-pass analysis identified Fear and Resentment as distinct techniques. Our current `appeals.pathos` string loses this granularity.
 - `namedFallacies`: Array of specific logical fallacy names with the triggering quote -- `[{name: "straw man", quote: "...", impact: "..."}]`. Our L1 "logic" flag doesn't name the fallacy. The 1-pass analysis said "Straw Man" with the exact text.
 - `cognitiveBiases`: Array of identified biases -- `[{name: "optimism bias", quote: "...", influence: "..."}]`. We don't extract these at all. The 1-pass analysis found this.
 - `speakerIntent`: The "What They Actually Want to Say" field from the rhetorical analyzer skill. Our current `underlyingStatement` is close but should be sharpened to match the skill's devastating one-liner format: _"I want you to feel X so you'll do Y."_
-- `quotedEvidence`: Every evidence table row should include the actual quote from the source, not just a paraphrase. The Yang analysis pinned every claim to specific words.
+- `evidenceTable[].quote`: Every evidence table row includes the actual quote from the source, not just a paraphrase. This is now part of the canonical contract, not a future enhancement.
 
 **What L1 flags should capture (enhanced):**
 
@@ -617,23 +619,23 @@ interface VerificationRun {
 
 ## Design Decision 5: Adaptive Scheduling + Sliding Window (kept from v1)
 
-Identical to v1 plan but now applied to ONE analysis endpoint instead of two separate L2/L3 endpoints. The math improves:
+Applied to ONE analysis endpoint instead of two separate L2/L3 endpoints. The canonical implementation lives in `src/lib/pipeline-policy.ts`; if this prose ever drifts, the code wins.
 
-**Adaptive interval function** (same as v1):
+**Adaptive interval function** (current implementation):
 
 ```typescript
-function getAnalysisInterval(chunkCount: number): number {
-  if (chunkCount < 75) return 4; // first 5 min: every 16s
-  if (chunkCount < 225) return 8; // 5-15 min: every 32s
-  if (chunkCount < 450) return 16; // 15-30 min: every 64s
-  if (chunkCount < 900) return 32; // 30-60 min: every ~2 min
-  return 64; // 60+ min: every ~4 min
+function getAnalysisIntervalMs(segmentCount: number): number {
+  if (segmentCount < 6) return 16_000;
+  if (segmentCount < 20) return 30_000;
+  if (segmentCount < 60) return 60_000;
+  return 2 * 60_000;
 }
 ```
 
-**Sliding window** (same as v1, now for unified analysis):
+**Sliding window** (current implementation, now for unified analysis):
 
-- Last 20 chunks (~2,000 tokens) + running summary (~500 tokens) = ~2,500 tokens constant per call
+- `getSlidingWindowSize(segmentCount)` currently yields: all segments up to 6, then 8 up to 20, 10 up to 60, and 12 beyond that
+- Running summary is fed as separate context, so the rolling prompt stays bounded without pretending the live window is 20 chunks
 - Progressive summarization runs in background via `POST /api/analyze/summarize`
 
 **2-hour podcast cost (v2 vs v1 vs current):**
@@ -1069,23 +1071,25 @@ Depends on Phase 1. Parallelizable with Phase 2A.
 - `p2b-claim-queue` -- Create `src/lib/claim-queue.ts` for normalization, dedup, and cap only. Verifiability and priority are determined by LLM triage (`runClaimTriage` in `verification-core.ts`, driven by `CLAIM_TRIAGE_PROMPT`). No regex heuristics. **DONE.**
 - `p2b-claim-triage` -- Create LLM-driven claim classification via `CLAIM_TRIAGE_PROMPT` in `prompts.ts` and `runClaimTriage()` in `verification-core.ts`. Model decides verifiable/not and priority 0-5. **DONE.**
 - `p2b-preverify-route` -- Create `/api/verify/pre-check/route.ts` for LLM-only claim verification. **DONE.**
-- `p2b-verify-route` -- Create `/api/verify/route.ts` orchestrating triage -> queue -> pre-check -> Exa. **Route exists, but the `claimId` invariant is not fully enforced yet; that hardening is Phase 2C.**
+- `p2b-verify-route` -- Create `/api/verify/route.ts` orchestrating triage -> queue -> pre-check -> Exa. **DONE.** The route exists and now preserves `claimId` through pre-check, Exa routing, final verdicts, and unverified rows.
 - `p2b-remove-tavily` -- Delete `src/lib/tavily.ts` and `src/lib/structured-generate.ts`. Swap `TAVILY_API_KEY` for `EXA_API_KEY` in env. **DONE.**
 
-Important reality check: this phase is backend-complete, not product-complete. The verification routes/libs exist, but the live client does not call `/api/verify` yet and the pre-check -> Exa identity chain still needs one hardening pass.
+Important reality check: this phase is backend-complete, not product-complete. The verification routes/libs exist and the pre-check -> Exa identity chain is now hardened, but the live client still does not call `/api/verify` yet.
 
 **Files touched:** new `exa.ts`, new `claim-queue.ts`, new `verification-core.ts`, new `verify/pre-check/route.ts`, new `verify/route.ts`, `tavily.ts` (deleted), `structured-generate.ts` (deleted)
 
-### Phase 2C: Readiness Hardening (1 engineer, ~1-2 hours) -- NEXT
+### Phase 2C: Readiness Hardening (1 engineer, ~1-2 hours) -- COMPLETE, PHASE 3 READY
 
 Depends on Phase 2A + 2B existing. This is the phase where we turn lessons learned into stable invariants before touching the main client rewire.
 
 - `p2c-plan-sync` -- Reconcile this document with the repo. Separate backend-complete from product-complete, remove future-state claims written in present tense, and make compatibility shims explicit. **DONE in this update.**
-- `p2c-verify-identity` -- Return `claimId` from pre-check, route pre-check -> Exa by `claimId`, preserve `claimId` in final verdicts/unverified rows, and emit `cap-exceeded` when the cap actually suppresses work.
-- `p2c-analysis-parity` -- Reconcile plan/types/schemas on evidence quote semantics and provenance. Enforce `trustTrajectory.length === analyzed segment count`. Document batch/full window semantics so Phase 3 selectors are not guessing.
-- `p2c-smoke-checks` -- Add repeatable smoke checks for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`. These do not need a full test suite yet, but they must be documented and rerunnable.
+- `p2c-verify-identity` -- Return `claimId` from pre-check, route pre-check -> Exa by `claimId`, preserve `claimId` in final verdicts/unverified rows, and emit `cap-exceeded` when the cap actually suppresses work. **DONE.**
+- `p2c-analysis-parity` -- Reconcile plan/types/schemas on evidence quote semantics and provenance. Enforce `trustTrajectory.length === analyzed segment count`. Document batch/full window semantics so Phase 3 selectors are not guessing. **DONE.**
+- `p2c-smoke-checks` -- Add repeatable smoke checks for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`. These do not need a full test suite yet, but they must be documented and rerunnable. **DONE.**
 
-**Files touched:** `verification-core.ts`, `schemas.ts`, `types.ts`, `verify/route.ts`, `verify/pre-check/route.ts`, `analysis-core.ts`, docs/plan notes as needed
+**Files touched:** `verification-core.ts`, `schemas.ts`, `types.ts`, `verify/route.ts`, `verify/pre-check/route.ts`, `analysis-core.ts`, `readiness-smoke-checks.ts`, `readiness-smoke-mocks.ts`, `package.json`, `README.md`, docs/plan notes as needed
+
+**Phase 3 readiness result:** Ready to begin. Backend contracts are now aligned, smoke-checked, and documented; what remains is client rewire and UI migration.
 
 ### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- NEXT
 
@@ -1140,7 +1144,7 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 - Phase 1 is the critical path starter (1 engineer, fast)
 - Phase 2A and 2B run in parallel (2 engineers)
-- Phase 2C is a short hardening pass after backend work and before frontend rewire
+- Phase 2C is the short hardening pass that now completes the backend runway for frontend rewire
 - Phase 4 scaffolding can start during Phase 2/2C (TruthPanel with mock data)
 - Phase 3 is the bottleneck (single engineer, depends on 2A + 2B + 2C)
 - Phase 4 finalization and Phase 5 follow Phase 3
@@ -1159,6 +1163,8 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/verification-core.ts`** -- LLM claim triage (`runClaimTriage`), pre-verification (`runPreVerification`), and verification run assembly
 - **`src/lib/pipeline-policy.ts`** -- `getAnalysisIntervalMs(n)`, `shouldRunRollingAnalysis(n, lastRanAt, now)`, `shouldRunFullPass(elapsed, lastAt)`. Single module, two schedules. (NOT adaptive-scheduler.ts)
 - **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
+- **`src/lib/readiness-smoke-checks.ts`** -- Repeatable Phase 2C route validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`
+- **`src/lib/readiness-smoke-mocks.ts`** -- Shared test doubles used by the readiness smoke runner so contract checks do not depend on live model/web credentials
 - **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateObject()` for schema-validated structured output
 - **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 3/4 complete
 - **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
@@ -1197,9 +1203,9 @@ NOTE: This section uses a different numbering than the detailed phase breakdown 
 
 **Phases 2A-2B (BACKEND COMPLETE):** Unified `/api/analyze`, `/api/analyze/summarize`, `pipeline-policy.ts`, and verification routes/libs exist. Tavily is removed. The live client is still on a compatibility bridge and does not yet call summarize or verify.
 
-**Phase 2C (NEXT):** Readiness hardening. Fix verification identity invariants, close contract parity gaps, and add repeatable route smoke checks before touching the main client rewire.
+**Phase 2C (COMPLETE):** Verification identity invariants, analysis contract parity, and repeatable route smoke checks are now in place. The backend runway for Phase 3 is ready.
 
-**Phase 3:** Extract `useTruthSession` hook from `page.tsx`. Wire verification and summarize into the client. Replace fixed thresholds with policy-driven scheduling. Thin composition shell.
+**Phase 3 (NEXT):** Extract `useTruthSession` hook from `page.tsx`. Wire verification and summarize into the client. Replace fixed thresholds with policy-driven scheduling. Thin composition shell.
 
 **Phase 4:** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed. TranscriptInput simplification. Remove duplicate/legacy view surfaces.
 
@@ -1221,15 +1227,17 @@ Before Phase 3 begins, confirm all of the following:
 - **Rules and prompts reflect implementation lessons.** Kebab-case enum literals remain enforced in rules. Prompt changes that depend on new inputs are matched by route/request changes.
 - **Phase boundaries are still clean.** Batch mode stays Phase 5. Topic segmentation stays Phase 5. We do not pull them into Phase 3 under the banner of "while we're here."
 
+Current repo status: all readiness gates above are satisfied. Phase 3 can start from a verified backend baseline rather than assumptions.
+
 ### Checks To Run Before Opening Phase 3 Work
 
 1. `bunx tsc --noEmit`
-2. `bun run lint` (or the project lint entrypoint if renamed)
-3. Manual route validation for `/api/analyze` in `streaming`, `full`, and `batch` modes
-4. Manual route validation for `/api/analyze/summarize` with and without an existing summary
-5. Manual route validation for `/api/verify/pre-check` and `/api/verify`, including a case that should hit the Exa cap
-6. Confirm there are no remaining client fetches to deleted `deep`/`patterns` routes
-7. Confirm the live client still intentionally lacks summarize/verify wiring so Phase 3 work starts from a known baseline, not a hidden partial integration
+2. `bun run lint` (currently expected to surface pre-existing max-lines warnings in untouched legacy UI files, but no blocking Phase 2C errors)
+3. `bun run smoke:readiness`
+4. Confirm there are no remaining client fetches to deleted `deep`/`patterns` routes
+5. Confirm the live client still intentionally lacks summarize/verify wiring so Phase 3 work starts from a known baseline, not a hidden partial integration
+6. Optional manual spot-check: `/api/analyze` in `streaming`, `full`, and `batch` modes if you need to inspect payload/response shape by hand
+7. Optional manual spot-check: `/api/verify/pre-check` and `/api/verify`, including a capped run, if you need to inspect the UX-facing result structure by hand
 
 ---
 
