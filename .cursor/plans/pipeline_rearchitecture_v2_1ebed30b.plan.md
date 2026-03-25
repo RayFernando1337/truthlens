@@ -345,12 +345,29 @@ Open by default in batch mode (paste/URL result):
 
 **Critical constraint:** Deep analysis must never auto-expand during live listening. It competes with the conversation. Flags and the line are enough. Analysis is there when the user is ready, not when the system decides.
 
+### Broadcast-Informed Design (News + Sports + Viral)
+
+The elements viewers already know how to read at a glance -- news chyrons, sports scorebugs, tickers -- should inform every design choice. We are not inventing a new visual language. We are borrowing 30 years of trained eye behavior.
+
+**The trust chart + stats bar = our "scorebug."** Sports broadcasts place a persistent, minimal overlay (score, clock, possession) in a fixed position. Viewers learn to glance at ONE spot. The scorebug is calm when nothing happens and spikes with color/animation on state changes (score change, shot clock red when low, penalty flag). Our trust chart + stats bar works the same way: fixed position, quiet baseline, color shift on drops.
+
+**The flag feed = our "chyron / lower-third."** News networks use one-line banners (~55 characters max) on a high-contrast bar. Red = breaking/alert (universal since 9/11). Blue = informational. Viewers parse these in under a second without losing the main content. Our flag rows follow this pattern exactly: severity icon + flag type + quoted fragment + reason. One line. High contrast. Red for logic/contradiction, amber for stat/attribution, dim for vague/prediction.
+
+**Calm baseline, loud events.** Both sports and news overlays are mostly stable. Motion and color changes ONLY fire on state transitions. This prevents "alert fatigue" and makes real changes feel meaningful. Our UI should be almost silent when the speaker is being rigorous -- the absence of flags is itself information.
+
+**The "gotcha screenshot" = our Wrapped moment.** Viral UIs succeed when one frame tells the whole story without context. The shareable unit is: trust chart at a dramatic inflection + flag label naming the trick + speaker/show identification + subtle branding. This frame should work as a screenshot, a tweet embed, or a vertical clip thumbnail.
+
+**The 90s vertical clip = our viral vector.** Sterling described it: video on top, analysis on bottom, vertical format. This is native to TikTok/Reels/Shorts. Every clip a user shares becomes a personalized demo for the next user. The viral loop is: shareable artifact -> "try your podcast" CTA -> recipient pastes their own URL -> new user.
+
 ### Visual Constraints
 
-- Flag rows must be one-line scannable: severity icon, flag type, quoted fragment, and why it matters.
+- Flag rows must be one-line scannable: severity icon, flag type, quoted fragment, why it matters. Target ~55 characters like a news chyron.
 - The chart must update every chunk (~4s) so the screen never feels stale.
 - New flags must appear above the fold; users should not hunt for the latest weird moment.
 - The trust chart shape tells the story before any text is read -- the line going down IS the information.
+- Color conventions: red (#ff4400) = alert/flagged (logic, contradiction). Amber (#ffaa00) = caution (stat, attribution). Green (#00cc66) = OK/supported. Dim gray = informational (vague, prediction). These map to the universal red=alert, green=safe conventions from both news and sports.
+- Animations fire only on state changes (new flag, trust drop, verdict arrived), never on idle. Calm baseline, loud events.
+- The "gotcha screenshot" must be designable: trust chart + latest flag + speaker/show context + branding watermark in one frame, without needing any other UI context.
 
 The current UI has **27-28 distinct interactive elements**, **~40 section templates**, and **two parallel view modes** (Insights + Debug with 3 tabs) that show the **same data in different layouts**. The TrustChart is rendered twice. The deep analysis appears in 3 places. There is a modal architecture diagram accessible from the header.
 
@@ -609,6 +626,48 @@ Understanding what updates when is critical for which elements feel "alive":
 - **On verification** (at stop + periodic + user-triggered): Verdicts accumulate. Stats bar "verified" count updates.
 
 The trust chart uses a **client-derived live score** (EMA of L1 confidence weighted by flag severity) for per-chunk updates, with the analysis-provided `trustTrajectory` overlaid as a smoother reference line when available. This means the chart is always moving during streaming -- never stale.
+
+---
+
+## Use Cases & Viral Loop
+
+### Sterling's Use Cases (distilled from feedback)
+
+- **Live podcast companion** -- BS meter running while listening. The core product.
+- **"Podcast wrapper"** -- default listening layer for every show. Habit-forming.
+- **Gotcha / vindication** -- catching rhetorical tricks. The emotional payoff.
+- **Argument arc tracking** -- watching the truth meter decline over 5 minutes. The narrative.
+- **Positive validation** -- pleasant surprise when a show is consistent. Not just cynicism.
+- **Self-analysis** -- "am I doing this too?" on own podcast appearances. Growth tool.
+- **One-shot full episode** -- whole podcast analyzed with a click. Batch mode.
+- **Short-form clips** -- 90s vertical: video top, analysis bottom. The viral vector.
+- **Discovery / lead magnet** -- "analyze a podcast of your choice" + paste YouTube link. Acquisition.
+
+### The Viral Loop
+
+```
+User analyzes a podcast
+  -> screenshots the "gotcha moment" (trust dip + flag label)
+  -> shares on Twitter/TikTok/Discord
+  -> viewer sees the screenshot, recognizes the speaker/show
+  -> clicks through to TruthLens
+  -> "Analyze YOUR podcast" CTA -> pastes their own URL
+  -> new user -> repeat
+```
+
+The shareable artifact IS the acquisition channel. Every gotcha screenshot, every vertical clip, every "look what it caught" tweet is a personalized demo for the next user.
+
+### The Gotcha Screenshot (designed as a share unit)
+
+The single frame that gets shared must contain, without any other context:
+
+- **Trust chart at a dramatic inflection** (the line visibly dropping)
+- **The flag that caused it** (severity icon + type + quoted claim + reason)
+- **Speaker/show identification** (episode title, timestamp, or thumbnail)
+- **Subtle TruthLens branding** (watermark or URL, not intrusive)
+- **Works at phone width** -- must survive Twitter/TikTok compression
+
+This is TruthLens's equivalent of the Spotify Wrapped card: one image, one story, shareable without explanation.
 
 ---
 
