@@ -18,9 +18,7 @@ import {
   fetchPulse, fetchAnalysis, fetchSummary,
   fetchVerification, fetchUrlExtract,
 } from "@/lib/api-client";
-
 // ─── Constants ────────────────────────────────────────
-
 type StageKey = "pulse" | "analysis" | "verification" | "summary";
 type Pipeline = Record<StageKey, PipelineStageStatus>;
 
@@ -33,23 +31,19 @@ function createSession(
 ): TruthSession {
   return { sessionId: crypto.randomUUID(), mode, inputKind, createdAt: Date.now() };
 }
-
 // ─── Hook ─────────────────────────────────────────────
-
 export function useTruthSession() {
   const [session, setSession] = useState<TruthSession | null>(null);
   const [pulseEntries, setPulseEntries] = useState<PulseEntry[]>([]);
   const [snapshot, setSnapshot] = useState<AnalysisSnapshot | null>(null);
   const [runningSummary, setRunningSummary] = useState<SessionSummary | null>(null);
   const [verificationRun, setVerificationRun] = useState<VerificationRun | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [pipeline, setPipeline] = useState<Pipeline>(IDLE);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [processingChunk, setProcessingChunk] = useState<string | null>(null);
-  const [chunkProgress, setChunkProgress] = useState<{
-    current: number;
-    total: number;
-  } | null>(null);
+  const [chunkProgress, setChunkProgress] = useState<{ current: number; total: number } | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string[]>([]);
 
   const mem = useRef({
@@ -80,6 +74,7 @@ export function useTruthSession() {
     setSnapshot(null);
     setRunningSummary(null);
     setVerificationRun(null);
+    setVerificationError(null);
     setPipeline(IDLE);
     setVoiceTranscript([]);
     setProcessingChunk(null);
@@ -99,9 +94,7 @@ export function useTruthSession() {
     m.summary = null;
     m.snap = null;
   }, []);
-
   // ─── Pipeline triggers ────────────────────────────
-
   const runSummaryUpdate = useCallback(async () => {
     const m = mem.current;
     const newSegs = m.segments.slice(m.lastSummarizedCount);
@@ -124,15 +117,29 @@ export function useTruthSession() {
     const m = mem.current;
     if (!m.snap || !m.session) return;
     const claims = extractClaimCandidatesFromSnapshot(m.snap);
-    if (claims.length === 0) return;
+    if (claims.length === 0) {
+      setVerificationRun(null);
+      setVerificationError(null);
+      setStage("verification", "idle");
+      return;
+    }
     const reqId = ++m.verifyReq;
+    setVerificationRun(null);
+    setVerificationError(null);
     setStage("verification", "running");
     const result = await fetchVerification(m.session.sessionId, claims);
     if (reqId !== m.verifyReq) return;
-    if (result) {
-      setVerificationRun(result);
+    if (result?.ok) {
+      setVerificationRun(result.data);
+      setVerificationError(null);
       setStage("verification", "success");
+    } else if (result) {
+      setVerificationRun(null);
+      setVerificationError(result.error.message);
+      setStage("verification", "error");
     } else {
+      setVerificationRun(null);
+      setVerificationError(null);
       setStage("verification", "error");
     }
   }, [setStage]);
@@ -287,14 +294,11 @@ export function useTruthSession() {
 
   // ─── Derived selectors ────────────────────────────
 
-  const voiceChunkSeverities = useMemo(
-    (): ChunkSeverity[] =>
-      voiceTranscript.map((_, i) => {
-        const e = pulseEntries.find((p) => p.id === `voice-${i}`);
-        return e ? severityFromPulse(e.result) : "ok";
-      }),
-    [voiceTranscript, pulseEntries],
-  );
+  const voiceChunkSeverities = useMemo((): ChunkSeverity[] =>
+    voiceTranscript.map((_, i) => {
+      const e = pulseEntries.find((p) => p.id === `voice-${i}`);
+      return e ? severityFromPulse(e.result) : "ok";
+    }), [voiceTranscript, pulseEntries]);
 
   const seekTranscriptChunk = useCallback((index: number) => {
     document
@@ -320,7 +324,7 @@ export function useTruthSession() {
   const isAnalysisLoading = pipeline.analysis === "running";
 
   return {
-    session, snapshot, runningSummary, verificationRun,
+    session, snapshot, runningSummary, verificationRun, verificationError,
     pipelineStatus: pipeline, flagCount, isAnalysisLoading,
     pulseEntries, analysisResult, patternsResult,
     voiceTranscript, voiceChunkSeverities,

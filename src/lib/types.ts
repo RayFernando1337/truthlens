@@ -262,6 +262,15 @@ export interface VerificationRun {
   timestamp: number;
 }
 
+export interface ApiError {
+  message: string;
+  status?: number;
+}
+
+export type VerificationFetchResult =
+  | { ok: true; data: VerificationRun }
+  | { ok: false; error: ApiError };
+
 export interface VerifyRequest {
   sessionId: string;
   claims: ClaimCandidate[];

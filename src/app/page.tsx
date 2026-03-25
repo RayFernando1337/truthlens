@@ -41,6 +41,20 @@ export default function Home() {
           />
         </div>
         <div className="flex min-w-0 flex-1 flex-col bg-[#141414]">
+          {(s.pipelineStatus.verification === "running" || s.verificationError) && (
+            <div className="border-b border-[#222] px-4 py-2">
+              {s.pipelineStatus.verification === "running" ? (
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#666]">
+                  <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+                  Checking outside support...
+                </div>
+              ) : (
+                <p className="text-[11px] leading-relaxed text-[#ffb199]">
+                  Verification paused: {s.verificationError}
+                </p>
+              )}
+            </div>
+          )}
           <InsightsPanel
             entries={s.pulseEntries}
             processingChunk={s.processingChunk}

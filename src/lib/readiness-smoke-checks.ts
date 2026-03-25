@@ -96,18 +96,27 @@ async function checkBatchAnalyze() {
 }
 
 async function checkInvalidTrajectory() {
-  const response = await postJson(analyzeRoute.POST, "/api/analyze", {
-    mode: "streaming",
-    segments: [
-      {
-        segmentId: "seg-bad",
-        text: "FORCE_BAD_TRAJECTORY",
-        index: 0,
-        startMs: 0,
-        endMs: 4000,
-      },
-    ],
-  });
+  const originalConsoleError = console.error;
+  console.error = () => {};
+
+  let response: Awaited<ReturnType<typeof postJson>>;
+
+  try {
+    response = await postJson(analyzeRoute.POST, "/api/analyze", {
+      mode: "streaming",
+      segments: [
+        {
+          segmentId: "seg-bad",
+          text: "FORCE_BAD_TRAJECTORY",
+          index: 0,
+          startMs: 0,
+          endMs: 4000,
+        },
+      ],
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
 
   assert.equal(response.status, 502);
   assert.match(response.body.error, /trustTrajectory length/i);
@@ -239,7 +248,7 @@ async function main() {
   await runPreCheckChecks();
   await runVerifyChecks();
 
-  console.log("Phase 2C readiness smoke checks passed.");
+  console.log("Readiness smoke checks passed.");
 }
 
 await main();

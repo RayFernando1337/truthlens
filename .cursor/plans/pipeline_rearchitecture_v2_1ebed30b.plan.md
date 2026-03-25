@@ -1178,20 +1178,20 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/verification-core.ts`** -- LLM claim triage (`runClaimTriage`), pre-verification (`runPreVerification`), and verification run assembly
 - **`src/lib/pipeline-policy.ts`** -- `getAnalysisIntervalMs(n)`, `shouldRunRollingAnalysis(n, lastRanAt, now)`, `shouldRunFullPass(elapsed, lastAt)`. Single module, two schedules. (NOT adaptive-scheduler.ts)
 - **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
-- **`src/lib/readiness-smoke-checks.ts`** -- Repeatable Phase 2C route validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`
+- **`src/lib/readiness-smoke-checks.ts`** -- Repeatable readiness validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`, including a quiet expected-failure check so stderr does not imply a false negative on green runs
 - **`src/lib/readiness-smoke-mocks.ts`** -- Shared test doubles used by the readiness smoke runner so contract checks do not depend on live model/web credentials
 - **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` for schema-validated structured output
 - **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 3/4 complete
 - **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
-- **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search
-- **`src/app/api/verify/pre-check/route.ts`** -- LLM-only claim verification
+- **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search, now with actionable error logging keyed by `sessionId`
+- **`src/app/api/verify/pre-check/route.ts`** -- LLM-only claim verification with parity error logging
 - **`src/app/api/analyze/summarize/route.ts`** -- Progressive summary maintenance
 
 ### Legacy surfaces still present on purpose
 
-- **`src/app/page.tsx`** -- Now a thin orchestration shell. It still renders `InsightsPanel`, so the final panel migration is not done, but the state machine is no longer living in the page itself.
+- **`src/app/page.tsx`** -- Now a thin orchestration shell. It still renders `InsightsPanel`, so the final panel migration is not done, but the state machine is no longer living in the page itself and it now surfaces verification loading/error states without starting the full TruthPanel migration.
 - **`src/app/components/InsightsPanel.tsx`**, **`AnalysisPanel.tsx`**, **`PatternsPanel.tsx`**, **`PulseFeed.tsx`**, **`ConfidenceMeter.tsx`**, **`ArchitectureDiagram.tsx`** -- Still present until TruthPanel migration is complete.
-- **`src/lib/types.ts` / `src/lib/schemas.ts` / `src/lib/prompts.ts`** -- Canonical contracts exist, but deprecated compatibility exports remain until old UI code is removed.
+- **`src/lib/types.ts` / `src/lib/schemas.ts` / `src/lib/prompts.ts`** -- Canonical contracts exist, including the minimal typed client error/result contract used to surface non-OK verification responses, but deprecated compatibility exports remain until old UI code is removed.
 
 ### Planned remaining file changes
 
@@ -1242,7 +1242,7 @@ Before Phase 4 begins, confirm all of the following:
 - **Phase boundaries are still clean.** Batch mode stays Phase 5. Topic segmentation stays Phase 5. We do not pull them into Phase 4 under the banner of "while we're here."
 - **Verification failures are diagnosable.** `/api/verify` logs actionable errors and the client can surface non-OK responses instead of silently collapsing them into `null`.
 
-Current repo status: the UI prerequisites for Phase 4 are satisfied, but two cleanup tasks remain before calling the boundary clean: (1) tighten readiness/observability around `/api/verify` so failures are easy to interpret, and (2) make the smoke runner output truthful so a printed contract failure cannot coexist with a success exit code.
+Current repo status: the Phase 4 boundary is now clean in code. `/api/verify` and `/api/verify/pre-check` log actionable failures, the client preserves non-OK verification responses instead of collapsing them into `null`, and `bun run smoke:readiness` now exits green without printing the expected invalid-trajectory contract error as a false alarm.
 
 ### Checks To Run Before Opening Phase 4 Work
 

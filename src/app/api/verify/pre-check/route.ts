@@ -21,6 +21,11 @@ export async function POST(req: Request) {
     const results = await runPreVerification(parsed.data.claims);
     return Response.json(llmPreVerdictBatchSchema.parse({ results }));
   } catch (e) {
+    console.error(
+      "[/api/verify/pre-check]",
+      { claimsCount: parsed.data.claims.length },
+      e
+    );
     const message = e instanceof Error ? e.message : "Pre-check failed";
     return Response.json({ error: message }, { status: 502 });
   }

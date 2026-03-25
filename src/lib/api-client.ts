@@ -1,4 +1,5 @@
 import type {
+  ApiError,
   AnalysisMode,
   AnalysisSnapshot,
   ClaimCandidate,
@@ -6,8 +7,34 @@ import type {
   SegmentPulse,
   SessionSummary,
   TranscriptSegment,
+  VerificationFetchResult,
   VerificationRun,
 } from "@/lib/types";
+
+async function readApiError(
+  response: Response,
+  fallbackMessage: string
+): Promise<ApiError> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const body = await response.json() as { error?: unknown };
+      if (typeof body.error === "string" && body.error.trim().length > 0) {
+        return { message: body.error, status: response.status };
+      }
+    } else {
+      const body = await response.text();
+      if (body.trim().length > 0) {
+        return { message: body, status: response.status };
+      }
+    }
+  } catch {
+    /* fallback below if error payload is unreadable */
+  }
+
+  return { message: fallbackMessage, status: response.status };
+}
 
 export async function fetchPulse(
   segment: TranscriptSegment,
@@ -65,7 +92,7 @@ export async function fetchSummary(
 export async function fetchVerification(
   sessionId: string,
   claims: ClaimCandidate[]
-): Promise<VerificationRun | null> {
+) : Promise<VerificationFetchResult | null> {
   if (claims.length === 0) return null;
   try {
     const res = await fetch("/api/verify", {
@@ -73,11 +100,27 @@ export async function fetchVerification(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, claims }),
     });
-    if (res.ok) return res.json();
+
+    if (res.ok) {
+      const data = await res.json() as VerificationRun;
+      return { ok: true, data };
+    }
+
+    return {
+      ok: false,
+      error: await readApiError(
+        res,
+        "Verification could not complete right now."
+      ),
+    };
   } catch {
-    /* network error */
+    return {
+      ok: false,
+      error: {
+        message: "Verification could not reach the server.",
+      },
+    };
   }
-  return null;
 }
 
 export async function fetchUrlExtract(url: string): Promise<string | null> {

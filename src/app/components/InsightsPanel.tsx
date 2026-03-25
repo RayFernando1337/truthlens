@@ -294,7 +294,7 @@ export default function InsightsPanel({
             <div className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
             <span className="text-[10px] uppercase tracking-widest text-[#444]">
               {isAnalysisLoading
-                ? "Running verification (early pass)…"
+                ? "Running early-pass analysis..."
                 : "Running full-transcript analysis…"}
             </span>
           </div>

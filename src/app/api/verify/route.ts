@@ -59,6 +59,14 @@ export async function POST(req: Request) {
 
     return Response.json(verificationRunSchema.parse(verificationRun));
   } catch (e) {
+    console.error(
+      "[/api/verify]",
+      {
+        sessionId: parsed.data.sessionId,
+        claimsCount: parsed.data.claims.length,
+      },
+      e
+    );
     const message = e instanceof Error ? e.message : "Verification failed";
     return Response.json({ error: message }, { status: 502 });
   }
