@@ -4,7 +4,7 @@ overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded gr
 todos:
   - id: phase-1-shadcn
     content: "Phase 1: Install shadcn/ui — run init, get cn(), components.json, dependencies"
-    status: pending
+    status: in_progress
   - id: phase-2-tokens
     content: "Phase 2: Rationalize token palette in globals.css — full shadcn set + TruthLens extensions + backward compat aliases"
     status: pending
@@ -27,6 +27,7 @@ isProject: false
 The visual language is modeled after [Factory.ai](https://factory.ai) — a dark, monospace, information-dense interface that achieves hierarchy through typography weight and spacing rather than a gradient of gray shades.
 
 Reference screenshots saved in `assets/`:
+
 - `Screenshot_2026-03-25_at_2.58.15_PM` — homepage: near-black canvas, orange accent dots, monospace type, minimal palette
 - `Screenshot_2026-03-25_at_2.58.51_PM` — product page: bordered buttons, small uppercase tracking-widest labels with orange dot prefix, clean card sections
 - `Screenshot_2026-03-25_at_2.59.18_PM` — features: dark section with 3-4 gray levels max, testimonial section, clear separation via borders not shade gradients
@@ -265,6 +266,7 @@ body {
 - L14: `bg-[#444]/15` -> `bg-muted-foreground/15`
 
 **DO NOT TOUCH** (inline styles / canvas — confirmed exclusions):
+
 - `ShareCapture.tsx` lines 18-129 — canvas `fillStyle`/`strokeStyle` hex values
 - `TruthPanel.tsx` lines 31-36 (FC object), 80-84 (`style={{ color: ... }}`)
 - `TruthPanelExtras.tsx` lines 14-18 (SCOL), 46-50 (`style={{ borderColor }}`)
