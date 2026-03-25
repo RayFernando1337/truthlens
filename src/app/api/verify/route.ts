@@ -10,11 +10,10 @@ import {
 export const maxDuration = 60;
 
 function getClaimsNeedingWebVerification(
-  claimTexts: string[],
+  llmResults: { needsWebSearch: boolean }[],
   queuedClaims: Parameters<typeof prepareClaimQueue>[0]
 ) {
-  const unresolved = new Set(claimTexts);
-  return queuedClaims.filter((claim) => unresolved.has(claim.text));
+  return queuedClaims.filter((_, index) => llmResults[index]?.needsWebSearch);
 }
 
 export async function POST(req: Request) {
@@ -39,9 +38,7 @@ export async function POST(req: Request) {
     );
     const llmResults = await runPreVerification(queue.queued);
     const pendingWebClaims = getClaimsNeedingWebVerification(
-      llmResults
-        .filter((result) => result.needsWebSearch)
-        .map((result) => result.claim),
+      llmResults,
       queue.queued
     );
     const webVerified = await Promise.all(

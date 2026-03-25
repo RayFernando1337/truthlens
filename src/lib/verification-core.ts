@@ -9,6 +9,7 @@ import type {
   ClaimCandidate,
   ClaimTriageResult,
   ClaimVerdict,
+  ClaimVerdictResult,
   LLMPreVerdict,
   VerificationRun,
 } from "@/lib/types";
@@ -21,7 +22,7 @@ function buildClaimTriagePrompt(claims: ClaimCandidate[]): string {
 
 function buildPreVerifyPrompt(claims: ClaimCandidate[]): string {
   return claims
-    .map((claim, index) => `${index + 1}. ${claim.text}`)
+    .map((claim) => `[${claim.claimId}] ${claim.text}`)
     .join("\n");
 }
 
@@ -40,15 +41,24 @@ function mergeTriageResult(
   };
 }
 
-function toClaimVerdict(result: LLMPreVerdict): ClaimVerdict {
-  const verdict =
-    result.verdict === "supported" || result.verdict === "refuted"
-      ? result.verdict
-      : "unverifiable";
+function mapPreVerdictToFinal(
+  preVerdict: LLMPreVerdict["verdict"]
+): ClaimVerdictResult {
+  switch (preVerdict) {
+    case "supported":
+      return "supported";
+    case "refuted":
+      return "refuted";
+    case "uncertain":
+    case "not-verifiable":
+      return "unverifiable";
+  }
+}
 
+function toClaimVerdict(result: LLMPreVerdict): ClaimVerdict {
   return {
     claim: result.claim,
-    verdict,
+    verdict: mapPreVerdictToFinal(result.verdict),
     confidence: result.confidence,
     explanation: result.explanation,
     source: result.needsWebSearch ? "unverified" : "llm-knowledge",

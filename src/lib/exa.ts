@@ -50,12 +50,7 @@ function getExaClient(): Exa {
   return cachedClient;
 }
 
-function confidenceFromCitations(citationCount: number): number {
-  if (citationCount >= 3) return 0.86;
-  if (citationCount === 2) return 0.78;
-  if (citationCount === 1) return 0.68;
-  return 0.55;
-}
+const FALLBACK_CONFIDENCE = 0.5;
 
 export async function verifyClaim(candidate: ClaimCandidate): Promise<ClaimVerdict> {
   const exa = getExaClient();
@@ -68,13 +63,14 @@ export async function verifyClaim(candidate: ClaimCandidate): Promise<ClaimVerdi
     ? response.answer
     : {
         verdict: "unverifiable" as const,
+        confidence: FALLBACK_CONFIDENCE,
         explanation: "Exa returned an unstructured answer for this claim.",
       };
 
   return {
     claim: candidate.text,
     verdict: answer.verdict,
-    confidence: confidenceFromCitations(response.citations?.length ?? 0),
+    confidence: answer.confidence,
     explanation: answer.explanation,
     source: "exa-web",
     citations: response.citations?.map((citation) => ({
