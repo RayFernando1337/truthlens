@@ -6,6 +6,7 @@ const nemotron = createOpenAICompatible({
   headers: {
     Authorization: `Bearer ${process.env.NEBIUS_API_KEY}`,
   },
+  supportsStructuredOutputs: true,
 });
 
 export const model = nemotron.chatModel(
