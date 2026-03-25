@@ -37,6 +37,18 @@ export const flagRevisionActionEnum = z.enum([
 
 // ─── L1 Pulse ─────────────────────────────────────────
 
+const claimItem = z.preprocess(
+  (val: unknown) => {
+    if (typeof val === "string") return val;
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const obj = val as Record<string, unknown>;
+      return String(obj.text ?? obj.claim ?? obj.statement ?? JSON.stringify(obj));
+    }
+    return String(val);
+  },
+  z.string(),
+);
+
 const pulseFlagItem = z.preprocess(
   (val: unknown) => {
     if (typeof val === "string") return { type: val, label: val };
@@ -56,7 +68,7 @@ const pulseFlagItem = z.preprocess(
 );
 
 export const pulseSchema = z.object({
-  claims: z.array(z.string()).describe("Factual claims made in the segment"),
+  claims: z.array(claimItem).describe("Factual claims made in the segment"),
   flags: z.array(pulseFlagItem),
   tone: z.string().describe("Overall tone of the segment"),
   confidence: z

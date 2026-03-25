@@ -1,7 +1,5 @@
-import {
-  generateText, Output, NoObjectGeneratedError, type LanguageModel,
-} from "ai";
-import { type ZodType } from "zod";
+import { generateText, Output, type LanguageModel } from "ai";
+import { type ZodType, toJSONSchema } from "zod";
 
 function extractJson(text: string): unknown {
   const trimmed = text.trim();
@@ -24,17 +22,12 @@ export async function generateTypedObject<T>({
   system: string;
   prompt: string;
 }): Promise<T> {
-  try {
-    const { output } = await generateText({
-      model,
-      system,
-      prompt,
-      output: Output.object({ schema }),
-    });
-    return output;
-  } catch (err) {
-    const raw = NoObjectGeneratedError.isInstance(err) ? err.text : undefined;
-    if (!raw) throw err;
-    return schema.parse(extractJson(raw));
-  }
+  const spec = JSON.stringify(toJSONSchema(schema), null, 2);
+  const { text } = await generateText({
+    model,
+    system: `${system}\n\nRespond with ONLY a JSON object (no markdown, no explanation).\nRequired schema:\n${spec}`,
+    prompt,
+    output: Output.json(),
+  });
+  return schema.parse(extractJson(text));
 }
