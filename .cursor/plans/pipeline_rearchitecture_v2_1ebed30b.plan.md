@@ -300,7 +300,53 @@ After the real-time session, the transcript becomes queryable raw material. This
 - "Their confidence increased when discussing their own expertise but decreased on policy specifics."
 - These patterns only emerge when you look across topics, not within a single segment.
 
-**Implementation:** Post-analysis doesn't need a dedicated API route in Phase 1. The unified analysis endpoint with `mode: "full"` + a `query` parameter can handle targeted questions. Topic segmentation can be a separate lightweight call. For the prototype, the full transcript lives in client memory (no persistence needed). Future phases could add a "session review" UI surface.
+**Implementation -- topic segmentation via Gemini (from transcribe-groq):**
+
+The topic segmentation approach is adapted from the proven timestamp generation system in [transcribe-groq](https://github.com/RayFernando1337/transcribe-groq/blob/main/convex/utils/timestamps.ts). That system uses:
+
+- `google('gemini-2.5-pro')` via Vercel AI SDK `generateObject()` with Zod schema validation
+- A 4-step prompt process: Initial Analysis -> Identify Key Moments -> Draft Descriptions -> Format & Review
+- Content-density over fixed numbers (~1 key moment every 5-10 minutes, flexible)
+- Coverage validation (ensures the full duration is analyzed)
+- Gemini thinking mode (`thinkingBudget: -1`) for complex reasoning over long transcripts
+
+For TruthLens, adapt as follows:
+
+- **Model:** `google('gemini-2.5-pro')` for the topic segmentation pass (Nemotron stays for L1/unified analysis). Gemini handles long transcripts well and thinking mode helps with structural reasoning.
+- **Input:** Full transcript (or high-fidelity progressive summary for sessions >30 min) + accumulated L1 flags with chunk indices
+- **Output schema (Zod-validated):**
+
+```typescript
+interface TopicSegment {
+  startTime: string;    // MM:SS or HH:MM:SS
+  endTime: string;
+  topic: string;        // 3-7 word noun phrase (YouTube chapter style)
+  segmentType: "argument-development" | "evidence-presentation" | "emotional-appeal" | "topic-shift" | "qa-exchange" | "philosophical-tangent" | "anecdote" | "summary-recap";
+  flagsDuringSegment: string[];  // flag types that fired in this range
+  claimCount: number;
+  avgConfidence: number;
+}
+```
+
+- **Prompt process (adapted from transcribe-groq v4.0):**
+  1. Initial Analysis -- read the full transcript, identify the overall structure and flow
+  2. Identify Topic Boundaries -- mark where the conversation shifts, where argument phases change, where evidence vs emotion vs anecdote patterns emerge
+  3. Draft Segment Labels -- short noun phrases (not sentences), scannable as chapter titles
+  4. Format & Review -- chronological order, check coverage, ensure segments span the full duration
+
+- **Segment types (adapted from transcribe-groq's moment types):**
+  - `argument-development` -- speaker building toward a claim (replaces "Feature Demonstration")
+  - `evidence-presentation` -- data, studies, examples being cited (replaces "Pro-Tips")
+  - `emotional-appeal` -- pathos-heavy segment, fear/outrage/inspiration framing (replaces "Aha! Moments")
+  - `topic-shift` -- major subject change (same as transcribe-groq's "Major Topic Shifts")
+  - `qa-exchange` -- host-guest back-and-forth (replaces "Community Moments")
+  - `philosophical-tangent` -- broader worldview statement (same as "Soapbox Segments")
+  - `anecdote` -- personal story used as evidence
+  - `summary-recap` -- speaker restating or wrapping up
+
+These segments become natural clip boundaries (Sterling's 90s vertical format), chapter markers for podcast navigation, and grouping keys for theme-based reorganization.
+
+**Implementation:** A dedicated `/api/analyze/segments/route.ts` that accepts the full transcript + L1 flag data. Fires once at session stop or on demand. Uses Gemini, not Nemotron. Returns `TopicSegment[]`. For the prototype, this is Phase 5 scope -- not needed for the real-time experience but critical for the post-analysis and clip/share use cases.
 
 ### Batch Mode (Paste / URL)
 
