@@ -3,9 +3,12 @@ import type {
   AnalysisMode,
   AnalysisSnapshot,
   ClaimCandidate,
+  PostAnalysisQueryResult,
+  PostQueryType,
   PulseResult,
   SegmentPulse,
   SessionSummary,
+  TopicSegment,
   TranscriptSegment,
   VerificationFetchResult,
   VerificationRun,
@@ -134,6 +137,44 @@ export async function fetchUrlExtract(url: string): Promise<string | null> {
       const data = await res.json();
       return data.text ?? null;
     }
+  } catch {
+    /* network error */
+  }
+  return null;
+}
+
+export async function fetchTopicSegments(
+  segments: TranscriptSegment[],
+  flagData?: Array<{ segmentId: string; flags: string[] }>,
+  summary?: SessionSummary
+): Promise<TopicSegment[] | null> {
+  try {
+    const res = await fetch("/api/analyze/segments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ segments, flagData, summary }),
+    });
+    if (res.ok) return res.json();
+  } catch {
+    /* network error */
+  }
+  return null;
+}
+
+export async function fetchPostAnalysisQuery(
+  query: string,
+  queryType: PostQueryType,
+  segments: TranscriptSegment[],
+  summary?: SessionSummary,
+  topicSegments?: TopicSegment[]
+): Promise<PostAnalysisQueryResult | null> {
+  try {
+    const res = await fetch("/api/analyze/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, queryType, segments, summary, topicSegments }),
+    });
+    if (res.ok) return res.json();
   } catch {
     /* network error */
   }

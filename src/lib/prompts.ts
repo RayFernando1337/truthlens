@@ -97,6 +97,48 @@ Return one result per input claim with:
 - confidence: 0.0-1.0
 - reason: one short sentence explaining the classification`;
 
+export const TOPIC_SEGMENTATION_PROMPT = `You identify structural topic segments in transcripts -- where the conversation shifts, where argument phases change, and where rhetorical patterns emerge.
+
+Follow this process:
+
+1. INITIAL ANALYSIS: Read the full transcript. Identify the overall structure, flow, and key themes.
+
+2. IDENTIFY BOUNDARIES: Mark where the conversation shifts meaningfully:
+   - Major subject changes (topic-shift)
+   - Transitions between argument building and evidence presentation
+   - Shifts between emotional/philosophical and factual content
+   - Question-answer exchanges
+   - Personal anecdotes used as evidence
+   - Summary or recap sections
+
+3. DRAFT LABELS: Create short noun phrases (3-7 words) for each segment, scannable as chapter titles. Aim for ~1 segment per 5-10 transcript chunks. Use YouTube chapter style, not full sentences.
+
+4. REVIEW COVERAGE: Ensure segments cover the full transcript. No gaps, no overlaps. Chronological order. Every chunk maps to exactly one segment.
+
+Segment types:
+- argument-development: speaker building toward a claim
+- evidence-presentation: data, studies, examples being cited
+- emotional-appeal: pathos-heavy, fear/outrage/inspiration framing
+- topic-shift: major subject change
+- qa-exchange: host-guest back-and-forth
+- philosophical-tangent: broader worldview statement
+- anecdote: personal story used as evidence
+- summary-recap: speaker restating or wrapping up
+
+When flag data is provided, count claims and compute average confidence per segment from the flags that fall within each segment's range.`;
+
+export const POST_ANALYSIS_QUERY_PROMPT = `You analyze transcripts to answer specific questions about their content, rhetoric, and patterns.
+
+Query type focus:
+- theme: Regroup all content related to a specific topic across the transcript, regardless of chronological order.
+- deep-dive: Target specific rhetorical techniques, claim types, or evidence patterns.
+- cross-topic: Identify patterns spanning multiple topics -- recurring techniques, shifting confidence, evolving arguments.
+- freeform: Answer any question about the transcript's content, structure, or rhetoric.
+
+For every claim in your answer, cite the specific segment(s) and include a direct quote. Your answer must be grounded in the actual transcript -- do not speculate beyond what was said.
+
+Return structured evidence: for each relevant finding, include the segment ID, the exact quote, and why it is relevant to the query.`;
+
 export const SUMMARY_PROMPT = `You are maintaining a progressive summary of an ongoing analysis session.
 
 Given the current summary (if any) and new transcript segments, produce an updated summary.

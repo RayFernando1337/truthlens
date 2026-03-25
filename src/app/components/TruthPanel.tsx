@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from "react";
 import type {
-  AnalysisSnapshot, PipelineStageStatus,
-  PulseEntry, PulseFlag, VerificationRun,
+  AnalysisSnapshot, PipelineStageStatus, PostAnalysisQueryResult,
+  PostQueryType, PulseEntry, PulseFlag, TopicSegment, VerificationRun,
 } from "@/lib/types";
 import { severityFromPulse } from "@/lib/pulse-utils";
 import TrustChart from "./TrustChart";
 import {
   AnalysisContent, VerdictsContent, PatternsContent,
+  TopicSegmentsContent, QueryContent,
 } from "./TruthPanelSections";
 
 const EMA_ALPHA = 0.3;
@@ -44,13 +45,15 @@ const FI: Record<PulseFlag["type"], string> = {
 };
 
 type FlatFlag = { flag: PulseFlag; idx: number };
-type Disclosure = "analysis" | "verdicts" | "patterns";
+type Disclosure = "analysis" | "verdicts" | "patterns" | "segments" | "query";
 
 interface TruthPanelProps {
   pulseEntries: PulseEntry[];
   snapshot: AnalysisSnapshot | null;
   verificationRun: VerificationRun | null;
   verificationError: string | null;
+  topicSegments: TopicSegment[] | null;
+  queryResult: PostAnalysisQueryResult | null;
   pipelineStatus: {
     analysis: PipelineStageStatus;
     verification: PipelineStageStatus;
@@ -59,6 +62,8 @@ interface TruthPanelProps {
   isStreaming: boolean;
   onSeekTranscriptChunk: (index: number) => void;
   onTriggerVerification: () => void;
+  onTriggerTopicSegmentation: () => void;
+  onSubmitQuery: (query: string, queryType: PostQueryType) => void;
 }
 
 function StatsBar(
@@ -112,11 +117,15 @@ function LoadingHint({ text }: { text: string }) {
 }
 
 function DisclosureTabs(
-  { active, onToggle }: { active: Disclosure | null; onToggle: (t: Disclosure) => void },
+  { active, onToggle, tabs }: {
+    active: Disclosure | null;
+    onToggle: (t: Disclosure) => void;
+    tabs: readonly Disclosure[];
+  },
 ) {
   return (
     <div className="sticky top-0 z-[5] flex border-y border-[#222] bg-[#0a0a0a]">
-      {(["analysis", "verdicts", "patterns"] as const).map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab} type="button" onClick={() => onToggle(tab)}
           className={`flex-1 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest transition-colors ${
@@ -132,19 +141,37 @@ function DisclosureTabs(
 
 export default function TruthPanel({
   pulseEntries: entries, snapshot, verificationRun, verificationError,
-  pipelineStatus, processingChunk, isStreaming, onSeekTranscriptChunk, onTriggerVerification,
+  topicSegments, queryResult, pipelineStatus, processingChunk, isStreaming,
+  onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
 }: TruthPanelProps) {
   const [os, setOs] = useState({ tab: null as Disclosure | null, autoTs: null as number | null });
   const ema = useMemo(() => computeEMA(entries), [entries]);
   const trajectory = snapshot?.trustTrajectory;
   const hasTrajectory = !!trajectory && trajectory.length > 1;
-  const flatFlags = useMemo<FlatFlag[]>(() => entries.flatMap((e, i) => e.result.flags.map((f) => ({ flag: f, idx: i }))).reverse(), [entries]);
-  const claimCount = useMemo(() => entries.reduce((s, e) => s + e.result.claims.length, 0), [entries]);
+  const batchMode = entries.length === 0 && !!snapshot;
+  const flatFlags = useMemo<FlatFlag[]>(
+    () => entries.flatMap((e, i) => e.result.flags.map((f) => ({ flag: f, idx: i }))).reverse(),
+    [entries],
+  );
+  const claimCount = useMemo(
+    () => batchMode ? (snapshot?.evidenceTable.length ?? 0) : entries.reduce((s, e) => s + e.result.claims.length, 0),
+    [entries, snapshot, batchMode],
+  );
   const verifiedCount = verificationRun ? verificationRun.llmResolved.length + verificationRun.webVerified.length : 0;
   const autoOpen = !!snapshot && !isStreaming && os.tab === null && os.autoTs !== snapshot.timestamp;
   const active: Disclosure | null = autoOpen ? "analysis" : os.tab;
   const toggle = (tab: Disclosure) => setOs({ tab: active === tab ? null : tab, autoTs: snapshot?.timestamp ?? null });
-  if (entries.length === 0 && !processingChunk) return (
+  const tabs = useMemo<readonly Disclosure[]>(
+    () => isStreaming ? ["analysis", "verdicts", "patterns"] : ["analysis", "verdicts", "patterns", "segments", "query"],
+    [isStreaming],
+  );
+  const chartScores = batchMode ? (trajectory ?? []) : (hasTrajectory ? trajectory! : ema);
+  const chartOverlay = batchMode ? undefined : (hasTrajectory ? ema : trajectory);
+  const flaggedCount = batchMode
+    ? (snapshot?.namedFallacies.length ?? 0) + (snapshot?.patterns.length ?? 0)
+    : flatFlags.length;
+
+  if (entries.length === 0 && !processingChunk && !snapshot) return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
       <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
       <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
@@ -153,16 +180,16 @@ export default function TruthPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 border-b border-[#222] bg-[#141414]">
-        <TrustChart scores={hasTrajectory ? trajectory! : ema} overlay={hasTrajectory ? ema : trajectory} />
-        <StatsBar claims={claimCount} flags={flatFlags.length} verified={verifiedCount} />
+        <TrustChart scores={chartScores} overlay={chartOverlay} />
+        <StatsBar claims={claimCount} flags={flaggedCount} verified={verifiedCount} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {processingChunk && <LoadingHint text="Analyzing\u2026" />}
-        <FlagFeed flags={flatFlags} onSeek={onSeekTranscriptChunk} />
-        {flatFlags.length === 0 && entries.length > 0 && (
+        {!batchMode && <FlagFeed flags={flatFlags} onSeek={onSeekTranscriptChunk} />}
+        {!batchMode && flatFlags.length === 0 && entries.length > 0 && (
           <p className="px-4 py-3 text-[11px] text-[#00cc66]/70">No flags so far. The argument looks straight.</p>
         )}
-        <DisclosureTabs active={active} onToggle={toggle} />
+        <DisclosureTabs active={active} onToggle={toggle} tabs={tabs} />
         {active === "analysis" && (snapshot
           ? <AnalysisContent snapshot={snapshot} />
           : <LoadingHint text={pipelineStatus.analysis === "running" ? "Analyzing\u2026" : "Appears after more content."} />
@@ -174,6 +201,13 @@ export default function TruthPanel({
         {active === "patterns" && (snapshot
           ? <PatternsContent snapshot={snapshot} />
           : <p className="px-4 py-3 text-[11px] text-[#444]">No patterns detected yet.</p>
+        )}
+        {active === "segments" && (
+          <TopicSegmentsContent segments={topicSegments}
+            onGenerate={onTriggerTopicSegmentation} />
+        )}
+        {active === "query" && (
+          <QueryContent result={queryResult} onSubmit={onSubmitQuery} />
         )}
       </div>
     </div>

@@ -281,24 +281,56 @@ export interface VerifyRequest {
 
 export type PipelineStageStatus = "idle" | "running" | "success" | "error";
 
-// ─── Deprecated (remove after Phase 2A/2B migration) ──
+// ─── Topic Segmentation ──────────────────────────────
 
-/** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
-export interface AnalysisResult {
-  tldr: string;
-  corePoints: string[];
-  underlyingStatement: string;
-  evidenceTable: EvidenceRow[];
-  appeals: Appeals;
-  assumptions: string[];
-  steelman: string;
-  missing: string[];
+export type TopicSegmentType =
+  | "argument-development"
+  | "evidence-presentation"
+  | "emotional-appeal"
+  | "topic-shift"
+  | "qa-exchange"
+  | "philosophical-tangent"
+  | "anecdote"
+  | "summary-recap";
+
+export interface TopicSegment {
+  startSegmentIndex: number;
+  endSegmentIndex: number;
+  startTime?: string;
+  endTime?: string;
+  topic: string;
+  segmentType: TopicSegmentType;
+  flagsDuringSegment: string[];
+  claimCount: number;
+  avgConfidence: number;
 }
 
-/** @deprecated Use AnalysisSnapshot. Replaced in Phase 2A. */
-export interface PatternsResult {
-  patterns: PatternEntry[];
-  trustTrajectory: number[];
-  overallAssessment: string;
-  fullAnalysis?: AnalysisResult;
+export interface TopicSegmentRequest {
+  segments: TranscriptSegment[];
+  flagData?: Array<{ segmentId: string; flags: string[] }>;
+  summary?: SessionSummary;
+}
+
+// ─── Post-Analysis Queries ───────────────────────────
+
+export type PostQueryType = "theme" | "deep-dive" | "cross-topic" | "freeform";
+
+export interface QueryEvidence {
+  segmentId: string;
+  quote: string;
+  relevance: string;
+}
+
+export interface PostAnalysisQuery {
+  query: string;
+  queryType: PostQueryType;
+  segments: TranscriptSegment[];
+  summary?: SessionSummary;
+  topicSegments?: TopicSegment[];
+}
+
+export interface PostAnalysisQueryResult {
+  answer: string;
+  relevantSegmentIds: string[];
+  evidence: QueryEvidence[];
 }

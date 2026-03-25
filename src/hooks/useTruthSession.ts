@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   AnalysisSnapshot, InputKind, PipelineStageStatus,
-  PulseEntry, SegmentPulse, SessionSummary,
+  PostAnalysisQueryResult, PostQueryType, PulseEntry,
+  SegmentPulse, SessionSummary, TopicSegment,
   TranscriptSegment, TruthSession, VerificationRun,
 } from "@/lib/types";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
@@ -16,6 +17,7 @@ import { makeSegment, splitIntoChunks } from "@/lib/segment-utils";
 import {
   fetchPulse, fetchAnalysis, fetchSummary,
   fetchVerification, fetchUrlExtract,
+  fetchTopicSegments, fetchPostAnalysisQuery,
 } from "@/lib/api-client";
 // ─── Constants ────────────────────────────────────────
 type StageKey = "pulse" | "analysis" | "verification" | "summary";
@@ -44,6 +46,8 @@ export function useTruthSession() {
   const [processingChunk, setProcessingChunk] = useState<string | null>(null);
   const [chunkProgress, setChunkProgress] = useState<{ current: number; total: number } | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string[]>([]);
+  const [topicSegments, setTopicSegments] = useState<TopicSegment[] | null>(null);
+  const [queryResult, setQueryResult] = useState<PostAnalysisQueryResult | null>(null);
 
   const mem = useRef({
     segments: [] as TranscriptSegment[],
@@ -80,6 +84,8 @@ export function useTruthSession() {
     setChunkProgress(null);
     setIsProcessing(false);
     setIsFetchingUrl(false);
+    setTopicSegments(null);
+    setQueryResult(null);
     const m = mem.current;
     m.segments = [];
     m.pulses = [];
@@ -142,6 +148,30 @@ export function useTruthSession() {
       setStage("verification", "error");
     }
   }, [setStage]);
+
+  const triggerTopicSegmentation = useCallback(async () => {
+    const m = mem.current;
+    if (m.segments.length === 0) return;
+    const flagData = m.pulses.map((p) => ({
+      segmentId: p.segmentId,
+      flags: p.flags.map((f) => f.type),
+    }));
+    const result = await fetchTopicSegments(
+      m.segments, flagData.length > 0 ? flagData : undefined, m.summary ?? undefined,
+    );
+    if (result) setTopicSegments(result);
+  }, []);
+
+  const submitQuery = useCallback(async (query: string, queryType: PostQueryType) => {
+    const m = mem.current;
+    if (m.segments.length === 0) return null;
+    setQueryResult(null);
+    const result = await fetchPostAnalysisQuery(
+      query, queryType, m.segments, m.summary ?? undefined,
+    );
+    if (result) setQueryResult(result);
+    return result;
+  }, []);
 
   const runAnalysis = useCallback(
     async (mode: "streaming" | "full") => {
@@ -234,51 +264,42 @@ export function useTruthSession() {
     }
     if (m.segments.length === 0) return;
     void runAnalysis("full");
-  }, [stopRecording, runAnalysis]);
+    void triggerTopicSegmentation();
+  }, [stopRecording, runAnalysis, triggerTopicSegmentation]);
 
   const handleAnalyze = useCallback(
     async (text: string, inputKind?: InputKind) => {
       const m = mem.current;
       const era = ++m.era;
       resetState();
-      const sess = createSession("streaming", inputKind ?? "paste");
+      const sess = createSession("batch", inputKind ?? "paste");
       m.session = sess;
       m.sessionStart = Date.now();
       setSession(sess);
+      setIsProcessing(true);
+      setProcessingChunk("Analyzing full text\u2026");
+      setStage("analysis", "running");
 
       const chunks = splitIntoChunks(text);
-      const segments = chunks.map((c, i) => makeSegment(`chunk-${i}`, c, i));
-      setIsProcessing(true);
-      setChunkProgress({ current: 0, total: chunks.length });
+      m.segments = chunks.map((c, i) => makeSegment(`batch-${i}`, c, i));
 
-      for (let i = 0; i < segments.length; i++) {
-        if (era !== m.era) break;
-        const seg = segments[i];
-        const prev = m.segments.slice(-3);
-        setProcessingChunk(seg.text);
-        setChunkProgress({ current: i + 1, total: chunks.length });
-
-        const result = await fetchPulse(seg, prev);
-        if (result) {
-          setPulseEntries((p) => [...p, { id: seg.segmentId, chunk: seg.text, result }]);
-          m.pulses.push({ ...result, segmentId: seg.segmentId });
-        }
-        m.segments.push(seg);
-
-        const now = Date.now();
-        if (shouldRunRollingAnalysis(m.segments.length, m.rollingAt, now)) {
-          void runAnalysis("streaming");
-        }
-      }
+      const result = await fetchAnalysis("batch", m.segments);
 
       setProcessingChunk(null);
       setIsProcessing(false);
-      setChunkProgress(null);
 
-      if (era !== m.era || m.segments.length < 2) return;
-      void runAnalysis("full");
+      if (era !== m.era) return;
+      if (result) {
+        m.snap = result;
+        setSnapshot(result);
+        setStage("analysis", "success");
+        void triggerVerification();
+        void triggerTopicSegmentation();
+      } else {
+        setStage("analysis", "error");
+      }
     },
-    [resetState, runAnalysis],
+    [resetState, setStage, triggerVerification, triggerTopicSegmentation],
   );
 
   const handleFetchUrl = useCallback(
@@ -314,6 +335,7 @@ export function useTruthSession() {
 
   return {
     session, snapshot, runningSummary, verificationRun, verificationError,
+    topicSegments, queryResult,
     pipelineStatus: pipeline, flagCount, isAnalysisLoading,
     pulseEntries,
     voiceTranscript, voiceChunkSeverities,
@@ -321,7 +343,8 @@ export function useTruthSession() {
     isProcessing, isFetchingUrl, processingChunk, chunkProgress,
     handleAnalyze, handleFetchUrl,
     handleStartRecording, handleStopRecording,
-    triggerVerification, seekTranscriptChunk,
+    triggerVerification, triggerTopicSegmentation,
+    submitQuery, seekTranscriptChunk,
   };
 }
 

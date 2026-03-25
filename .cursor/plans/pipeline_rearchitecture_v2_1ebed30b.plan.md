@@ -94,13 +94,13 @@ todos:
     status: completed
   - id: p5-batch-mode
     content: "[Phase 5] Add batch mode path in useTruthSession -- skip L1 for paste/URL, single unified analysis call with mode=batch, extract claims from output for verification"
-    status: pending
+    status: in_progress
   - id: p5-add-gemini
     content: "[Phase 5] Add Gemini Flash for topic segmentation via AI gateway -- use gateway('google/gemini-3-flash') from existing generate-object.ts pattern, no new dependency needed (separate model from Nemotron)"
-    status: pending
+    status: completed
   - id: p5-topic-segments
     content: "[Phase 5] Create /api/analyze/segments/route.ts -- Gemini 3 Flash via gateway('google/gemini-3-flash') + generateObject() with TopicSegment[] Zod schema, adapted from transcribe-groq v4.0 prompt pattern (4-step: analyze, identify boundaries, draft labels, review coverage). Fires at stop or on demand."
-    status: pending
+    status: completed
   - id: p5-post-queries
     content: "[Phase 5] Post-analysis query support -- theme-based reorganization, targeted deep dives, cross-topic patterns via LLM queries against stored transcript"
     status: pending

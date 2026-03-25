@@ -53,11 +53,15 @@ export default function Home() {
             snapshot={s.snapshot}
             verificationRun={s.verificationRun}
             verificationError={s.verificationError}
+            topicSegments={s.topicSegments}
+            queryResult={s.queryResult}
             pipelineStatus={s.pipelineStatus}
             processingChunk={s.processingChunk}
             isStreaming={s.isRecording || s.isProcessing}
             onSeekTranscriptChunk={s.seekTranscriptChunk}
             onTriggerVerification={s.triggerVerification}
+            onTriggerTopicSegmentation={s.triggerTopicSegmentation}
+            onSubmitQuery={s.submitQuery}
           />
         </div>
       </div>

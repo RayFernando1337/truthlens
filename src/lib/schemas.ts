@@ -264,26 +264,76 @@ export const verifyRequestSchema = z.object({
 export const verificationRunSchema = z.object({
   sessionId: z.string(),
   status: z.enum([
-    "queued",
-    "model-assessed",
-    "web-verified",
-    "skipped",
-    "cap-exceeded",
+    "queued", "model-assessed", "web-verified", "skipped", "cap-exceeded",
   ]),
   llmResolved: z.array(claimVerdictSchema),
   webVerified: z.array(claimVerdictSchema),
-  unverified: z.array(
-    z.object({
-      claimId: z.string(),
-      claim: z.string(),
-      reason: z.enum(["needs-web", "not-verifiable", "cap-exceeded"]),
-    })
-  ),
+  unverified: z.array(z.object({
+    claimId: z.string(), claim: z.string(),
+    reason: z.enum(["needs-web", "not-verifiable", "cap-exceeded"]),
+  })),
   stats: z.object({
-    totalClaims: z.number().int().min(0),
-    llmChecked: z.number().int().min(0),
-    webSearched: z.number().int().min(0),
-    capped: z.number().int().min(0),
+    totalClaims: z.number().int().min(0), llmChecked: z.number().int().min(0),
+    webSearched: z.number().int().min(0), capped: z.number().int().min(0),
   }),
   timestamp: z.number(),
+});
+
+// ─── Topic Segmentation ──────────────────────────────
+
+export const topicSegmentTypeEnum = z.enum([
+  "argument-development", "evidence-presentation", "emotional-appeal",
+  "topic-shift", "qa-exchange", "philosophical-tangent",
+  "anecdote", "summary-recap",
+]);
+
+export const topicSegmentSchema = z.object({
+  startSegmentIndex: z.number().int().min(0),
+  endSegmentIndex: z.number().int().min(0),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  topic: z.string().describe("3-7 word noun phrase describing this segment"),
+  segmentType: topicSegmentTypeEnum,
+  flagsDuringSegment: z.array(z.string()),
+  claimCount: z.number().int().min(0),
+  avgConfidence: z.number().min(0).max(1),
+});
+
+export const topicSegmentBatchSchema = z.object({
+  segments: z.array(topicSegmentSchema),
+});
+
+export const topicSegmentRequestSchema = z.object({
+  segments: z.array(transcriptSegmentSchema).min(1),
+  flagData: z.array(z.object({
+    segmentId: z.string(),
+    flags: z.array(z.string()),
+  })).optional(),
+  summary: sessionSummarySchema.optional(),
+});
+
+// ─── Post-Analysis Queries ───────────────────────────
+
+export const postQueryTypeEnum = z.enum([
+  "theme", "deep-dive", "cross-topic", "freeform",
+]);
+
+export const queryEvidenceSchema = z.object({
+  segmentId: z.string(),
+  quote: z.string(),
+  relevance: z.string(),
+});
+
+export const postAnalysisQueryRequestSchema = z.object({
+  query: z.string().min(1),
+  queryType: postQueryTypeEnum,
+  segments: z.array(transcriptSegmentSchema).min(1),
+  summary: sessionSummarySchema.optional(),
+  topicSegments: z.array(topicSegmentSchema).optional(),
+});
+
+export const postAnalysisQueryResultSchema = z.object({
+  answer: z.string(),
+  relevantSegmentIds: z.array(z.string()),
+  evidence: z.array(queryEvidenceSchema),
 });
