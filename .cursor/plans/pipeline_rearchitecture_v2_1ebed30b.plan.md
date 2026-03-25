@@ -106,13 +106,13 @@ todos:
     status: completed
   - id: p6-youtube
     content: "[Phase 6] YouTube transcript ingestion for podcast URLs + clip extraction (90s vertical format using TopicSegment boundaries)"
-    status: pending
+    status: completed
   - id: p6-persistence
     content: "[Phase 6] Persistence layer TBD -- if needed, localStorage for session history; backend persistence deferred until prototype stabilizes"
-    status: pending
+    status: completed
   - id: p6-share
     content: "[Phase 6] Gotcha screenshot / share unit -- exportable frame with trust chart + flag + speaker ID + branding watermark, optimized for Twitter/TikTok compression"
-    status: pending
+    status: completed
 isProject: false
 ---
 

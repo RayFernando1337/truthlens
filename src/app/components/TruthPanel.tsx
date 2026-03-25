@@ -6,7 +6,9 @@ import type {
   PostQueryType, PulseEntry, PulseFlag, TopicSegment, VerificationRun,
 } from "@/lib/types";
 import { severityFromPulse } from "@/lib/pulse-utils";
+import type { ShareFrameData } from "@/lib/types";
 import TrustChart from "./TrustChart";
+import ShareButton from "./ShareCapture";
 import {
   AnalysisContent, VerdictsContent, PatternsContent,
   TopicSegmentsContent, QueryContent,
@@ -60,6 +62,7 @@ interface TruthPanelProps {
   };
   processingChunk: string | null;
   isStreaming: boolean;
+  sourceTitle?: string;
   onSeekTranscriptChunk: (index: number) => void;
   onTriggerVerification: () => void;
   onTriggerTopicSegmentation: () => void;
@@ -192,13 +195,17 @@ function usePanelDerived(
 export default function TruthPanel({
   pulseEntries: entries, snapshot, verificationRun, verificationError,
   topicSegments, queryResult, pipelineStatus, processingChunk, isStreaming,
-  onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
+  sourceTitle, onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
 }: TruthPanelProps) {
   const [os, setOs] = useState({ tab: null as Disclosure | null, autoTs: null as number | null });
   const d = usePanelDerived(entries, snapshot, verificationRun, isStreaming);
   const autoOpen = !!snapshot && !isStreaming && os.tab === null && os.autoTs !== snapshot.timestamp;
   const active: Disclosure | null = autoOpen ? "analysis" : os.tab;
   const toggle = (tab: Disclosure) => setOs({ tab: active === tab ? null : tab, autoTs: snapshot?.timestamp ?? null });
+  const shareData: ShareFrameData | null = snapshot && d.scores.length > 0 ? {
+    scores: d.scores, latestFlag: d.flatFlags[0]?.flag, sourceTitle,
+    tldr: snapshot.tldr, flagCount: d.flagged, claimCount: d.claims, verifiedCount: d.verified,
+  } : null;
 
   if (entries.length === 0 && !processingChunk && !snapshot) return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -210,7 +217,10 @@ export default function TruthPanel({
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 border-b border-[#222] bg-[#141414]">
         <TrustChart scores={d.scores} overlay={d.overlay} />
-        <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />
+        <div className="flex items-center justify-between">
+          <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />
+          {shareData && <div className="pr-4"><ShareButton data={shareData} /></div>}
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {processingChunk && <LoadingHint text="Analyzing\u2026" />}

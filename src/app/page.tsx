@@ -1,10 +1,15 @@
 "use client";
 
 import { useTruthSession } from "@/hooks/useTruthSession";
+import type { SessionHistoryEntry } from "@/lib/types";
 import TranscriptInput from "./components/TranscriptInput";
 import TruthPanel from "./components/TruthPanel";
+import SessionHistory from "./components/SessionHistory";
 
-function PageHeader({ isRecording, flagCount }: { isRecording: boolean; flagCount: number }) {
+function PageHeader({ isRecording, flagCount, onRestore }: {
+  isRecording: boolean; flagCount: number;
+  onRestore: (entry: SessionHistoryEntry) => void;
+}) {
   return (
     <header className="flex items-center justify-between border-b border-[#222] px-6 py-3">
       <h1 className="text-sm font-bold tracking-wider text-[#e5e5e5]">TRUTHLENS</h1>
@@ -19,6 +24,7 @@ function PageHeader({ isRecording, flagCount }: { isRecording: boolean; flagCoun
             {flagCount} flag{flagCount !== 1 ? "s" : ""}
           </span>
         )}
+        <SessionHistory onRestore={onRestore} />
       </div>
     </header>
   );
@@ -29,7 +35,7 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col bg-[#0a0a0a]">
-      <PageHeader isRecording={s.isRecording} flagCount={s.flagCount} />
+      <PageHeader isRecording={s.isRecording} flagCount={s.flagCount} onRestore={s.restoreSession} />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[320px] shrink-0 border-r border-[#222] bg-[#0a0a0a] xl:w-[400px]">
@@ -58,6 +64,7 @@ export default function Home() {
             pipelineStatus={s.pipelineStatus}
             processingChunk={s.processingChunk}
             isStreaming={s.isRecording || s.isProcessing}
+            sourceTitle={s.session?.sourceAsset?.title}
             onSeekTranscriptChunk={s.seekTranscriptChunk}
             onTriggerVerification={s.triggerVerification}
             onTriggerTopicSegmentation={s.triggerTopicSegmentation}

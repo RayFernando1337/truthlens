@@ -3,6 +3,7 @@ import type {
   AnalysisMode,
   AnalysisSnapshot,
   ClaimCandidate,
+  ExtractResult,
   PostAnalysisQueryResult,
   PostQueryType,
   PulseResult,
@@ -126,7 +127,7 @@ export async function fetchVerification(
   }
 }
 
-export async function fetchUrlExtract(url: string): Promise<string | null> {
+export async function fetchUrlExtract(url: string): Promise<ExtractResult | null> {
   try {
     const res = await fetch("/api/extract", {
       method: "POST",
@@ -134,8 +135,10 @@ export async function fetchUrlExtract(url: string): Promise<string | null> {
       body: JSON.stringify({ url }),
     });
     if (res.ok) {
-      const data = await res.json();
-      return data.text ?? null;
+      const data = await res.json() as { title?: string; text?: string; excerpt?: string };
+      if (data.text) {
+        return { title: data.title ?? "", text: data.text, excerpt: data.excerpt ?? "" };
+      }
     }
   } catch {
     /* network error */

@@ -334,3 +334,38 @@ export interface PostAnalysisQueryResult {
   relevantSegmentIds: string[];
   evidence: QueryEvidence[];
 }
+
+// ─── Extract ──────────────────────────────────────────
+
+export interface ExtractResult {
+  title: string;
+  text: string;
+  excerpt: string;
+}
+
+// ─── Session History ──────────────────────────────────
+
+export interface SessionHistoryEntry {
+  sessionId: string;
+  title: string;
+  inputKind: InputKind;
+  mode: SessionMode;
+  createdAt: number;
+  sourceAsset?: SourceAsset;
+  segments: TranscriptSegment[];
+  snapshot: AnalysisSnapshot | null;
+  verificationRun: VerificationRun | null;
+  topicSegments: TopicSegment[] | null;
+}
+
+// ─── Share ────────────────────────────────────────────
+
+export interface ShareFrameData {
+  scores: number[];
+  latestFlag?: PulseFlag;
+  sourceTitle?: string;
+  tldr?: string;
+  flagCount: number;
+  claimCount: number;
+  verifiedCount: number;
+}

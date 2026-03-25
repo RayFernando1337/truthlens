@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
-import type { AnalysisSnapshot, InputKind, PipelineStageStatus, PostAnalysisQueryResult, PostQueryType, PulseEntry, SegmentPulse, SessionSummary, TopicSegment, TranscriptSegment, TruthSession, VerificationRun } from "@/lib/types";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import type { AnalysisSnapshot, InputKind, PipelineStageStatus, PostAnalysisQueryResult, PostQueryType, PulseEntry, SegmentPulse, SessionHistoryEntry, SessionSummary, SourceAsset, TopicSegment, TranscriptSegment, TruthSession, VerificationRun } from "@/lib/types";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import {
@@ -10,19 +10,8 @@ import {
 import { extractClaimCandidatesFromSnapshot } from "@/lib/claim-queue";
 import { makeSegment, splitIntoChunks } from "@/lib/segment-utils";
 import { fetchPulse, fetchAnalysis, fetchSummary, fetchVerification, fetchUrlExtract, fetchTopicSegments, fetchPostAnalysisQuery } from "@/lib/api-client";
-// ─── Constants ────────────────────────────────────────
-type StageKey = "pulse" | "analysis" | "verification" | "summary";
-type Pipeline = Record<StageKey, PipelineStageStatus>;
-
-const IDLE: Pipeline = {
-  pulse: "idle", analysis: "idle", verification: "idle", summary: "idle",
-};
-
-function createSession(
-  mode: TruthSession["mode"], inputKind: InputKind
-): TruthSession {
-  return { sessionId: crypto.randomUUID(), mode, inputKind, createdAt: Date.now() };
-}
+import { buildHistoryEntry, saveSession } from "@/lib/session-history";
+import { createSession, IDLE, type StageKey, type Pipeline } from "@/hooks/truth-session-helpers";
 // ─── Hook ─────────────────────────────────────────────
 export function useTruthSession() {
   const [session, setSession] = useState<TruthSession | null>(null);
@@ -258,11 +247,12 @@ export function useTruthSession() {
   }, [stopRecording, runAnalysis, triggerTopicSegmentation]);
 
   const handleAnalyze = useCallback(
-    async (text: string, inputKind?: InputKind) => {
+    async (text: string, inputKind?: InputKind, sourceAsset?: SourceAsset) => {
       const m = mem.current;
       const era = ++m.era;
       resetState();
       const sess = createSession("batch", inputKind ?? "paste");
+      if (sourceAsset) sess.sourceAsset = sourceAsset;
       m.session = sess;
       m.sessionStart = Date.now();
       setSession(sess);
@@ -294,10 +284,22 @@ export function useTruthSession() {
 
   const handleFetchUrl = useCallback(async (url: string) => {
     setIsFetchingUrl(true);
-    const text = await fetchUrlExtract(url);
+    const result = await fetchUrlExtract(url);
     setIsFetchingUrl(false);
-    if (text) void handleAnalyze(text, "url");
+    if (result) {
+      const asset: SourceAsset = { url, title: result.title, excerpt: result.excerpt };
+      void handleAnalyze(result.text, "url", asset);
+    }
   }, [handleAnalyze]);
+
+  const restoreSession = useCallback((entry: SessionHistoryEntry) => {
+    ++mem.current.era; resetState();
+    const sess: TruthSession = { sessionId: entry.sessionId, mode: entry.mode, inputKind: entry.inputKind, createdAt: entry.createdAt, sourceAsset: entry.sourceAsset };
+    mem.current.session = sess; mem.current.segments = [...entry.segments]; setSession(sess);
+    if (entry.snapshot) { mem.current.snap = entry.snapshot; setSnapshot(entry.snapshot); }
+    if (entry.verificationRun) setVerificationRun(entry.verificationRun);
+    if (entry.topicSegments) setTopicSegments(entry.topicSegments);
+  }, [resetState]);
 
   // ─── Derived selectors ────────────────────────────
 
@@ -317,10 +319,15 @@ export function useTruthSession() {
 
   const isAnalysisLoading = pipeline.analysis === "running";
 
+  useEffect(() => {
+    if (!session || !snapshot) return;
+    saveSession(buildHistoryEntry(session, mem.current.segments, snapshot, verificationRun, topicSegments));
+  }, [session, snapshot, verificationRun, topicSegments]);
+
   return {
     session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult, pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
     voiceTranscript, voiceChunkSeverities, isRecording, voiceError, isProcessing, isFetchingUrl, processingChunk, chunkProgress,
-    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk,
+    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk, restoreSession,
   };
 }
 
