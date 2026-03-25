@@ -1,0 +1,37 @@
+---
+description: ""
+globs: ""
+alwaysApply: true
+---
+
+# Code Standards
+
+## File Hygiene (enforced by ESLint)
+
+- Max 300 lines per file (skip blanks and comments). If a file is approaching this, split it.
+- Max 50 lines per function. Extract helpers, hooks, or utilities.
+- If a folder exceeds ~12 files, create sub-folders.
+
+## Package Manager
+
+Use **bun** exclusively. Never npm, npx, or yarn.
+`bun install`, `bun add`, `bun run`, `bunx`.
+
+## Code Organization
+
+- All types in `src/lib/types.ts`
+- All Zod schemas in `src/lib/schemas.ts`
+- All LLM prompts in `src/lib/prompts.ts`
+- Do not scatter contracts across route files
+- One shared `rhetoricalCoreSchema` reused by all analysis responses
+
+## Architecture
+
+- Schema-validated JSON via Zod `generateObject()`. No freeform markdown in the pipeline.
+- Stable `segmentId` on every transcript segment. Every flag, chart point, and verdict traces back to an ID.
+- `page.tsx` is a thin composition shell. All orchestration lives in `useTruthSession` hook.
+- One analysis endpoint, one verification pipeline. No duplicate paths.
+
+## Next.js
+
+This version has breaking changes. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
