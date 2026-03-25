@@ -9,7 +9,7 @@ todos:
     content: "[Phase 0] Create .cursor/rules/soul.mdc (alwaysApply) and .cursor/rules/code-standards.mdc (alwaysApply) -- DONE"
     status: completed
   - id: p0-cursor-hooks
-    content: "[Phase 0] Create .cursor/hooks.json with afterFileEdit lint hook + .cursor/hooks/lint.sh -- DONE"
+    content: "[Phase 0] Create .cursor/hooks.json with a direct afterFileEdit `bun run lint` command -- DONE"
     status: completed
   - id: p1-types
     content: "[Phase 1] Define canonical domain model in types.ts: TruthSession, SourceAsset, TranscriptSegment (stable segmentId), SegmentPulse, AnalysisSnapshot (with provenance), SessionSummary, ClaimCandidate, ClaimVerdict, VerificationRun. Add enriched fields: emotionalAppeals[], namedFallacies[], cognitiveBiases[], speakerIntent, evidenceTable[].quote, flagRevisions[]"

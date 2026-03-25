@@ -3,7 +3,7 @@
   "hooks": {
     "afterFileEdit": [
       {
-        "command": ".cursor/hooks/lint.sh"
+        "command": "bun run lint"
       }
     ]
   }
