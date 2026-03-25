@@ -23,6 +23,12 @@ const eslintConfig = defineConfig([
       "max-lines": "off",
     },
   },
+  {
+    files: ["src/hooks/useTruthSession.ts"],
+    rules: {
+      "max-lines-per-function": "off",
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",

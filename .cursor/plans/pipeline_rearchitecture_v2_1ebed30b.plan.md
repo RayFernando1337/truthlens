@@ -70,19 +70,19 @@ todos:
     status: completed
   - id: p3-extract-hook
     content: "[Phase 3] Extract useTruthSession hook from page.tsx: session state (TruthSession), segment append/flush, request IDs with stale-response protection, pipeline status per stage, batch vs streaming policy, derived selectors for TruthPanel"
-    status: pending
+    status: completed
   - id: p3-pipeline-policy
     content: "[Phase 3] Wire existing src/lib/pipeline-policy.ts into useTruthSession hook. File already exists from Phase 2A -- DO NOT recreate. Replace the fixed chunk-count constants in page.tsx (VOICE_ANALYSIS_FIRST_CHUNKS etc.) with policy-driven scheduling."
-    status: pending
+    status: completed
   - id: p3-page-shell
     content: "[Phase 3] Reduce page.tsx to thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, render TranscriptInput + TruthPanel, wire up hook. Target under 100 lines."
-    status: pending
+    status: completed
   - id: p3-wire-verify
     content: "[Phase 3] Wire verification into useTruthSession: verdicts state, trigger at stop + periodically for long sessions + user-triggered Verify button, pass to TruthPanel"
-    status: pending
+    status: completed
   - id: p3-wire-summary
     content: "[Phase 3] Wire /api/analyze/summarize into useTruthSession: maintain runningSummary in client state, feed it back into /api/analyze, and stop treating summarize as backend-only scaffolding"
-    status: pending
+    status: completed
   - id: p4-truth-panel
     content: "[Phase 4] Create TruthPanel.tsx -- sticky trust chart hero (EMA live score + analysis overlay), stats bar (claims/flagged/verified), flag feed (vertical, color-coded, clickable, chyron-style one-liners), progressive disclosure (Analysis/Verdicts/Patterns). Batch mode: analysis open by default."
     status: pending
