@@ -27,7 +27,7 @@ todos:
     content: "[Phase 1] Update L1_SYSTEM_PROMPT for spoken content: accept previous 2-3 chunks as context, calibrate for conversational hedging, add emotional-appeal/cognitive-bias/building flag types, raise confidence baseline for speech"
     status: completed
   - id: p2a-unified-route
-    content: "[Phase 2A] Create /api/analyze/route.ts as unified endpoint. Accept segments (with segmentIds), runningSummary, priorPulses, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Uses generateObject() not generateStructured(). -- DONE"
+    content: "[Phase 2A] Create /api/analyze/route.ts as unified endpoint. Accept segments (with segmentIds), runningSummary, priorPulses, mode (streaming|full|batch). Return AnalysisSnapshot with provenance. Uses AI SDK structured output via shared generateTypedObject() (`generateText` + `Output.object`). -- DONE"
     status: completed
   - id: p2a-full-mode
     content: "[Phase 2A] Add mode='full' to unified analysis endpoint -- accepts full transcript or high-fidelity summary, fires at 45s/3m/5m/10m then every 5m, plus at stop and on demand -- DONE (mode supported, scheduling in pipeline-policy.ts)"
@@ -48,7 +48,7 @@ todos:
     content: "[Phase 2B] Create src/lib/claim-queue.ts with dedupe + per-session cap (10 Exa calls configurable). Verifiability and priority MUST be determined by LLM triage (CLAIM_TRIAGE_PROMPT in prompts.ts), NOT regex heuristics. claim-queue.ts only handles normalization, dedup, and cap. -- DONE"
     status: completed
   - id: p2b-preverify-route
-    content: "[Phase 2B] Create /api/verify/pre-check/route.ts -- LLM-only knowledge-based claim verification via Nemotron (FREE) -- DONE"
+    content: "[Phase 2B] Create /api/verify/pre-check/route.ts -- LLM-only knowledge-based claim verification via the shared structured-output model helper -- DONE"
     status: completed
   - id: p2b-verify-route
     content: "[Phase 2B] Create /api/verify/route.ts -- orchestrates LLM triage, then claim queue, then LLM pre-check, then Exa web search for uncertain claims only. Claims flow by claimId, NOT by string matching. -- DONE"
@@ -75,10 +75,10 @@ todos:
     content: "[Phase 3] Wire existing src/lib/pipeline-policy.ts into useTruthSession hook. File already exists from Phase 2A -- DO NOT recreate. Replace the fixed chunk-count constants in page.tsx (VOICE_ANALYSIS_FIRST_CHUNKS etc.) with policy-driven scheduling."
     status: completed
   - id: p3-page-shell
-    content: "[Phase 3] Reduce page.tsx to thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, render TranscriptInput + TruthPanel, wire up hook. Target under 100 lines."
+    content: "[Phase 3] Reduce page.tsx to a thin composition shell: remove viewMode/Debug/tabs/showArch, import useTruthSession, and keep orchestration out of the page. Current repo result: DONE for the shell (<100 lines), but the right-side surface still points at InsightsPanel until TruthPanel lands in Phase 4."
     status: completed
   - id: p3-wire-verify
-    content: "[Phase 3] Wire verification into useTruthSession: verdicts state, trigger at stop + periodically for long sessions + user-triggered Verify button, pass to TruthPanel"
+    content: "[Phase 3] Wire verification into useTruthSession and the live client path. Current repo result: DONE for state + automatic triggering after full analysis passes, but verdict rendering and the manual Verify affordance are intentionally deferred to Phase 4 TruthPanel work."
     status: completed
   - id: p3-wire-summary
     content: "[Phase 3] Wire /api/analyze/summarize into useTruthSession: maintain runningSummary in client state, feed it back into /api/analyze, and stop treating summarize as backend-only scaffolding"
@@ -1059,9 +1059,9 @@ Foundation layer. Canonical domain model in `types.ts`, shared `rhetoricalCoreSc
 
 ### Phase 2A: Unified Analysis Backend -- BACKEND COMPLETE
 
-New `/api/analyze/route.ts` (unified, uses `generateObject()`). New `/api/analyze/summarize/route.ts`. New `pipeline-policy.ts`. Deleted `deep/route.ts`, `patterns/route.ts`, `structured-generate.ts`, `tavily.ts`.
+New `/api/analyze/route.ts` (unified, uses the shared structured-output helper on top of AI SDK `generateText` + `Output.object`). New `/api/analyze/summarize/route.ts`. New `pipeline-policy.ts`. Deleted `deep/route.ts`, `patterns/route.ts`, `structured-generate.ts`, `tavily.ts`.
 
-Important reality check: this phase is backend-complete, not product-complete. The routes and libs exist, but the live client still does not call `/api/analyze/summarize`, does not feed `runningSummary` back into `/api/analyze`, and does not yet use `pipeline-policy.ts` to drive orchestration.
+Important reality check: this phase is backend-complete, not product-complete. The routes and libs exist, and the live client now calls `/api/analyze/summarize`, feeds `runningSummary` back into `/api/analyze`, and uses `pipeline-policy.ts` through `useTruthSession`. What remains is the UI migration that surfaces this state directly instead of through compatibility panels.
 
 ### Phase 2B: Verification Backend (1 engineer, ~2-3 hours) -- BACKEND COMPLETE
 
@@ -1074,7 +1074,7 @@ Depends on Phase 1. Parallelizable with Phase 2A.
 - `p2b-verify-route` -- Create `/api/verify/route.ts` orchestrating triage -> queue -> pre-check -> Exa. **DONE.** The route exists and now preserves `claimId` through pre-check, Exa routing, final verdicts, and unverified rows.
 - `p2b-remove-tavily` -- Delete `src/lib/tavily.ts` and `src/lib/structured-generate.ts`. Swap `TAVILY_API_KEY` for `EXA_API_KEY` in env. **DONE.**
 
-Important reality check: this phase is backend-complete, not product-complete. The verification routes/libs exist and the pre-check -> Exa identity chain is now hardened, but the live client still does not call `/api/verify` yet.
+Important reality check: this phase is backend-complete, not product-complete. The verification routes/libs exist and the pre-check -> Exa identity chain is now hardened. The live client now calls `/api/verify` via `useTruthSession`, but the verdict surface and manual retry/verify affordance are still part of the pending UI migration.
 
 **Files touched:** new `exa.ts`, new `claim-queue.ts`, new `verification-core.ts`, new `verify/pre-check/route.ts`, new `verify/route.ts`, `tavily.ts` (deleted), `structured-generate.ts` (deleted)
 
@@ -1091,27 +1091,42 @@ Depends on Phase 2A + 2B existing. This is the phase where we turn lessons learn
 
 **Phase 3 readiness result:** Ready to begin. Backend contracts are now aligned, smoke-checked, and documented; what remains is client rewire and UI migration.
 
-### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- NEXT
+### Phase 3: Frontend Orchestration (1 engineer, ~3-4 hours) -- COMPLETE, COMPATIBILITY BRIDGE STILL PRESENT
 
 Depends on Phase 2A + 2B + 2C. Sequential -- single engineer rewires the main page.
 
-NOTE: `page.tsx` already talks to `/api/analyze` and the new pulse contract via a compatibility bridge (`legacy-analysis.ts`). That is useful scaffolding, but the client is still an old state machine: no `useTruthSession`, no `/api/verify` usage, no `/api/analyze/summarize` usage, and no `pipeline-policy.ts` wiring. What remains for Phase 3:
+Reality check: Phase 3 orchestration is now in the repo. `useTruthSession` exists, `pipeline-policy.ts` is wired, `page.tsx` is a thin shell, and the live client calls `/api/analyze/summarize` and `/api/verify`. The remaining gap is not orchestration anymore -- it is the deliberate UI compatibility bridge. `page.tsx` still renders `InsightsPanel`, verdicts are not surfaced yet, and `legacy-analysis.ts` still adapts `AnalysisSnapshot` into the old panel props. Those remaining user-facing tasks now belong to the Phase 4 UI migration.
+
+Shipped in the repo as part of Phase 3:
+
+- `useTruthSession` owns session state, request ids, stale-response protection, pipeline status, rolling/full analysis cadence, summarize orchestration, and verification orchestration.
+- `page.tsx` is reduced to a thin shell and stays under 100 lines.
+- The live client path now calls `/api/analyze/summarize` and `/api/verify`.
+- `pipeline-policy.ts` now drives scheduling instead of the old fixed threshold constants.
+
+The original Phase 3 bullets are retained here for historical traceability, but they are functionally complete enough to unblock Phase 4:
 
 - `p3-extract-hook` -- Extract `useTruthSession` hook from `page.tsx`. Move session state (`TruthSession`), segment management, pipeline status, and scheduling into the hook. Use `AnalysisSnapshot` directly instead of the `toAnalysisResult`/`toPatternsResult` shim.
 - `p3-pipeline-policy` -- Wire `pipeline-policy.ts` into `useTruthSession` for adaptive scheduling. Replace the current fixed chunk-count constants (`VOICE_ANALYSIS_FIRST_CHUNKS`, etc.) with policy-driven decisions.
-- `p3-page-shell` -- Reduce `page.tsx` to thin composition shell: remove `viewMode`/Debug/tabs/`showArch`, import `useTruthSession`, render TranscriptInput + TruthPanel. Target under 100 lines.
-- `p3-wire-verify` -- Wire `/api/verify` into `useTruthSession`. Add `verdicts: VerificationRun | null` state. Trigger at stop + periodically for long sessions + user-triggered Verify button. Pass verdicts to TruthPanel.
+- `p3-page-shell` -- Reduce `page.tsx` to thin composition shell: remove `viewMode`/Debug/tabs/`showArch`, import `useTruthSession`, render TranscriptInput + the current right-side panel surface. Final `TruthPanel` swap belongs to Phase 4.
+- `p3-wire-verify` -- Wire `/api/verify` into `useTruthSession`. `verificationRun` state and automatic triggers are live; final verdict presentation and manual Verify affordance belong to Phase 4.
 - `p3-wire-summary` -- Wire `/api/analyze/summarize` into `useTruthSession`. Maintain `runningSummary`, feed it into `/api/analyze`, and stop treating summarize as backend-only scaffolding.
 
-**Files touched:** new `src/hooks/useTruthSession.ts`, `page.tsx` (major rewrite), delete `legacy-analysis.ts` once TruthPanel replaces old panels
+**Files touched:** new `src/hooks/useTruthSession.ts`, `page.tsx` (major rewrite), `api-client.ts` (verify/summarize live client path), keep `legacy-analysis.ts` only until TruthPanel replaces the old panels
 
 ### Phase 4: UI Rebuild (1-2 engineers, ~3-4 hours)
 
 Can start scaffolding after Phase 1 (types defined). Final wiring after Phase 3 (page.tsx props stable). The TruthPanel build and TranscriptInput simplification are parallelizable.
 
-- `p4-truth-panel` -- Create `src/app/components/TruthPanel.tsx`. Sticky trust chart (SVG, EMA-based live score + analysis overlay). Stats bar. Flag feed (vertical, color-coded, clickable). Progressive disclosure: Analysis / Verdicts / Patterns sections.
+- `p4-truth-panel` -- Create `src/app/components/TruthPanel.tsx`. Sticky trust chart (SVG, EMA-based live score + analysis overlay). Stats bar. Flag feed (vertical, color-coded, clickable). Progressive disclosure: Analysis / Verdicts / Patterns sections. This is where the current `InsightsPanel` surface is retired and where `snapshot`, `runningSummary`, `verificationRun`, `pipelineStatus`, and `triggerVerification` are finally rendered directly instead of through compatibility selectors.
 - `p4-simplify-input` -- Simplify [TranscriptInput.tsx](src/app/components/TranscriptInput.tsx). 3 demo buttons to 1 dropdown. Remove voice timing copy. Clean footer states.
-- `p4-delete-old-components` -- Delete `InsightsPanel.tsx`, `AnalysisPanel.tsx`, `PatternsPanel.tsx`, `PulseFeed.tsx`, `ConfidenceMeter.tsx`, `ArchitectureDiagram.tsx`.
+- `p4-delete-old-components` -- Delete `InsightsPanel.tsx`, `AnalysisPanel.tsx`, `PatternsPanel.tsx`, `PulseFeed.tsx`, `ConfidenceMeter.tsx`, `ArchitectureDiagram.tsx`, and `legacy-analysis.ts` once TruthPanel has taken over their responsibilities.
+
+Phase 4 kickoff is intentionally carrying the remaining user-facing tasks that were previously hidden behind stale Phase 3 prose:
+
+- Surface `verificationRun` in the UI instead of keeping it hook-only state.
+- Add a user-triggered Verify / retry affordance in the TruthPanel verdicts section.
+- Replace the `analysisResult` / `patternsResult` compatibility selectors with direct `AnalysisSnapshot` rendering.
 
 **Files touched:** new `TruthPanel.tsx`, `TranscriptInput.tsx` (simplify), 6 files deleted
 
@@ -1165,7 +1180,7 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 - **`src/lib/analysis-core.ts`** -- Prompt builders and snapshot finalization for unified analysis + summary routes
 - **`src/lib/readiness-smoke-checks.ts`** -- Repeatable Phase 2C route validation for `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify`
 - **`src/lib/readiness-smoke-mocks.ts`** -- Shared test doubles used by the readiness smoke runner so contract checks do not depend on live model/web credentials
-- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateObject()` for schema-validated structured output
+- **`src/lib/generate-object.ts`** -- Thin wrapper around AI SDK `generateText()` + `Output.object()` with `gateway("openai/gpt-5.4-nano")` for schema-validated structured output
 - **`src/lib/legacy-analysis.ts`** -- Temporary compatibility layer: `toAnalysisResult()` and `toPatternsResult()` for old UI panels until Phase 3/4 complete
 - **`src/app/api/analyze/route.ts`** -- Unified analysis endpoint (replaces deep/route.ts + patterns/route.ts)
 - **`src/app/api/verify/route.ts`** -- Orchestrates triage -> queue -> LLM pre-check -> Exa web search
@@ -1174,22 +1189,21 @@ Engineer C:            [-- Phase 4 scaffold --] [-- Phase 4 finalize --]
 
 ### Legacy surfaces still present on purpose
 
-- **`src/app/page.tsx`** -- Still the large orchestration surface. Talks to `/api/analyze` through a compatibility bridge, but is not yet the thin Phase 3 shell.
+- **`src/app/page.tsx`** -- Now a thin orchestration shell. It still renders `InsightsPanel`, so the final panel migration is not done, but the state machine is no longer living in the page itself.
 - **`src/app/components/InsightsPanel.tsx`**, **`AnalysisPanel.tsx`**, **`PatternsPanel.tsx`**, **`PulseFeed.tsx`**, **`ConfidenceMeter.tsx`**, **`ArchitectureDiagram.tsx`** -- Still present until TruthPanel migration is complete.
 - **`src/lib/types.ts` / `src/lib/schemas.ts` / `src/lib/prompts.ts`** -- Canonical contracts exist, but deprecated compatibility exports remain until old UI code is removed.
 
 ### Planned remaining file changes
 
-- **`src/hooks/useTruthSession.ts`** -- To be created in Phase 3. Owns session state, segment append/flush, request IDs, stale-response protection, pipeline status, derived selectors, summary state, and verification state.
-- **`src/app/components/TruthPanel.tsx`** -- To be created in Phase 4. Replaces InsightsPanel, AnalysisPanel, PatternsPanel, and PulseFeed with one composition root.
-- **`src/app/page.tsx`** -- To be reduced in Phase 3 to a thin composition shell that renders `TranscriptInput` + `TruthPanel`.
+- **`src/app/components/TruthPanel.tsx`** -- To be created in Phase 4. Replaces InsightsPanel, AnalysisPanel, PatternsPanel, and PulseFeed with one composition root and finally consumes `snapshot`, `runningSummary`, `verificationRun`, and `triggerVerification` directly.
+- **`src/app/page.tsx`** -- Already reduced to a thin composition shell in Phase 3. Phase 4 swaps the right-side surface from `InsightsPanel` to `TruthPanel`.
 - **`src/app/components/TranscriptInput.tsx`** -- To be simplified in Phase 4 (demo affordance cleanup, footer cleanup, calmer copy).
-- **`src/lib/legacy-analysis.ts`** -- To be deleted after Phase 3/4 remove the compatibility bridge.
+- **`src/lib/legacy-analysis.ts`** -- To be deleted in Phase 4 when TruthPanel replaces the compatibility bridge.
 
 ### Already removed
 
 - **`src/lib/tavily.ts`** -- DELETED. Replaced by `src/lib/exa.ts`
-- **`src/lib/structured-generate.ts`** -- DELETED. Replaced by `src/lib/generate-object.ts` (uses AI SDK `generateObject()`)
+- **`src/lib/structured-generate.ts`** -- DELETED. Replaced by `src/lib/generate-object.ts` (uses AI SDK structured output via `generateText()` + `Output.object()`)
 - **`src/app/api/analyze/deep/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
 - **`src/app/api/analyze/patterns/route.ts`** -- DELETED. Merged into `/api/analyze/route.ts`
 
@@ -1201,13 +1215,13 @@ NOTE: This section uses a different numbering than the detailed phase breakdown 
 
 **Phases 0-1 (DONE):** Types, contracts, prompts, and rules. Canonical domain model exists. Kebab-case enum naming is now codified in `.cursor/rules/code-standards.mdc`.
 
-**Phases 2A-2B (BACKEND COMPLETE):** Unified `/api/analyze`, `/api/analyze/summarize`, `pipeline-policy.ts`, and verification routes/libs exist. Tavily is removed. The live client is still on a compatibility bridge and does not yet call summarize or verify.
+**Phases 2A-2B (BACKEND COMPLETE):** Unified `/api/analyze`, `/api/analyze/summarize`, `pipeline-policy.ts`, and verification routes/libs exist. Tavily is removed. The live client now calls summarize and verify, but the UI still presents them through a compatibility bridge instead of a dedicated TruthPanel surface.
 
-**Phase 2C (COMPLETE):** Verification identity invariants, analysis contract parity, and repeatable route smoke checks are now in place. The backend runway for Phase 3 is ready.
+**Phase 2C (COMPLETE):** Verification identity invariants, analysis contract parity, and repeatable route smoke checks are now in place. The backend runway for Phase 3 was ready; these same checks now remain part of the Phase 4 kickoff checklist.
 
-**Phase 3 (NEXT):** Extract `useTruthSession` hook from `page.tsx`. Wire verification and summarize into the client. Replace fixed thresholds with policy-driven scheduling. Thin composition shell.
+**Phase 3 (COMPLETE, COMPATIBILITY BRIDGE STILL PRESENT):** `useTruthSession` is extracted, summarize and verify are wired into the live client path, fixed thresholds are replaced with policy-driven scheduling, and `page.tsx` is a thin shell. The remaining work is UI migration, not orchestration.
 
-**Phase 4:** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed. TranscriptInput simplification. Remove duplicate/legacy view surfaces.
+**Phase 4 (NEXT):** TruthPanel replaces InsightsPanel/AnalysisPanel/PatternsPanel/PulseFeed, surfaces verification and manual verify controls, removes the `legacy-analysis.ts` bridge, and simplifies TranscriptInput.
 
 **Phase 5:** Batch mode for paste/URL (skip L1, single analysis call, analysis open by default). Topic segmentation via Gemini. Post-analysis queries.
 
@@ -1215,29 +1229,31 @@ NOTE: This section uses a different numbering than the detailed phase breakdown 
 
 ---
 
-## Phase 3 Readiness Checklist
+## Phase 4 Readiness Checklist
 
-Before Phase 3 begins, confirm all of the following:
+Before Phase 4 begins, confirm all of the following:
 
 - **Verification identity is stable end-to-end.** `claimId` survives triage, pre-check, Exa routing, and final verdict/unverified storage. No positional joins.
 - **Analysis contract parity is explicit.** Types, Zod schemas, prompts, and this plan agree on evidence quote semantics, provenance fields, and trust trajectory length expectations.
-- **Route smoke checks exist and pass.** We can manually or automatically validate `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify` with representative payloads.
-- **The plan matches the repo.** No section claims `TruthPanel`, `useTruthSession`, or a thin `page.tsx` already exist.
+- **Route smoke checks exist and are trustworthy.** We can manually or automatically validate `/api/analyze`, `/api/analyze/summarize`, `/api/verify/pre-check`, and `/api/verify` with representative payloads, and the runner does not print contract failures while still exiting 0.
+- **The plan matches the repo.** No section claims `TruthPanel` already exists, and no section still says the client does not call summarize or verify.
 - **Compatibility bridges are documented.** `legacy-analysis.ts` and the old panel stack are acknowledged as temporary so nobody mistakes them for the target architecture.
 - **Rules and prompts reflect implementation lessons.** Kebab-case enum literals remain enforced in rules. Prompt changes that depend on new inputs are matched by route/request changes.
-- **Phase boundaries are still clean.** Batch mode stays Phase 5. Topic segmentation stays Phase 5. We do not pull them into Phase 3 under the banner of "while we're here."
+- **Phase boundaries are still clean.** Batch mode stays Phase 5. Topic segmentation stays Phase 5. We do not pull them into Phase 4 under the banner of "while we're here."
+- **Verification failures are diagnosable.** `/api/verify` logs actionable errors and the client can surface non-OK responses instead of silently collapsing them into `null`.
 
-Current repo status: all readiness gates above are satisfied. Phase 3 can start from a verified backend baseline rather than assumptions.
+Current repo status: the UI prerequisites for Phase 4 are satisfied, but two cleanup tasks remain before calling the boundary clean: (1) tighten readiness/observability around `/api/verify` so failures are easy to interpret, and (2) make the smoke runner output truthful so a printed contract failure cannot coexist with a success exit code.
 
-### Checks To Run Before Opening Phase 3 Work
+### Checks To Run Before Opening Phase 4 Work
 
 1. `bunx tsc --noEmit`
-2. `bun run lint` (currently expected to surface pre-existing max-lines warnings in untouched legacy UI files, but no blocking Phase 2C errors)
+2. `bun run lint` (currently expected to surface pre-existing max-lines warnings in untouched legacy UI files, but no blocking TypeScript or contract errors)
 3. `bun run smoke:readiness`
-4. Confirm there are no remaining client fetches to deleted `deep`/`patterns` routes
-5. Confirm the live client still intentionally lacks summarize/verify wiring so Phase 3 work starts from a known baseline, not a hidden partial integration
-6. Optional manual spot-check: `/api/analyze` in `streaming`, `full`, and `batch` modes if you need to inspect payload/response shape by hand
-7. Optional manual spot-check: `/api/verify/pre-check` and `/api/verify`, including a capped run, if you need to inspect the UX-facing result structure by hand
+4. Confirm the smoke runner output is truthful: no printed contract failure should coexist with a success exit code
+5. Confirm `/api/verify` failures are observable in logs and not swallowed in the client fetch layer
+6. Confirm there are no remaining client fetches to deleted `deep`/`patterns` routes
+7. Optional manual spot-check: `/api/analyze` in `streaming`, `full`, and `batch` modes if you need to inspect payload/response shape by hand
+8. Optional manual spot-check: `/api/verify/pre-check` and `/api/verify`, including a capped run, if you need to inspect the UX-facing result structure by hand
 
 ---
 
