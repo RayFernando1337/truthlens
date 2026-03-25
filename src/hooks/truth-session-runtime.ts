@@ -149,16 +149,18 @@ export async function runBatchAnalysis(args: {
   mem.current.snap = result;
   setSnapshot(result);
   setStage("analysis", "success");
-  endTraceStage(trace, "success", {
-    output: {
-      evidenceRows: result.evidenceTable.length,
-      patterns: result.patterns.length,
-      trajectoryPoints: result.trustTrajectory.length,
-      mode: result.mode,
-    },
-  });
+  endTraceStage(trace, "success", { output: batchTraceOutput(result) });
   void triggerVerification();
   void triggerTopicSegmentation();
+}
+
+function batchTraceOutput(result: AnalysisSnapshot): Record<string, unknown> {
+  return {
+    evidenceRows: result.evidenceTable.length,
+    patterns: result.patterns.length,
+    trajectoryPoints: result.trustTrajectory.length,
+    mode: result.mode,
+  };
 }
 
 export function restoreTrackedSession(args: {

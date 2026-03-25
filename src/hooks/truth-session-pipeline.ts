@@ -52,6 +52,16 @@ export async function runSummaryUpdate(args: {
   });
 }
 
+function buildVerificationTraceOutput(data: VerificationRun): Record<string, unknown> {
+  return {
+    status: data.status,
+    totalClaims: data.stats.totalClaims,
+    llmChecked: data.stats.llmChecked,
+    webSearched: data.stats.webSearched,
+    capped: data.stats.capped,
+  };
+}
+
 export async function triggerVerification(args: {
   mem: MutableRefObject<TruthSessionMem>;
   setStage: (key: StageKey, status: PipelineStageStatus) => void;
@@ -87,15 +97,7 @@ export async function triggerVerification(args: {
     setVerificationRun(result.data);
     setVerificationError(null);
     setStage("verification", "success");
-    endTraceStage(trace, "success", {
-      output: {
-        status: result.data.status,
-        totalClaims: result.data.stats.totalClaims,
-        llmChecked: result.data.stats.llmChecked,
-        webSearched: result.data.stats.webSearched,
-        capped: result.data.stats.capped,
-      },
-    });
+    endTraceStage(trace, "success", { output: buildVerificationTraceOutput(result.data) });
     return;
   }
   setVerificationRun(null);

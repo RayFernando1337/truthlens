@@ -6,6 +6,7 @@ import type {
   AnalysisSnapshot,
   PipelineStageStatus,
   PulseEntry,
+  PulseResult,
   TraceStage,
 } from "@/lib/types";
 import type { StageKey } from "@/hooks/truth-session-helpers";
@@ -102,13 +103,7 @@ export async function processVoiceChunk(args: {
   setPulseEntries((prev) => [...prev, { id: segmentId, chunk: text, result }]);
   mem.current.pulses.push({ ...result, segmentId });
   setStage("pulse", "success");
-  endTraceStage(trace, "success", {
-    output: {
-      claims: result.claims.length,
-      flags: result.flags.length,
-      confidence: result.confidence,
-    },
-  });
+  endTraceStage(trace, "success", { output: pulseTraceOutput(result) });
   setProcessingChunk(null);
   const now = Date.now();
   if (shouldRunRollingAnalysis(mem.current.segments.length, mem.current.rollingAt, now)) {
@@ -117,4 +112,12 @@ export async function processVoiceChunk(args: {
   if (shouldRunFullPass(now - mem.current.sessionStart, mem.current.fullPassElapsed)) {
     void runAnalysis("full");
   }
+}
+
+function pulseTraceOutput(result: PulseResult): Record<string, unknown> {
+  return {
+    claims: result.claims.length,
+    flags: result.flags.length,
+    confidence: result.confidence,
+  };
 }

@@ -37,7 +37,7 @@ function buildSnapshot(segmentIds: string[]) {
   };
 }
 
-async function mockApis(page: Page) {
+async function mockExtractApi(page: Page): Promise<void> {
   await page.route("**/api/extract", async (route) => {
     await route.fulfill({
       status: 200,
@@ -49,7 +49,9 @@ async function mockApis(page: Page) {
       }),
     });
   });
+}
 
+async function mockAnalyzeApi(page: Page): Promise<void> {
   await page.route("**/api/analyze", async (route) => {
     const body = route.request().postDataJSON() as { segments?: Array<{ segmentId: string }> };
     const segmentIds = body.segments?.map((segment) => segment.segmentId) ?? ["batch-0", "batch-1"];
@@ -59,7 +61,9 @@ async function mockApis(page: Page) {
       body: JSON.stringify(buildSnapshot(segmentIds)),
     });
   });
+}
 
+async function mockVerifyApi(page: Page): Promise<void> {
   await page.route("**/api/verify", async (route) => {
     const body = route.request().postDataJSON() as { sessionId: string };
     await route.fulfill({
@@ -86,7 +90,9 @@ async function mockApis(page: Page) {
       }),
     });
   });
+}
 
+async function mockSegmentsApi(page: Page): Promise<void> {
   await page.route("**/api/analyze/segments", async (route) => {
     await route.fulfill({
       status: 200,
@@ -104,6 +110,13 @@ async function mockApis(page: Page) {
       ]),
     });
   });
+}
+
+async function mockApis(page: Page) {
+  await mockExtractApi(page);
+  await mockAnalyzeApi(page);
+  await mockVerifyApi(page);
+  await mockSegmentsApi(page);
 }
 
 test.beforeEach(async ({ page }) => {
