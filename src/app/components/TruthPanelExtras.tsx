@@ -18,18 +18,28 @@ const SCOL: Record<string, string> = {
   "anecdote": "#44aaff", "summary-recap": "#666",
 };
 
-export function TopicSegmentsContent({ segments, onGenerate }: {
-  segments: TopicSegment[] | null; onGenerate: () => void;
+export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
+  segments: TopicSegment[] | null; onGenerate: () => void; isLoading?: boolean;
 }) {
-  if (!segments) return (
-    <div className="px-4 py-3">
-      <p className="text-[11px] text-[#444]">No topic segments yet.</p>
-      <button type="button" onClick={onGenerate}
-        className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] hover:border-[#e5e5e5]">
-        Generate segments
-      </button>
-    </div>
-  );
+  if (!segments) {
+    if (isLoading) return (
+      <div className="flex items-center gap-2 px-4 py-4">
+        <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+        <span className="text-[10px] uppercase tracking-widest text-[#444]">
+          Mapping topic structure&hellip;
+        </span>
+      </div>
+    );
+    return (
+      <div className="px-4 py-3">
+        <p className="text-[11px] text-[#444]">No topic segments yet.</p>
+        <button type="button" onClick={onGenerate}
+          className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] hover:border-[#e5e5e5]">
+          Generate segments
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="space-y-1 px-4 py-3">
       {segments.map((seg, i) => {

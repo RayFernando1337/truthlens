@@ -85,11 +85,12 @@ export function useTruthSession() {
   const triggerTopicSegmentation = useCallback(async () => {
     await triggerTopicSegmentationTask({
       mem,
+      setStage,
       setTopicSegments,
       beginTraceStage,
       endTraceStage,
     });
-  }, [beginTraceStage, endTraceStage]);
+  }, [beginTraceStage, endTraceStage, setStage]);
 
   const submitQuery = useCallback(async (query: string, queryType: PostQueryType) => {
     const m = mem.current;

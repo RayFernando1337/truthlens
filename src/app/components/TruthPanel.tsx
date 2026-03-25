@@ -59,6 +59,7 @@ interface TruthPanelProps {
   pipelineStatus: {
     analysis: PipelineStageStatus;
     verification: PipelineStageStatus;
+    topics: PipelineStageStatus;
   };
   processingChunk: string | null;
   isStreaming: boolean;
@@ -160,7 +161,7 @@ function DisclosureBody(
     case "patterns": return snapshot
       ? <PatternsContent snapshot={snapshot} />
       : <p className="px-4 py-3 text-[11px] text-[#444]">No patterns detected yet.</p>;
-    case "segments": return <TopicSegmentsContent segments={topicSegments} onGenerate={onTriggerTopicSegmentation} />;
+    case "segments": return <TopicSegmentsContent segments={topicSegments} onGenerate={onTriggerTopicSegmentation} isLoading={pipelineStatus.topics === "running"} />;
     case "query": return <QueryContent result={queryResult} onSubmit={onSubmitQuery} />;
     default: return null;
   }

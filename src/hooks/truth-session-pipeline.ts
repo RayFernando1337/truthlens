@@ -5,8 +5,8 @@ import type { StageKey } from "@/hooks/truth-session-helpers";
 import type {
   PipelineStageStatus,
   SessionSummary,
-  TraceStage,
   TopicSegment,
+  TraceStage,
   VerificationRun,
 } from "@/lib/types";
 import type { TruthSessionMem } from "./truth-session-runtime";
@@ -108,6 +108,7 @@ export async function triggerVerification(args: {
 
 export async function triggerTopicSegmentation(args: {
   mem: MutableRefObject<TruthSessionMem>;
+  setStage: (key: StageKey, status: PipelineStageStatus) => void;
   setTopicSegments: Dispatch<SetStateAction<TopicSegment[] | null>>;
   beginTraceStage: (stage: "topics", input?: Record<string, unknown>) => TraceToken;
   endTraceStage: (
@@ -116,8 +117,9 @@ export async function triggerTopicSegmentation(args: {
     options?: { output?: Record<string, unknown>; error?: string },
   ) => void;
 }) {
-  const { mem, setTopicSegments, beginTraceStage, endTraceStage } = args;
+  const { mem, setStage, setTopicSegments, beginTraceStage, endTraceStage } = args;
   if (mem.current.segments.length === 0) return;
+  setStage("topics", "running");
   const era = mem.current.era;
   const reqId = ++mem.current.topicReq;
   const flagData = mem.current.pulses.map((pulse) => ({
@@ -136,9 +138,11 @@ export async function triggerTopicSegmentation(args: {
   );
   if (era !== mem.current.era || reqId !== mem.current.topicReq) return;
   if (!result) {
+    setStage("topics", "error");
     endTraceStage(trace, "error", { error: "Topic segmentation failed." });
     return;
   }
   setTopicSegments(result);
+  setStage("topics", "success");
   endTraceStage(trace, "success", { output: { segmentCount: result.length } });
 }
