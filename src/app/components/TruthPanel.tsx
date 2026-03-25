@@ -75,7 +75,7 @@ function StatsBar(
 ) {
   return (
     <div className="flex items-center gap-3 border-t border-[#1a1a1a] px-4 py-1.5 font-mono text-[10px] tabular-nums">
-      <span className="text-[#e5e5e5]">{claims} claims</span>
+      <span className="text-foreground">{claims} claims</span>
       <span className="text-[#333]">&middot;</span>
       <span style={{ color: flags > 0 ? "#ff4400" : "#666" }}>{flags} flagged</span>
       <span className="text-[#333]">&middot;</span>
@@ -114,7 +114,7 @@ function FlagFeed(
 function LoadingHint({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2 px-4 py-4">
-      <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+      <span className="h-1 w-1 animate-pulse bg-foreground" />
       <span className="text-[10px] uppercase tracking-widest text-[#444]">{text}</span>
     </div>
   );
@@ -128,12 +128,12 @@ function DisclosureTabs(
   },
 ) {
   return (
-    <div className="sticky top-0 z-5 flex border-y border-[#222] bg-[#0a0a0a]">
+    <div className="sticky top-0 z-5 flex border-y border-border bg-bg">
       {tabs.map((tab) => (
         <button
           key={tab} type="button" onClick={() => onToggle(tab)}
           className={`flex-1 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest transition-colors ${
-            active === tab ? "bg-[#1a1a1a] text-[#e5e5e5]" : "text-[#555] hover:text-[#888]"
+            active === tab ? "bg-[#1a1a1a] text-foreground" : "text-[#555] hover:text-[#888]"
           }`}
         >
           {active === tab ? "\u25BE" : "\u25B8"} {tab}
@@ -216,7 +216,7 @@ export default function TruthPanel({
   );
   return (
     <div className="flex h-full flex-col" data-testid="truth-panel">
-      <div className="sticky top-0 z-10 border-b border-[#222] bg-surface">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface">
         <TrustChart scores={d.scores} overlay={d.overlay} />
         <div className="flex items-center justify-between">
           <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />

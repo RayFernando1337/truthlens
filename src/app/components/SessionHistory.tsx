@@ -38,7 +38,7 @@ export default function SessionHistory({ onRestore }: Props) {
   if (!open) {
     return (
       <button type="button" onClick={handleOpen}
-        className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-[#e5e5e5]">
+        className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground">
         History
       </button>
     );
@@ -47,10 +47,10 @@ export default function SessionHistory({ onRestore }: Props) {
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen(false)}
-        className="text-[10px] uppercase tracking-wider text-[#e5e5e5]">
+        className="text-[10px] uppercase tracking-wider text-foreground">
         History &#x25B4;
       </button>
-      <div className="absolute right-0 top-full z-30 mt-1 max-h-[280px] w-[260px] overflow-y-auto border border-[#333] bg-[#141414] shadow-lg">
+      <div className="absolute right-0 top-full z-30 mt-1 max-h-[280px] w-[260px] overflow-y-auto border border-[#333] bg-surface shadow-lg">
         {sessions.length === 0 ? (
           <p className="px-3 py-4 text-center text-[10px] text-[#444]">No saved sessions.</p>
         ) : sessions.map((s) => (

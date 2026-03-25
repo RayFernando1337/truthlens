@@ -5,7 +5,7 @@ import type { PostAnalysisQueryResult, PostQueryType, TopicSegment } from "@/lib
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+    <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
       {children}
     </span>
   );
@@ -24,7 +24,7 @@ export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
   if (!segments) {
     if (isLoading) return (
       <div className="flex items-center gap-2 px-4 py-4">
-        <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+        <span className="h-1 w-1 animate-pulse bg-foreground" />
         <span className="text-[10px] uppercase tracking-widest text-[#444]">
           Mapping topic structure&hellip;
         </span>
@@ -34,7 +34,7 @@ export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
       <div className="px-4 py-3">
         <p className="text-[11px] text-[#444]">No topic segments yet.</p>
         <button type="button" onClick={onGenerate}
-          className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] hover:border-[#e5e5e5]">
+          className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
           Generate segments
         </button>
       </div>
@@ -54,7 +54,7 @@ export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
                 [{seg.startSegmentIndex}&ndash;{seg.endSegmentIndex}]
               </span>
             </div>
-            <p className="text-[11px] text-[#e5e5e5]">{seg.topic}</p>
+            <p className="text-[11px] text-foreground">{seg.topic}</p>
             {seg.claimCount > 0 && (
               <span className="text-[9px] tabular-nums text-[#555]">
                 {seg.claimCount} claims &middot; conf {Math.round(seg.avgConfidence * 100)}
@@ -77,7 +77,7 @@ const QUERY_TYPES: { id: PostQueryType; label: string }[] = [
 function QueryResultDisplay({ result }: { result: PostAnalysisQueryResult }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs leading-relaxed text-[#e5e5e5]">{result.answer}</p>
+      <p className="text-xs leading-relaxed text-foreground">{result.answer}</p>
       {result.evidence.length > 0 && (
         <div>
           <Lbl>Evidence</Lbl>
@@ -85,7 +85,7 @@ function QueryResultDisplay({ result }: { result: PostAnalysisQueryResult }) {
             <div key={i} className="mt-1 border-l-2 border-[#333] pl-2">
               <p className="text-[10px] text-[#888]">[{ev.segmentId}]</p>
               <p className="text-[11px] italic text-[#ccc]">&ldquo;{ev.quote}&rdquo;</p>
-              <p className="text-[10px] text-[#666]">{ev.relevance}</p>
+              <p className="text-[10px] text-text-secondary">{ev.relevance}</p>
             </div>
           ))}
         </div>
@@ -114,8 +114,8 @@ export function QueryContent({ result, onSubmit }: {
           <button key={qt.id} type="button" onClick={() => setQueryType(qt.id)}
             className={`border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
               queryType === qt.id
-                ? "border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]"
-                : "border-[#333] text-[#888] hover:border-[#666]"
+                ? "border-foreground bg-foreground text-bg"
+                : "border-[#333] text-[#888] hover:border-text-secondary"
             }`}>{qt.label}</button>
         ))}
       </div>
@@ -123,9 +123,9 @@ export function QueryContent({ result, onSubmit }: {
         <input value={query} onChange={(e) => setQuery(e.target.value)} disabled={loading}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Ask about the transcript..."
-          className="flex-1 border border-[#333] bg-transparent px-2 py-1.5 text-[11px] text-[#e5e5e5] placeholder:text-[#444] focus:border-[#666] focus:outline-none" />
+          className="flex-1 border border-[#333] bg-transparent px-2 py-1.5 text-[11px] text-foreground placeholder:text-[#444] focus:border-text-secondary focus:outline-none" />
         <button type="button" onClick={handleSubmit} disabled={loading || !query.trim()}
-          className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] hover:border-[#e5e5e5] disabled:opacity-30">
+          className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground disabled:opacity-30">
           {loading ? "\u2026" : "Ask"}
         </button>
       </div>

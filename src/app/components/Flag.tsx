@@ -3,15 +3,15 @@
 import type { PulseFlag } from "@/lib/types";
 
 const FLAG_STYLES: Record<PulseFlag["type"], { bg: string; text: string }> = {
-  vague: { bg: "bg-[#ffaa00]/15", text: "text-[#ffaa00]" },
-  stat: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
-  prediction: { bg: "bg-[#ffaa00]/15", text: "text-[#ffaa00]" },
-  attribution: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
-  logic: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
-  contradiction: { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
-  "emotional-appeal": { bg: "bg-[#ff4400]/15", text: "text-[#ff4400]" },
-  "cognitive-bias": { bg: "bg-[#ffaa00]/15", text: "text-[#ffaa00]" },
-  building: { bg: "bg-[#444]/15", text: "text-[#666]" },
+  vague: { bg: "bg-yellow/15", text: "text-yellow" },
+  stat: { bg: "bg-accent/15", text: "text-accent" },
+  prediction: { bg: "bg-yellow/15", text: "text-yellow" },
+  attribution: { bg: "bg-accent/15", text: "text-accent" },
+  logic: { bg: "bg-accent/15", text: "text-accent" },
+  contradiction: { bg: "bg-accent/15", text: "text-accent" },
+  "emotional-appeal": { bg: "bg-accent/15", text: "text-accent" },
+  "cognitive-bias": { bg: "bg-yellow/15", text: "text-yellow" },
+  building: { bg: "bg-[#444]/15", text: "text-text-secondary" },
 };
 
 const FLAG_LABELS: Record<PulseFlag["type"], string> = {

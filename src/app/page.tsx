@@ -11,8 +11,8 @@ function PageHeader({ isRecording, flagCount, onRestore }: {
   onRestore: (entry: SessionHistoryEntry) => void;
 }) {
   return (
-    <header className="flex items-center justify-between border-b border-[#222] px-6 py-3">
-      <h1 className="text-sm font-bold tracking-wider text-[#e5e5e5]">TRUTHLENS</h1>
+    <header className="flex items-center justify-between border-b border-border px-6 py-3">
+      <h1 className="text-sm font-bold tracking-wider text-foreground">TRUTHLENS</h1>
       <div className="flex items-center gap-4">
         {isRecording && (
           <span className="flex items-center gap-1.5 text-[10px] text-accent">
@@ -34,11 +34,11 @@ export default function Home() {
   const s = useTruthSession();
 
   return (
-    <div className="flex h-full flex-col bg-[#0a0a0a]">
+    <div className="flex h-full flex-col bg-bg">
       <PageHeader isRecording={s.isRecording} flagCount={s.flagCount} onRestore={s.restoreSession} />
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[320px] shrink-0 border-r border-[#222] bg-[#0a0a0a] xl:w-[400px]">
+        <div className="w-[320px] shrink-0 border-r border-border bg-bg xl:w-[400px]">
           <TranscriptInput
             onAnalyze={(text, fixtureKey) => {
               void s.handleAnalyze(text, "paste", undefined, fixtureKey);

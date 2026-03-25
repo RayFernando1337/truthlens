@@ -158,7 +158,7 @@ export default function ShareButton({ data }: { data: ShareFrameData }) {
 
   return (
     <button type="button" onClick={handle} disabled={busy || data.scores.length === 0}
-      className="text-[10px] font-semibold uppercase tracking-widest text-[#555] transition-colors hover:text-[#e5e5e5] disabled:opacity-30">
+      className="text-[10px] font-semibold uppercase tracking-widest text-[#555] transition-colors hover:text-foreground disabled:opacity-30">
       {busy ? "\u2026" : "Share"}
     </button>
   );

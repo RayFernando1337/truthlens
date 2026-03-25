@@ -5,7 +5,7 @@ import type { AnalysisSnapshot, VerificationRun } from "@/lib/types";
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[9px] font-semibold uppercase tracking-widest text-[#666]">
+    <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
       {children}
     </span>
   );
@@ -23,8 +23,8 @@ function AppealsToggle({ appeals }: { appeals: AnalysisSnapshot["appeals"] }) {
             onClick={() => setOpen((o) => (o === k ? null : k))}
             className={`border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
               open === k
-                ? "border-[#e5e5e5] bg-[#e5e5e5] text-[#0a0a0a]"
-                : "border-[#333] text-[#888] hover:border-[#666]"
+                ? "border-foreground bg-foreground text-bg"
+                : "border-[#333] text-[#888] hover:border-text-secondary"
             }`}
           >
             {k}
@@ -32,7 +32,7 @@ function AppealsToggle({ appeals }: { appeals: AnalysisSnapshot["appeals"] }) {
         ))}
       </div>
       {open && (
-        <p className="mt-1.5 max-w-md text-[11px] leading-snug text-[#e5e5e5]">
+        <p className="mt-1.5 max-w-md text-[11px] leading-snug text-foreground">
           {appeals[open]}
         </p>
       )}
@@ -52,7 +52,7 @@ function GapsAndAssumptions({ snapshot }: { snapshot: AnalysisSnapshot }) {
             {snapshot.missing.map((m, i) => (
               <span
                 key={i} title={m}
-                className="truncate border border-[#ff4400]/40 bg-[#ff4400]/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#ff4400]"
+                className="truncate border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent"
               >
                 {m.length > 50 ? m.slice(0, 50) + "\u2026" : m}
               </span>
@@ -67,7 +67,7 @@ function GapsAndAssumptions({ snapshot }: { snapshot: AnalysisSnapshot }) {
             {snapshot.assumptions.map((a, i) => (
               <span
                 key={i} title={a}
-                className="truncate border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#ffaa00]"
+                className="truncate border border-yellow/40 bg-yellow/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-yellow"
               >
                 {a.length > 60 ? a.slice(0, 60) + "\u2026" : a}
               </span>
@@ -82,9 +82,9 @@ function GapsAndAssumptions({ snapshot }: { snapshot: AnalysisSnapshot }) {
 export function AnalysisContent({ snapshot }: { snapshot: AnalysisSnapshot }) {
   return (
     <div className="space-y-3 px-4 py-3">
-      <p className="text-xs leading-relaxed text-[#e5e5e5]">{snapshot.tldr}</p>
+      <p className="text-xs leading-relaxed text-foreground">{snapshot.tldr}</p>
       {snapshot.speakerIntent && (
-        <p className="border-l-2 border-[#ff4400] pl-2 text-[11px] italic leading-snug text-[#ff4400]">
+        <p className="border-l-2 border-accent pl-2 text-[11px] italic leading-snug text-accent">
           &ldquo;{snapshot.speakerIntent}&rdquo;
         </p>
       )}
@@ -92,8 +92,8 @@ export function AnalysisContent({ snapshot }: { snapshot: AnalysisSnapshot }) {
         <Lbl>Core points</Lbl>
         <ul className="mt-1 space-y-0.5">
           {snapshot.corePoints.map((p, i) => (
-            <li key={i} className="text-[11px] leading-snug text-[#e5e5e5]">
-              <span className="mr-1.5 text-[#666]">{i + 1}.</span>{p}
+            <li key={i} className="text-[11px] leading-snug text-foreground">
+              <span className="mr-1.5 text-text-secondary">{i + 1}.</span>{p}
             </li>
           ))}
         </ul>
@@ -103,17 +103,17 @@ export function AnalysisContent({ snapshot }: { snapshot: AnalysisSnapshot }) {
           <Lbl>Evidence</Lbl>
           {snapshot.evidenceTable.map((r, i) => (
             <div key={i} className="mt-1 border-l-2 border-[#333] pl-2">
-              <p className="text-[11px] font-medium text-[#e5e5e5]">{r.claim}</p>
-              <p className="text-[10px] text-[#666]">{r.evidence}</p>
+              <p className="text-[11px] font-medium text-foreground">{r.claim}</p>
+              <p className="text-[10px] text-text-secondary">{r.evidence}</p>
             </div>
           ))}
         </div>
       )}
       <GapsAndAssumptions snapshot={snapshot} />
       <AppealsToggle appeals={snapshot.appeals} />
-      <div className="border border-[#00cc66]/30 bg-[#00cc66]/5 p-2.5">
+      <div className="border border-green/30 bg-green/5 p-2.5">
         <Lbl>Steelman</Lbl>
-        <p className="mt-1 text-[11px] leading-snug text-[#e5e5e5]">
+        <p className="mt-1 text-[11px] leading-snug text-foreground">
           {snapshot.steelman}
         </p>
       </div>
@@ -125,7 +125,7 @@ function VerifyBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button" onClick={onClick}
-      className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#e5e5e5] hover:border-[#e5e5e5]"
+      className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground"
     >
       {label}
     </button>
@@ -147,7 +147,7 @@ export function VerdictsContent({ run, error, onVerify, isLoading }: {
 }) {
   if (isLoading) return (
     <div className="flex items-center gap-2 px-4 py-4">
-      <span className="h-1 w-1 animate-pulse bg-[#e5e5e5]" />
+      <span className="h-1 w-1 animate-pulse bg-foreground" />
       <span className="text-[10px] uppercase tracking-widest text-[#444]">
         Checking outside support&hellip;
       </span>
@@ -169,18 +169,18 @@ export function VerdictsContent({ run, error, onVerify, isLoading }: {
   return (
     <div className="space-y-1.5 px-4 py-3">
       <div className="flex items-center gap-3 text-[10px] tabular-nums">
-        <span className="text-[#00cc66]">{all.filter((v) => v.verdict === "supported").length} supported</span>
+        <span className="text-green">{all.filter((v) => v.verdict === "supported").length} supported</span>
         <span className="text-[#333]">&middot;</span>
-        <span className="text-[#ff4400]">{all.filter((v) => v.verdict === "refuted").length} refuted</span>
+        <span className="text-accent">{all.filter((v) => v.verdict === "refuted").length} refuted</span>
         <span className="text-[#333]">&middot;</span>
-        <span className="text-[#666]">{run.unverified.length} unverified</span>
+        <span className="text-text-secondary">{run.unverified.length} unverified</span>
       </div>
       {all.map((v) => (
         <div key={v.claimId} className="border-l-2 pl-2" style={{ borderColor: VCOL[v.verdict] ?? "#666" }}>
-          <p className="text-[11px] text-[#e5e5e5]">
+          <p className="text-[11px] text-foreground">
             <span style={{ color: VCOL[v.verdict] }}>{VICON[v.verdict]}</span>{" "}{v.claim}
           </p>
-          <p className="text-[10px] text-[#666]">{v.explanation}</p>
+          <p className="text-[10px] text-text-secondary">{v.explanation}</p>
         </div>
       ))}
       {run.unverified.map((u) => (
@@ -205,9 +205,9 @@ export function PatternsContent({ snapshot }: { snapshot: AnalysisSnapshot }) {
   return (
     <div className="space-y-3 px-4 py-3">
       {snapshot.overallAssessment && (
-        <div className="border border-[#222] bg-[#0a0a0a] p-3">
+        <div className="border border-border bg-bg p-3">
           <Lbl>Overall assessment</Lbl>
-          <p className="mt-1 text-xs leading-relaxed text-[#e5e5e5]">
+          <p className="mt-1 text-xs leading-relaxed text-foreground">
             {snapshot.overallAssessment}
           </p>
         </div>

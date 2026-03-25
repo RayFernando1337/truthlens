@@ -30,7 +30,7 @@ export function TranscriptDemoMenu({
                 type="button"
                 onClick={() => onSelect(fixture)}
                 data-testid={`demo-${fixture.key}`}
-                className="block w-full px-4 py-1.5 text-left text-[11px] text-[#888] transition-colors hover:bg-[#1a1a1a] hover:text-[#e5e5e5]"
+                className="block w-full px-4 py-1.5 text-left text-[11px] text-[#888] transition-colors hover:bg-[#1a1a1a] hover:text-foreground"
               >
                 {fixture.label}
               </button>
@@ -50,17 +50,17 @@ export function TranscriptFixtureCard({
   onClear: () => void;
 }) {
   return (
-    <div data-testid="fixture-card" className="border border-[#222] bg-[#111] p-3">
+    <div data-testid="fixture-card" className="border border-border bg-[#111] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-[#666]">
+          <p className="text-[10px] uppercase tracking-widest text-text-secondary">
             {fixture.inputMode === "voice-prompt"
               ? "Voice protocol"
               : fixture.inputMode === "url"
                 ? "URL fixture"
                 : "Text fixture"}
           </p>
-          <p className="mt-1 text-xs font-semibold text-[#e5e5e5]">{fixture.label}</p>
+          <p className="mt-1 text-xs font-semibold text-foreground">{fixture.label}</p>
         </div>
         <button
           type="button"
@@ -75,14 +75,14 @@ export function TranscriptFixtureCard({
         {fixture.expectedTraits.join(" / ")}
       </p>
       {fixture.inputMode !== "text" && (
-        <div className="mt-3 border border-[#1a1a1a] bg-[#0a0a0a] p-3">
+        <div className="mt-3 border border-[#1a1a1a] bg-bg p-3">
           <p className="whitespace-pre-wrap wrap-break-word text-[11px] leading-relaxed text-[#ccc]">
             {fixture.content}
           </p>
         </div>
       )}
       {fixture.inputMode === "voice-prompt" && (
-        <p className="mt-3 text-[10px] leading-relaxed text-[#666]">
+        <p className="mt-3 text-[10px] leading-relaxed text-text-secondary">
           Press Mic to begin. When the run settles, export the trace with
           <span className="mx-1 text-[#999]">window.truthlens.downloadLatestTrace()</span>
           in devtools.
