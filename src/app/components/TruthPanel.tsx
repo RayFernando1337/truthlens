@@ -127,7 +127,7 @@ function DisclosureTabs(
   },
 ) {
   return (
-    <div className="sticky top-0 z-[5] flex border-y border-[#222] bg-[#0a0a0a]">
+    <div className="sticky top-0 z-5 flex border-y border-[#222] bg-[#0a0a0a]">
       {tabs.map((tab) => (
         <button
           key={tab} type="button" onClick={() => onToggle(tab)}
@@ -214,8 +214,8 @@ export default function TruthPanel({
     </div>
   );
   return (
-    <div className="flex h-full flex-col">
-      <div className="sticky top-0 z-10 border-b border-[#222] bg-[#141414]">
+    <div className="flex h-full flex-col" data-testid="truth-panel">
+      <div className="sticky top-0 z-10 border-b border-[#222] bg-surface">
         <TrustChart scores={d.scores} overlay={d.overlay} />
         <div className="flex items-center justify-between">
           <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />
@@ -226,7 +226,7 @@ export default function TruthPanel({
         {processingChunk && <LoadingHint text="Analyzing\u2026" />}
         {!d.batch && <FlagFeed flags={d.flatFlags} onSeek={onSeekTranscriptChunk} />}
         {!d.batch && d.flatFlags.length === 0 && entries.length > 0 && (
-          <p className="px-4 py-3 text-[11px] text-[#00cc66]/70">No flags so far. The argument looks straight.</p>
+          <p className="px-4 py-3 text-[11px] text-green/70">No flags so far. The argument looks straight.</p>
         )}
         <DisclosureTabs active={active} onToggle={toggle} tabs={d.tabs} />
         <DisclosureBody active={active} snapshot={snapshot} verificationRun={verificationRun}

@@ -15,12 +15,12 @@ function PageHeader({ isRecording, flagCount, onRestore }: {
       <h1 className="text-sm font-bold tracking-wider text-[#e5e5e5]">TRUTHLENS</h1>
       <div className="flex items-center gap-4">
         {isRecording && (
-          <span className="flex items-center gap-1.5 text-[10px] text-[#ff4400]">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff4400]" /> LIVE
+          <span className="flex items-center gap-1.5 text-[10px] text-accent">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" /> LIVE
           </span>
         )}
         {flagCount > 0 && (
-          <span className="text-[10px] tabular-nums text-[#ff4400]">
+          <span className="text-[10px] tabular-nums text-accent">
             {flagCount} flag{flagCount !== 1 ? "s" : ""}
           </span>
         )}
@@ -40,20 +40,26 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[320px] shrink-0 border-r border-[#222] bg-[#0a0a0a] xl:w-[400px]">
           <TranscriptInput
-            onAnalyze={s.handleAnalyze}
-            onFetchUrl={s.handleFetchUrl}
+            onAnalyze={(text, fixtureKey) => {
+              void s.handleAnalyze(text, "paste", undefined, fixtureKey);
+            }}
+            onFetchUrl={(url, fixtureKey) => {
+              void s.handleFetchUrl(url, fixtureKey);
+            }}
             isRecording={s.isRecording}
             isProcessing={s.isProcessing}
             isFetchingUrl={s.isFetchingUrl}
             voiceTranscript={s.voiceTranscript}
             voiceError={s.voiceError}
-            onStartRecording={s.handleStartRecording}
+            onStartRecording={(fixtureKey) => {
+              s.handleStartRecording(fixtureKey);
+            }}
             onStopRecording={s.handleStopRecording}
             chunkProgress={s.chunkProgress}
             voiceChunkSeverities={s.voiceChunkSeverities}
           />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col bg-[#141414]">
+        <div className="flex min-w-0 flex-1 flex-col bg-surface">
           <TruthPanel
             pulseEntries={s.pulseEntries}
             snapshot={s.snapshot}

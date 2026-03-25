@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "smoke:readiness": "bun run src/lib/readiness-smoke-checks.ts"
+    "smoke:readiness": "bun run src/lib/readiness-smoke-checks.ts",
+    "test:smoke": "playwright test tests/demo-smoke.spec.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
@@ -22,6 +23,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

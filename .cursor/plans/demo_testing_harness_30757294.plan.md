@@ -4,25 +4,25 @@ overview: Re-architect the inline demo data into a config-driven testing harness
 todos:
   - id: demo-fixtures
     content: Create src/lib/demo-fixtures.ts with structured config for all demo scenarios (text, URL, voice)
-    status: pending
+    status: completed
   - id: pipeline-logger
     content: Create src/lib/pipeline-logger.ts -- capture layer that records pipeline events with timing and metadata
-    status: pending
+    status: completed
   - id: types-update
     content: Move DemoKey/InputMode types to src/lib/types.ts, add DemoFixture and PipelineEvent types
-    status: pending
+    status: completed
   - id: wire-logger
     content: Add pipeline-logger calls into useTruthSession.ts at each pipeline stage
-    status: pending
+    status: completed
   - id: refactor-input
     content: Refactor TranscriptInput.tsx to import from demo-fixtures, support URL/voice demo modes, remove inline data
-    status: pending
+    status: completed
   - id: playwright-setup
     content: Install Playwright, create config, write demo-smoke.spec.ts for text and URL demos
-    status: pending
+    status: completed
   - id: manual-protocol
     content: Add voice test protocol display and downloadTrace() export helper
-    status: pending
+    status: completed
 isProject: false
 ---
 

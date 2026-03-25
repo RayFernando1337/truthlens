@@ -2,6 +2,8 @@
 
 export type SessionMode = "streaming" | "batch";
 export type InputKind = "voice" | "paste" | "url";
+export type TranscriptInputMode = "text" | "url" | "voice";
+export type { DemoFixture, DemoInputMode, PipelineEvent, SessionTrace, TraceStage, TraceStatus } from "@/lib/harness-types";
 
 export interface TruthSession {
   sessionId: string;
@@ -17,9 +19,7 @@ export interface SourceAsset {
   title?: string;
   excerpt?: string;
 }
-
 // ─── Transcript ───────────────────────────────────────
-
 export interface TranscriptSegment {
   segmentId: string;
   text: string;
@@ -27,9 +27,7 @@ export interface TranscriptSegment {
   startMs?: number;
   endMs?: number;
 }
-
 // ─── L1 Pulse ─────────────────────────────────────────
-
 export type PulseFlagType =
   | "vague"
   | "stat"
