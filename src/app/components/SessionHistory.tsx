@@ -63,7 +63,7 @@ export default function SessionHistory({ onRestore }: Props) {
             <span className="min-w-0 flex-1 truncate text-[11px] text-[#ccc]">{s.title}</span>
             <span className="text-[9px] tabular-nums text-[#444]">{formatAge(s.createdAt)}</span>
             <span role="button" tabIndex={-1} onClick={(e) => handleDelete(s.sessionId, e)}
-              className="ml-1 text-[10px] text-[#333] transition-colors hover:text-[#ff4400] group-hover:text-[#555]">
+              className="ml-1 text-[10px] text-[#333] transition-colors hover:text-accent group-hover:text-[#555]">
               &times;
             </span>
           </button>
