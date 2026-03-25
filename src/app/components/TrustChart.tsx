@@ -1,7 +1,7 @@
 "use client";
 
 const W = 600;
-const H = 72;
+const H = 96;
 const PAD = 2;
 
 export function trustColor(v: number): string {

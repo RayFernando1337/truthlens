@@ -4,19 +4,19 @@ overview: "Five targeted fixes to address the visual issues visible in the scree
 todos:
   - id: chart-swap
     content: In TruthPanel.tsx, swap TrustChart primary/overlay when snapshot.trustTrajectory is available
-    status: pending
+    status: completed
   - id: chart-height
     content: In TrustChart.tsx, increase H from 72 to 96
-    status: pending
+    status: completed
   - id: tabs-sticky
     content: In DisclosureTabs, add sticky top-0, bg-[#0a0a0a], border-y, z-[5]
-    status: pending
+    status: completed
   - id: flag-border
     content: In FlagFeed, add border-l-2 with flag color via inline style
-    status: pending
+    status: completed
   - id: stats-check
     content: In StatsBar, add checkmark icon before verified count when > 0
-    status: pending
+    status: completed
 isProject: false
 ---
 

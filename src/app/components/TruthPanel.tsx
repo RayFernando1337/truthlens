@@ -70,7 +70,10 @@ function StatsBar(
       <span className="text-[#333]">&middot;</span>
       <span style={{ color: flags > 0 ? "#ff4400" : "#666" }}>{flags} flagged</span>
       <span className="text-[#333]">&middot;</span>
-      <span style={{ color: verified > 0 ? "#00cc66" : "#666" }}>{verified} verified</span>
+      <span style={{ color: verified > 0 ? "#00cc66" : "#666" }}>
+        {verified > 0 && <span className="mr-0.5 opacity-70">{"\u2713"}</span>}
+        {verified} verified
+      </span>
     </div>
   );
 }
@@ -83,7 +86,8 @@ function FlagFeed(
       {flags.map((f, i) => (
         <button
           key={i} type="button" onClick={() => onSeek(f.idx)}
-          className="flex w-full items-center gap-2.5 border-b border-[#1a1a1a] px-4 py-1.5 text-left transition-colors hover:bg-[#1a1a1a]"
+          className="flex w-full items-center gap-2.5 border-b border-[#1a1a1a] border-l-2 px-4 py-1.5 text-left transition-colors hover:bg-[#1a1a1a]"
+          style={{ borderLeftColor: FC[f.flag.type] }}
         >
           <span className="text-xs font-bold" style={{ color: FC[f.flag.type] }}>
             {FI[f.flag.type]}
@@ -111,7 +115,7 @@ function DisclosureTabs(
   { active, onToggle }: { active: Disclosure | null; onToggle: (t: Disclosure) => void },
 ) {
   return (
-    <div className="flex border-t border-[#222]">
+    <div className="sticky top-0 z-[5] flex border-y border-[#222] bg-[#0a0a0a]">
       {(["analysis", "verdicts", "patterns"] as const).map((tab) => (
         <button
           key={tab} type="button" onClick={() => onToggle(tab)}
@@ -132,6 +136,8 @@ export default function TruthPanel({
 }: TruthPanelProps) {
   const [os, setOs] = useState({ tab: null as Disclosure | null, autoTs: null as number | null });
   const ema = useMemo(() => computeEMA(entries), [entries]);
+  const trajectory = snapshot?.trustTrajectory;
+  const hasTrajectory = !!trajectory && trajectory.length > 1;
   const flatFlags = useMemo<FlatFlag[]>(() => entries.flatMap((e, i) => e.result.flags.map((f) => ({ flag: f, idx: i }))).reverse(), [entries]);
   const claimCount = useMemo(() => entries.reduce((s, e) => s + e.result.claims.length, 0), [entries]);
   const verifiedCount = verificationRun ? verificationRun.llmResolved.length + verificationRun.webVerified.length : 0;
@@ -147,7 +153,7 @@ export default function TruthPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 border-b border-[#222] bg-[#141414]">
-        <TrustChart scores={ema} overlay={snapshot?.trustTrajectory} />
+        <TrustChart scores={hasTrajectory ? trajectory! : ema} overlay={hasTrajectory ? ema : trajectory} />
         <StatsBar claims={claimCount} flags={flatFlags.length} verified={verifiedCount} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
