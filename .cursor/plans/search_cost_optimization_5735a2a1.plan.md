@@ -123,11 +123,11 @@ VOICE_L3_ROLL_EVERY = 4      // same
 
 ```typescript
 function getInterval(chunkCount: number): number {
-  if (chunkCount < 75)   return 4;   // first 5 min: every 16s (responsive)
-  if (chunkCount < 225)  return 8;   // 5-15 min: every 32s
-  if (chunkCount < 450)  return 16;  // 15-30 min: every 64s
-  if (chunkCount < 900)  return 32;  // 30-60 min: every ~2 min
-  return 64;                          // 60+ min: every ~4 min
+  if (chunkCount < 75) return 4; // first 5 min: every 16s (responsive)
+  if (chunkCount < 225) return 8; // 5-15 min: every 32s
+  if (chunkCount < 450) return 16; // 15-30 min: every 64s
+  if (chunkCount < 900) return 32; // 30-60 min: every ~2 min
+  return 64; // 60+ min: every ~4 min
 }
 ```
 
@@ -218,13 +218,16 @@ const response = await exa.answer(
     outputSchema: {
       type: "object",
       properties: {
-        verdict: { type: "string", enum: ["supported", "refuted", "partially-supported", "unverifiable"] },
+        verdict: {
+          type: "string",
+          enum: ["supported", "refuted", "partially-supported", "unverifiable"],
+        },
         confidence: { type: "number" },
         explanation: { type: "string" },
       },
-      required: ["verdict", "confidence", "explanation"]
-    }
-  }
+      required: ["verdict", "confidence", "explanation"],
+    },
+  },
 );
 ```
 
@@ -332,16 +335,16 @@ interface ClaimVerdict {
 }
 
 interface VerificationResult {
-  llmResolved: ClaimVerdict[];     // resolved by Nemotron knowledge
-  webVerified: ClaimVerdict[];     // verified via Exa
-  unverified: string[];            // capped out, not yet checked
+  llmResolved: ClaimVerdict[]; // resolved by Nemotron knowledge
+  webVerified: ClaimVerdict[]; // verified via Exa
+  unverified: string[]; // capped out, not yet checked
   stats: { llmChecked: number; webSearched: number; totalClaims: number };
 }
 
 interface SessionSummary {
-  summary: string;                 // ~500 token running summary
-  chunksCovered: number;           // how many chunks this summary covers
-  updatedAt: number;               // timestamp
+  summary: string; // ~500 token running summary
+  chunksCovered: number; // how many chunks this summary covers
+  updatedAt: number; // timestamp
 }
 ```
 
