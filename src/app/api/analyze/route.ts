@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       schema: analysisModelSchema,
       system: ANALYSIS_SYSTEM_PROMPT,
       prompt: buildAnalysisPrompt(parsed.data),
+      modelId: "mini",
+      maxOutputTokens: 16_384,
     });
 
     const snapshot = analysisSnapshotSchema.parse(
