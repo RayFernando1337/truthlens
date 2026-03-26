@@ -1,21 +1,30 @@
 ---
 name: Design System Overhaul
-overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to 4 semantic text levels + shadcn standard tokens (dual light/dark mode via CSS custom properties), replace all remaining arbitrary hex values, and adopt cn() for conditional classes.
+overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to 4 semantic text levels + shadcn standard tokens (dual light/dark mode via CSS custom properties), replace all remaining arbitrary hex values, migrate typography to 5-tier hierarchy, adopt cn(), and remove legacy aliases.
 todos:
   - id: phase-1-shadcn
-    content: "Phase 1: Install shadcn/ui — run init, get cn(), components.json, dependencies"
+    content: "[Phase 1] Install shadcn/ui — run init, get cn(), components.json, dependencies"
     status: completed
   - id: phase-2-tokens
-    content: "Phase 2: Rationalize token palette in globals.css — full shadcn set + TruthLens extensions + backward compat aliases"
+    content: "[Phase 2] Rationalize token palette in globals.css — full shadcn token set, TruthLens extensions (green, yellow, accent-muted, text-secondary), light/dark mode (:root/.dark), backward-compat aliases"
     status: pending
-  - id: phase-3-hex-replace
-    content: "Phase 3: Replace all remaining [#...] hex values across ~10 files (~60 locations) using consolidation map"
+  - id: phase-3a-right-panel
+    content: "[Phase 3a] Migrate TruthPanel.tsx + TruthPanelSections.tsx — 26 hex replacements, typography to 5-tier, cn() (2 sites), alias renames (bg-surface, bg-bg, text-bg)"
     status: pending
-  - id: phase-4-cn
-    content: "Phase 4: Adopt cn() for conditional className logic across component files"
+  - id: phase-3b-extras-fixtures
+    content: "[Phase 3b] Migrate TruthPanelExtras.tsx + TranscriptInputFixtures.tsx — 25 hex replacements, typography to 5-tier, cn() (1 site), alias renames (text-bg, bg-surface, bg-bg)"
     status: pending
-  - id: phase-5-cleanup
-    content: "Phase 5: Remove backward compat aliases (surface, bg), final verification"
+  - id: phase-3c-supporting
+    content: "[Phase 3c] Migrate SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx — 14 hex replacements, typography to 5-tier, cn() (1 site), alias renames (bg-surface)"
+    status: pending
+  - id: phase-3d-input-page
+    content: "[Phase 3d] Migrate TranscriptInputParts.tsx + page.tsx — typography to 5-tier, cn() (4 sites), alias renames (bg-bg, bg-surface, hover:text-bg)"
+    status: pending
+  - id: phase-3v-verify
+    content: "[Phase 3 verify] Browser verification — screenshot both modes at desktop (1440×900) and mobile (375×812), confirm hex sweep is clean, typography tiers are visually distinct"
+    status: pending
+  - id: phase-4-final
+    content: "[Phase 4] Final cleanup — remove --color-surface and --color-bg from globals.css, grep sweep for any remaining [# in classNames, tsc + lint + smoke tests, final browser verification both modes"
     status: pending
 isProject: false
 ---
@@ -71,33 +80,59 @@ This section is the source of truth for all visual decisions. When implementing 
 
 **Font:** JetBrains Mono (`--font-mono`) is the sole typeface, set on `<body>` via `font-[family-name:var(--font-mono)]`. Geist Sans is loaded as `--font-sans` for shadcn component internals but does not appear in TruthLens UI.
 
-**Scale (all sizes used in the app):**
+**Design principle:** The user should be able to glance at any panel and immediately know what to read first, what's supporting detail, and what's structural chrome. Size, weight, and tracking create three distinct visual bands — the eye moves top-to-bottom without confusion. Dieter Rams: "Good design makes a product understandable."
 
-| Size | Weight | Tracking | Use |
-|---|---|---|---|
-| `text-sm` (14px) | normal | default | Body text: transcript chunks, analysis TLDR, content paragraphs |
-| `text-xs` (12px) | normal | default | Dense body: core points, evidence claims, query answers |
-| `text-[11px]` | normal / medium / semibold | default / `tracking-wider` / `tracking-widest` | Primary workhorse: flag labels, disclosure content, fixture labels, buttons |
-| `text-[10px]` | semibold | `tracking-widest` / `tracking-wider` | Section labels (`Lbl`), button text, stat counters, loading hints |
-| `text-[9px]` | semibold | `tracking-widest` / `tracking-wider` | Micro labels: appeals toggles, segment type tags, gap/assumption badges |
-| `text-[8px]` | semibold | `tracking-wider` | Session history kind labels (MIC, TXT, URL) |
+**5-tier hierarchy (target scale):**
+
+| Tier | Class | Size | Weight | Tracking | Role |
+|---|---|---|---|---|---|
+| **T1 — Section heading** | `text-base` | 16px | `font-semibold` | default | Panel titles, disclosure headers, TLDR opener. The eye lands here first. |
+| **T2 — Body content** | `text-sm` | 14px | `font-normal` | default | The "read this" tier. Claims, analysis paragraphs, transcript chunks, evidence statements, steelman. Comfortable sustained reading. |
+| **T3 — Supporting detail** | `text-xs` | 12px | `font-normal` | default | Details on demand. Evidence explanations, verdict reasoning, segment descriptions, fixture metadata. Clearly subordinate to T2. |
+| **T4 — Structural label** | `text-[11px]` | 11px | `font-semibold` | `tracking-widest` | Section markers (`Lbl`), button text, disclosure tab labels, toggle buttons, flag badge text. Uppercase, structural chrome — tells you what section/control this is. |
+| **T5 — Metadata** | `text-[10px]` | 10px | `font-normal` or `font-semibold` | `tracking-wider` / `tabular-nums` | Counters, timestamps, chunk indices, status indicators. Smallest size — metadata the eye skips unless needed. |
+
+**Minimum size: 10px.** Nothing in the app renders below this. The old `text-[9px]` and `text-[8px]` are eliminated.
+
+**Size migration map (old → new):**
+
+| Old | New | What changes |
+|---|---|---|
+| `text-sm` (14px) | `text-sm` (14px) | No change — stays as T2 body |
+| `text-xs` (12px) | `text-xs` (12px) | No change — stays as T3 detail |
+| `text-[11px]` body | `text-xs` (12px) | Bump up: flag labels in feed, disclosure content, fixture labels, menu items, query input, error messages. These are content the user reads, not chrome. |
+| `text-[11px]` label/button | `text-[11px]` | No change — stays as T4 structural chrome (uppercase + tracking) |
+| `text-[10px]` label | `text-[11px]` | Bump up: section labels (Lbl), button text, disclosure tabs, loading hints. They were too small to scan. |
+| `text-[10px]` metadata | `text-[10px]` | No change — stays as T5 (counters, timestamps, chunk indices) |
+| `text-[9px]` | `text-[11px]` | **Eliminated.** Appeals toggles, segment type tags, gap/assumption badges all bump to T4. |
+| `text-[8px]` | `text-[10px]` | **Eliminated.** Session history kind labels (MIC, TXT, URL) bump to T5. |
+| *(new)* | `text-base` (16px) | **Added.** Panel section headings ("Analysis", "Verdicts", "Patterns"), source title, and the TLDR opener gain T1 weight. |
 
 **Key rules:**
 - All labels and buttons are `uppercase`. Body content is normal case.
-- Section headers use `tracking-widest` (0.1em). Button/tag text uses `tracking-wider` (0.05em).
+- T4 structural labels use `tracking-widest` (0.1em). T5 metadata uses `tracking-wider` (0.05em) when uppercase.
 - `tabular-nums` on any numeric display (stats, counters, timestamps).
-- `leading-relaxed` for multi-line content. `leading-snug` for compact items.
+- `leading-relaxed` (1.625) for T2 multi-line content. `leading-snug` (1.375) for T3 compact items. T1 headings use default leading.
+- **Weight carries hierarchy alongside size.** T1 is `semibold` at 16px. T2 is `normal` at 14px. The 2px + weight difference creates a clear visual break without needing huge size jumps.
 
 ### Component Patterns
 
-**Section label (the `Lbl` component):**
+All patterns below use the target tier sizes. Sizes in parentheses reference the tier: (T1), (T2), etc.
+
+**Section label (the `Lbl` component) — T4:**
 ```
-text-[9px] font-semibold uppercase tracking-widest text-text-secondary
+text-[11px] font-semibold uppercase tracking-widest text-text-secondary
 ```
 
-**Bordered button (Factory signature — never filled, invert on hover):**
+**Section heading — T1 (new):**
 ```
-border border-input px-3 py-1 text-[10px] font-semibold uppercase tracking-widest
+text-base font-semibold text-foreground
+```
+Used for panel section titles ("Analysis", "Verdicts"), source titles, disclosure headers when expanded.
+
+**Bordered button (Factory signature — never filled, invert on hover) — T4:**
+```
+border border-input px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest
 text-foreground hover:border-foreground
 ```
 Filled-on-hover variant (Analyze button):
@@ -105,7 +140,7 @@ Filled-on-hover variant (Analyze button):
 hover:bg-foreground hover:text-background
 ```
 
-**Toggle button (appeals, query types — selected inverts):**
+**Toggle button (appeals, query types — selected inverts) — T4:**
 - Selected: `border-foreground bg-foreground text-background`
 - Unselected: `border-input text-muted-foreground hover:border-text-secondary`
 
@@ -113,25 +148,28 @@ hover:bg-foreground hover:text-background
 ```
 absolute z-20 mt-1 min-w-[220px] border border-input bg-card py-1 shadow-lg
 ```
-Menu items: `px-4 py-1.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground`
+Menu items (T3): `px-4 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground`
 
-**Flag badge:**
+**Flag badge — T4:**
 ```
-inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider
+inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider
 ```
 Background and text from semantic color at 15% opacity (e.g. `bg-accent/15 text-accent`).
 
-**Loading hint:**
+**Loading hint — T4:**
 ```
 flex items-center gap-2 px-4 py-4
 ```
-Dot: `h-1 w-1 animate-pulse bg-foreground`. Label: `text-[10px] uppercase tracking-widest text-muted-foreground/50`.
+Dot: `h-1 w-1 animate-pulse bg-foreground`. Label: `text-[11px] uppercase tracking-widest text-muted-foreground/50`.
 
-**Disclosure tabs (section toggles):**
+**Disclosure tabs (section toggles) — T4:**
 ```
-text-[10px] font-semibold uppercase tracking-widest transition-colors
+text-[11px] font-semibold uppercase tracking-widest transition-colors
 ```
 Active: `bg-muted text-foreground`. Inactive: `text-text-secondary hover:text-muted-foreground`.
+
+**Flag feed items — T3 (content is readable, not squinting):**
+Flag label: `text-xs text-foreground`. Type badge: `text-[11px] font-semibold uppercase tracking-wider` with semantic color.
 
 **Border-left indicators (flags, evidence, verdicts):**
 `border-l-2` with semantic color from the data type. Content indented with `pl-2`.
@@ -140,11 +178,17 @@ Active: `bg-muted text-foreground`. Inactive: `text-text-secondary hover:text-mu
 
 **Cards/elevated panels:** `border border-border bg-card`. Optional `shadow-lg` for floating panels. Semantic-tinted cards use `border-{color}/30 bg-{color}/5` (e.g. steelman: `border-green/30 bg-green/5`).
 
+**Stats bar — T5 (metadata, scannable not readable):**
+```
+text-[10px] tabular-nums
+```
+Claims count, flag count, verified count — small numbers the eye skips to when it wants them.
+
 **Empty state (center of right panel when no data):**
 ```
 flex h-full flex-col items-center justify-center gap-3 text-center
 ```
-Primary: `text-sm text-text-secondary`. Secondary: `text-[11px] text-muted-foreground/40`.
+Primary (T2): `text-sm text-text-secondary`. Secondary (T3): `text-xs text-muted-foreground/40`.
 
 ### Layout
 
@@ -157,7 +201,7 @@ Primary: `text-sm text-text-secondary`. Secondary: `text-[11px] text-muted-foreg
 ```
 flex items-center justify-between border-b border-border px-6 py-3
 ```
-Logo: `text-sm font-bold tracking-wider text-foreground`. Status indicators right-aligned.
+Logo (T1): `text-base font-bold tracking-wider text-foreground`. Status indicators right-aligned (T5).
 
 **Sticky chart area (top of right panel):**
 ```
@@ -494,7 +538,24 @@ body {
 
 **Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic: `text-foreground` resolves to #e5e5e5 in dark, #171717 in light.
 
-## Phase 3 — Replace All Remaining Hex Values
+## Phase 3 — Replace Hex Values + Typography Scale
+
+**This phase combines two sweeps across the same files:** (1) replacing all remaining `[#...]` hex values with semantic tokens, and (2) migrating font sizes to the 5-tier hierarchy defined in the Design Specification. Since both touches hit the same components, doing them together avoids a second pass.
+
+### Typography migration (apply alongside hex replacements)
+
+When touching each file for hex replacements below, also apply the font size migration map from the Design Specification. The key changes per file:
+
+- **`text-[9px]` → `text-[11px]`** everywhere (Lbl components, toggle buttons, badge text, segment tags)
+- **`text-[8px]` → `text-[10px]`** everywhere (session history kind labels)
+- **`text-[10px]` on labels/buttons → `text-[11px]`** (section labels, disclosure tabs, loading hints, bordered buttons)
+- **`text-[10px]` on metadata → keep `text-[10px]`** (stat counters, timestamps, chunk indices)
+- **`text-[11px]` on readable content → `text-xs` (12px)** (flag labels in feed, disclosure body text, fixture labels, menu items, error messages, query input)
+- **Add `text-base` (16px) headings** where section titles currently have no distinct heading size (disclosure tab headers when expanded, TLDR opener, source title)
+
+**Do NOT change** `text-sm` (14px) or `text-xs` (12px) where they already exist — these are already at the correct tier.
+
+### Hex color replacements
 
 **Audit confirmed 73 discrete substitutions across 8 files.** Full manifest:
 
@@ -587,67 +648,101 @@ body {
 
 **Files already clean (zero [#...] in className):** `page.tsx`, `layout.tsx`, `TranscriptInput.tsx`, `TranscriptInputParts.tsx`.
 
-## Phase 4 — Adopt cn() for Conditional Classes
+## Phase 3 sub-task assignments
 
-**Audit confirmed 8 migration sites across 5 files.** Add `import { cn } from "@/lib/utils"` to each.
+Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, cn() adoption, and alias renames. This avoids multiple passes over the same files.
 
-### [src/app/components/TranscriptInputParts.tsx](src/app/components/TranscriptInputParts.tsx) — 4 sites
+**Each agent should:** read the full Design Specification and Technical Implementation Notes in this plan before starting. Apply the hex color map, typography migration map, cn() sites, and alias renames listed below for their assigned files. Run `bunx tsc --noEmit` and `bun run lint` after completing their files.
 
-- L43-45: mic button ternary (recording vs idle)
-- L47: recording indicator dot ternary
-- L85-89: severity border class composition (multi-condition)
-- L132: progress bar inner class composition
+### Phase 3a — TruthPanel.tsx + TruthPanelSections.tsx
 
-### [src/app/components/TruthPanel.tsx](src/app/components/TruthPanel.tsx) — 1 site
+**Hex replacements:** See the per-file manifests above (13 + 13 = 26 replacements).
 
-- L135-137: disclosure tab active/inactive ternary
+**cn() sites (add `import { cn } from "@/lib/utils"`):**
+- `TruthPanel.tsx` L135-137: disclosure tab active/inactive ternary
+- `TruthPanelSections.tsx` L24-28: appeals toggle selected/unselected ternary
 
-### [src/app/components/TruthPanelSections.tsx](src/app/components/TruthPanelSections.tsx) — 1 site
+**Alias renames:**
+- `TruthPanel.tsx` L219: `bg-surface` → `bg-card`
+- `TruthPanel.tsx` L131: `bg-bg` → `bg-background`
+- `TruthPanelSections.tsx` L208: `bg-bg` → `bg-background`
+- `TruthPanelSections.tsx` L26: `text-bg` → `text-background`
 
-- L24-28: appeals toggle selected/unselected ternary
+**Typography:** Apply 5-tier migration map to both files. Key changes: `Lbl` component 9px → 11px, disclosure tabs 10px → 11px, readable 11px content → 12px, add T1 headings.
 
-### [src/app/components/TruthPanelExtras.tsx](src/app/components/TruthPanelExtras.tsx) — 1 site
+### Phase 3b — TruthPanelExtras.tsx + TranscriptInputFixtures.tsx
 
-- L115-119: query type tab selected/unselected ternary
+**Hex replacements:** See manifests above (13 + 12 = 25 replacements).
 
-### [src/app/components/Flag.tsx](src/app/components/Flag.tsx) — 1 site
+**cn() sites:**
+- `TruthPanelExtras.tsx` L115-119: query type tab selected/unselected ternary
 
-- L34: flag badge style composition from record lookup
+**Alias renames:**
+- `TruthPanelExtras.tsx` L117: `text-bg` → `text-background`
+- `TranscriptInputFixtures.tsx` L18: `bg-surface` → `bg-card`
+- `TranscriptInputFixtures.tsx` L78: `bg-bg` → `bg-background`
 
-**Files with zero template-literal classNames (no cn() needed):** `TranscriptInput.tsx`, `TranscriptInputFixtures.tsx`, `SessionHistory.tsx`, `TrustChart.tsx`, `ShareCapture.tsx`, `page.tsx`.
+**Typography:** Apply 5-tier migration map. Key changes: `Lbl` component 9px → 11px, segment type tags 9px → 11px, readable 11px content → 12px, fixture label sizes.
 
-## Phase 5 — Remove Backward Compat Aliases and Final Polish
+### Phase 3c — SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
 
-**Audit confirmed 13 usages of old aliases across 7 files.**
+**Hex replacements:** See manifests above (10 + 1 + 2 + 1 = 14 replacements).
 
-### Remove `bg-surface` (4 usages -> `bg-card`)
+**cn() sites:**
+- `Flag.tsx` L34: flag badge style composition from record lookup
 
-- `TranscriptInputFixtures.tsx` L18
-- `TruthPanel.tsx` L219
-- `page.tsx` L62
-- `SessionHistory.tsx` L53
+**Alias renames:**
+- `SessionHistory.tsx` L53: `bg-surface` → `bg-card`
 
-### Remove `bg-bg` (7 usages -> `bg-background`)
+**Typography:** Apply 5-tier migration map. Key changes: SessionHistory 8px kind labels → 10px, Flag badge 10px → 11px.
 
-- `page.tsx` L37, L41
-- `TranscriptInputFixtures.tsx` L78
-- `TranscriptInputParts.tsx` L75
-- `TruthPanel.tsx` L131
-- `TruthPanelSections.tsx` L208
+**DO NOT TOUCH** (inline styles — confirmed exclusions):
+- `ShareCapture.tsx` lines 18-129 — canvas `fillStyle`/`strokeStyle` hex values
+- `TrustChart.tsx` lines 7-10 (trustColor), 38-45 (SVG stroke/fill)
 
-### Remove `text-bg` / `hover:text-bg` (3 usages -> `text-background` / `hover:text-background`)
+### Phase 3d — TranscriptInputParts.tsx + page.tsx
 
-- `TranscriptInputParts.tsx` L160: `hover:text-bg` -> `hover:text-background`
-- `TruthPanelSections.tsx` L26: `text-bg` -> `text-background`
-- `TruthPanelExtras.tsx` L117: `text-bg` -> `text-background`
+**Hex replacements:** None — these files have zero `[#...]` in classNames.
 
-### Then remove from globals.css
+**cn() sites (add `import { cn } from "@/lib/utils"` to TranscriptInputParts):**
+- `TranscriptInputParts.tsx` L43-45: mic button ternary (recording vs idle)
+- `TranscriptInputParts.tsx` L47: recording indicator dot ternary
+- `TranscriptInputParts.tsx` L85-89: severity border class composition (multi-condition)
+- `TranscriptInputParts.tsx` L132: progress bar inner class composition
 
-Delete `--color-surface` and `--color-bg` from the `@theme inline` block. (`--color-text` was already removed in Phase 1.)
+**Alias renames:**
+- `TranscriptInputParts.tsx` L75: `bg-bg` → `bg-background`
+- `TranscriptInputParts.tsx` L160: `hover:text-bg` → `hover:text-background`
+- `page.tsx` L37, L41: `bg-bg` → `bg-background`
+- `page.tsx` L62: `bg-surface` → `bg-card`
 
-### Final sweep
+**Typography:** Apply 5-tier migration map. Key changes: InputHeader label sizes, page header logo text-sm → text-base.
 
-Grep for any `[#` remaining in `.tsx` className strings — should be zero.
+### Phase 3 verify — Browser verification
+
+Runs after **all** Phase 3a–3d sub-tasks complete. See the Verification Workflow section for full instructions. Key checks:
+- Desktop screenshots in both light and dark mode
+- Mobile screenshot to confirm no clipping
+- Grep sweep: zero `[#` remaining in `.tsx` className strings
+- Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg` remaining
+- Typography spot-check: T1 headings (16px) visually larger than T2 body (14px), T4 labels (11px) clearly structural chrome
+
+## Phase 4 — Final Cleanup
+
+**After Phase 3 verify confirms everything is clean.**
+
+### Remove alias definitions from globals.css
+
+Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from the `@theme inline` block. (`--color-text` was already removed in Phase 1.)
+
+### Final verification
+
+- `bunx tsc --noEmit` — zero type errors (confirms no remaining references to removed tokens)
+- `bun run lint` — zero warnings
+- `bun run test:smoke` — 2/2 pass
+- Grep: zero `[#` in `.tsx` className strings
+- Grep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` in `.tsx` files
+- Browser verification in both modes (see Verification Workflow)
 
 ## Verification Workflow
 
@@ -708,6 +803,29 @@ If the browser verification reveals issues:
 |---|---|---|---|
 | 1 | tsc + lint | — | Nothing visual changes — just infrastructure |
 | 2 | tsc + lint | Desktop + mobile, both modes | Tokens resolve correctly, body/scrollbar/selection use var(), no regressions |
-| 3 | tsc + lint + smoke | Desktop both modes | All `[#...]` className replacements render correctly, no missing borders/text |
-| 4 | tsc + lint | — | cn() is a refactor, no visual change |
-| 5 | tsc + lint + smoke | Desktop + mobile, both modes | Final visual: no bg-surface/bg-bg remnants, grep confirms zero `[#` in classNames |
+| 3a–3d | tsc + lint (each agent) | — | Each agent confirms their files compile. No browser check yet — wait for 3 verify. |
+| 3 verify | grep sweeps | Desktop + mobile, both modes | All hex gone, all aliases gone, typography tiers visually distinct, colors correct in both modes |
+| 4 | tsc + lint + smoke | Desktop + mobile, both modes | Final visual: alias defs removed from CSS, grep confirms zero legacy tokens, smoke tests pass |
+
+### Dependency graph
+
+```
+Phase 1 (DONE)
+    │
+    ▼
+Phase 2 (1 agent, sequential)
+    │
+    ├──────┬──────┬──────┐
+    ▼      ▼      ▼      ▼
+  3a      3b     3c     3d    ← 4 agents in parallel
+    │      │      │      │
+    └──────┴──────┴──────┘
+           │
+           ▼
+     3 verify (1 agent)
+           │
+           ▼
+     Phase 4 (1 agent, sequential)
+```
+
+**Total agents possible:** 4 concurrent during Phase 3. All other phases are sequential (1 agent).
