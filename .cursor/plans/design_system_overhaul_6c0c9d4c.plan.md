@@ -1,6 +1,6 @@
 ---
 name: Design System Overhaul
-overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to 4 semantic text levels + shadcn standard tokens (dual light/dark mode via CSS custom properties), replace all remaining arbitrary hex values, migrate typography to 5-tier hierarchy, adopt cn(), and remove legacy aliases.
+overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to semantic tokens (dual light/dark mode via CSS custom properties), replace all arbitrary hex values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), and remove legacy aliases.
 todos:
   - id: phase-1-shadcn
     content: "[Phase 1] Install shadcn/ui — run init, get cn(), components.json, dependencies"
@@ -9,16 +9,16 @@ todos:
     content: "[Phase 2] Rationalize token palette in globals.css — full shadcn token set, TruthLens extensions (green, yellow, accent-muted, text-secondary), light/dark mode (:root/.dark), backward-compat aliases"
     status: pending
   - id: phase-3a-right-panel
-    content: "[Phase 3a] Migrate TruthPanel.tsx + TruthPanelSections.tsx — 26 hex replacements, typography to 5-tier, cn() (2 sites), alias renames (bg-surface, bg-bg, text-bg)"
+    content: "[Phase 3a] Migrate TruthPanel.tsx + TruthPanelSections.tsx — 26 hex replacements, typography to 3-tier (18/16/14), cn() (2 sites), alias renames (bg-surface, bg-bg, text-bg)"
     status: pending
   - id: phase-3b-extras-fixtures
-    content: "[Phase 3b] Migrate TruthPanelExtras.tsx + TranscriptInputFixtures.tsx — 25 hex replacements, typography to 5-tier, cn() (1 site), alias renames (text-bg, bg-surface, bg-bg)"
+    content: "[Phase 3b] Migrate TruthPanelExtras.tsx + TranscriptInputFixtures.tsx — 25 hex replacements, typography to 3-tier (18/16/14), cn() (1 site), alias renames (text-bg, bg-surface, bg-bg)"
     status: pending
   - id: phase-3c-supporting
-    content: "[Phase 3c] Migrate SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx — 14 hex replacements, typography to 5-tier, cn() (1 site), alias renames (bg-surface)"
+    content: "[Phase 3c] Migrate SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx — 14 hex replacements, typography to 3-tier (18/16/14), cn() (1 site), alias renames (bg-surface)"
     status: pending
   - id: phase-3d-input-page
-    content: "[Phase 3d] Migrate TranscriptInputParts.tsx + page.tsx — typography to 5-tier, cn() (4 sites), alias renames (bg-bg, bg-surface, hover:text-bg)"
+    content: "[Phase 3d] Migrate TranscriptInputParts.tsx + page.tsx — typography to 3-tier (18/16/14), cn() (4 sites), alias renames (bg-bg, bg-surface, hover:text-bg)"
     status: pending
   - id: phase-3v-verify
     content: "[Phase 3 verify] Browser verification — screenshot both modes at desktop (1440×900) and mobile (375×812), confirm hex sweep is clean, typography tiers are visually distinct"
@@ -80,67 +80,63 @@ This section is the source of truth for all visual decisions. When implementing 
 
 **Font:** JetBrains Mono (`--font-mono`) is the sole typeface, set on `<body>` via `font-[family-name:var(--font-mono)]`. Geist Sans is loaded as `--font-sans` for shadcn component internals but does not appear in TruthLens UI.
 
-**Design principle:** The user should be able to glance at any panel and immediately know what to read first, what's supporting detail, and what's structural chrome. Size, weight, and tracking create three distinct visual bands — the eye moves top-to-bottom without confusion. Dieter Rams: "Good design makes a product understandable."
+**Design principle (Rams):** "Weniger, aber besser." Less, but better. The user glances at any panel and instantly knows: what is this section (heading), what should I read (body), and what's a control (chrome). Three roles, three sizes. Nothing else.
 
-**5-tier hierarchy (target scale):**
+**3-tier hierarchy:**
 
-| Tier | Class | Size | Weight | Tracking | Role |
+| Tier | Class | Size | Weight | Case / Tracking | Role |
 |---|---|---|---|---|---|
-| **T1 — Section heading** | `text-base` | 16px | `font-semibold` | default | Panel titles, disclosure headers, TLDR opener. The eye lands here first. |
-| **T2 — Body content** | `text-sm` | 14px | `font-normal` | default | The "read this" tier. Claims, analysis paragraphs, transcript chunks, evidence statements, steelman. Comfortable sustained reading. |
-| **T3 — Supporting detail** | `text-xs` | 12px | `font-normal` | default | Details on demand. Evidence explanations, verdict reasoning, segment descriptions, fixture metadata. Clearly subordinate to T2. |
-| **T4 — Structural label** | `text-[11px]` | 11px | `font-semibold` | `tracking-widest` | Section markers (`Lbl`), button text, disclosure tab labels, toggle buttons, flag badge text. Uppercase, structural chrome — tells you what section/control this is. |
-| **T5 — Metadata** | `text-[10px]` | 10px | `font-normal` or `font-semibold` | `tracking-wider` / `tabular-nums` | Counters, timestamps, chunk indices, status indicators. Smallest size — metadata the eye skips unless needed. |
+| **Heading** | `text-lg` | 18px | `font-semibold` | normal case | The anchor. Panel titles, disclosure headers, TLDR opener, source title. The eye lands here first and orients. |
+| **Body** | `text-base` | 16px | `font-normal` | normal case | Everything the user reads. Claims, analysis, transcript chunks, evidence, explanations, steelman, flag labels, menu items, query results. Comfortable sustained reading at the web-standard size. |
+| **Chrome** | `text-sm` | 14px | `font-semibold` | `uppercase tracking-widest` | Structural controls. Section markers (`Lbl`), buttons, disclosure tabs, toggle buttons, flag badges, stat counters, timestamps, loading hints. Uppercase + tracking makes it unmistakable as chrome even at only 2px below body. |
 
-**Minimum size: 10px.** Nothing in the app renders below this. The old `text-[9px]` and `text-[8px]` are eliminated.
+**Minimum size: 14px.** Every piece of text in the app is readable. The old `text-[8px]` through `text-xs` range is gone entirely.
+
+Three sizes. Three textures. The hierarchy comes from the combination of size, weight, and typographic treatment — not from a gradient of barely-perceptible pixel differences. Ive: "When something is designed really well, you're not aware of the design. You're aware of what it enables you to do."
 
 **Size migration map (old → new):**
 
-| Old | New | What changes |
+| Old | New | Why |
 |---|---|---|
-| `text-sm` (14px) | `text-sm` (14px) | No change — stays as T2 body |
-| `text-xs` (12px) | `text-xs` (12px) | No change — stays as T3 detail |
-| `text-[11px]` body | `text-xs` (12px) | Bump up: flag labels in feed, disclosure content, fixture labels, menu items, query input, error messages. These are content the user reads, not chrome. |
-| `text-[11px]` label/button | `text-[11px]` | No change — stays as T4 structural chrome (uppercase + tracking) |
-| `text-[10px]` label | `text-[11px]` | Bump up: section labels (Lbl), button text, disclosure tabs, loading hints. They were too small to scan. |
-| `text-[10px]` metadata | `text-[10px]` | No change — stays as T5 (counters, timestamps, chunk indices) |
-| `text-[9px]` | `text-[11px]` | **Eliminated.** Appeals toggles, segment type tags, gap/assumption badges all bump to T4. |
-| `text-[8px]` | `text-[10px]` | **Eliminated.** Session history kind labels (MIC, TXT, URL) bump to T5. |
-| *(new)* | `text-base` (16px) | **Added.** Panel section headings ("Analysis", "Verdicts", "Patterns"), source title, and the TLDR opener gain T1 weight. |
+| `text-sm` (14px) body content | `text-base` (16px) **Body** | Bump up. 14px body was too small — now at web-standard reading size. |
+| `text-xs` (12px) body content | `text-base` (16px) **Body** | Bump up. Evidence details, descriptions — these are content the user reads. |
+| `text-[11px]` body content | `text-base` (16px) **Body** | Bump up. Flag labels, disclosure content, fixture labels, menu items, query input. |
+| `text-[11px]` label / button | `text-sm` (14px) **Chrome** | Bump up. Buttons and labels are chrome — now at legible 14px with uppercase + tracking. |
+| `text-[10px]` label / button | `text-sm` (14px) **Chrome** | Bump up. Section labels, disclosure tabs, loading hints. |
+| `text-[10px]` metadata | `text-sm` (14px) **Chrome** | Bump up. Counters, timestamps — still chrome, now readable. `tabular-nums` for alignment. |
+| `text-[9px]` | `text-sm` (14px) **Chrome** | **Eliminated.** Appeals toggles, segment tags, badge text. |
+| `text-[8px]` | `text-sm` (14px) **Chrome** | **Eliminated.** Session kind labels. |
+| *(new)* | `text-lg` (18px) **Heading** | **Added.** Section titles that don't currently exist get the anchor tier. |
 
 **Key rules:**
-- All labels and buttons are `uppercase`. Body content is normal case.
-- T4 structural labels use `tracking-widest` (0.1em). T5 metadata uses `tracking-wider` (0.05em) when uppercase.
-- `tabular-nums` on any numeric display (stats, counters, timestamps).
-- `leading-relaxed` (1.625) for T2 multi-line content. `leading-snug` (1.375) for T3 compact items. T1 headings use default leading.
-- **Weight carries hierarchy alongside size.** T1 is `semibold` at 16px. T2 is `normal` at 14px. The 2px + weight difference creates a clear visual break without needing huge size jumps.
+- **Chrome is always `uppercase tracking-widest`.** This is what separates it from body at only 2px smaller — the all-caps + wide tracking creates a completely different visual texture.
+- Body content is normal case, `font-normal`, `leading-relaxed` (1.625) for comfortable reading.
+- Headings are normal case, `font-semibold`, default leading.
+- `tabular-nums` on any numeric chrome (stats, counters, timestamps).
 
 ### Component Patterns
 
-All patterns below use the target tier sizes. Sizes in parentheses reference the tier: (T1), (T2), etc.
+Every pattern references one of three tiers: **Heading** (18px), **Body** (16px), **Chrome** (14px).
 
-**Section label (the `Lbl` component) — T4:**
+**Section heading — Heading:**
 ```
-text-[11px] font-semibold uppercase tracking-widest text-text-secondary
+text-lg font-semibold text-foreground
+```
+Panel titles ("Analysis", "Verdicts"), source title, disclosure headers, TLDR opener.
+
+**Section label (the `Lbl` component) — Chrome:**
+```
+text-sm font-semibold uppercase tracking-widest text-text-secondary
 ```
 
-**Section heading — T1 (new):**
+**Bordered button (Factory signature) — Chrome:**
 ```
-text-base font-semibold text-foreground
-```
-Used for panel section titles ("Analysis", "Verdicts"), source titles, disclosure headers when expanded.
-
-**Bordered button (Factory signature — never filled, invert on hover) — T4:**
-```
-border border-input px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest
+border border-input px-3 py-2 text-sm font-semibold uppercase tracking-widest
 text-foreground hover:border-foreground
 ```
-Filled-on-hover variant (Analyze button):
-```
-hover:bg-foreground hover:text-background
-```
+Filled-on-hover variant (Analyze button): `hover:bg-foreground hover:text-background`
 
-**Toggle button (appeals, query types — selected inverts) — T4:**
+**Toggle button (appeals, query types) — Chrome:**
 - Selected: `border-foreground bg-foreground text-background`
 - Unselected: `border-input text-muted-foreground hover:border-text-secondary`
 
@@ -148,47 +144,46 @@ hover:bg-foreground hover:text-background
 ```
 absolute z-20 mt-1 min-w-[220px] border border-input bg-card py-1 shadow-lg
 ```
-Menu items (T3): `px-4 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground`
+Menu items — Body: `px-4 py-2 text-base text-muted-foreground hover:bg-muted hover:text-foreground`
 
-**Flag badge — T4:**
+**Flag badge — Chrome:**
 ```
-inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider
+inline-flex items-center gap-1.5 px-2 py-0.5 text-sm font-semibold uppercase tracking-widest
 ```
 Background and text from semantic color at 15% opacity (e.g. `bg-accent/15 text-accent`).
 
-**Loading hint — T4:**
+**Loading hint — Chrome:**
 ```
 flex items-center gap-2 px-4 py-4
 ```
-Dot: `h-1 w-1 animate-pulse bg-foreground`. Label: `text-[11px] uppercase tracking-widest text-muted-foreground/50`.
+Dot: `h-1.5 w-1.5 animate-pulse bg-foreground`. Label: `text-sm uppercase tracking-widest text-muted-foreground/50`.
 
-**Disclosure tabs (section toggles) — T4:**
+**Disclosure tabs — Chrome:**
 ```
-text-[11px] font-semibold uppercase tracking-widest transition-colors
+text-sm font-semibold uppercase tracking-widest transition-colors
 ```
 Active: `bg-muted text-foreground`. Inactive: `text-text-secondary hover:text-muted-foreground`.
 
-**Flag feed items — T3 (content is readable, not squinting):**
-Flag label: `text-xs text-foreground`. Type badge: `text-[11px] font-semibold uppercase tracking-wider` with semantic color.
+**Flag feed items:**
+Flag label — Body: `text-base text-foreground`. Type badge — Chrome: `text-sm font-semibold uppercase tracking-widest` with semantic color.
 
 **Border-left indicators (flags, evidence, verdicts):**
-`border-l-2` with semantic color from the data type. Content indented with `pl-2`.
+`border-l-2` with semantic color. Content indented with `pl-2`.
 
-**Dot separator:** `·` character in `text-muted-foreground/40`.
+**Dot separator:** `·` in `text-muted-foreground/40`.
 
-**Cards/elevated panels:** `border border-border bg-card`. Optional `shadow-lg` for floating panels. Semantic-tinted cards use `border-{color}/30 bg-{color}/5` (e.g. steelman: `border-green/30 bg-green/5`).
+**Cards/elevated panels:** `border border-border bg-card`. Optional `shadow-lg` for floating. Semantic-tinted: `border-{color}/30 bg-{color}/5`.
 
-**Stats bar — T5 (metadata, scannable not readable):**
+**Stats bar — Chrome:**
 ```
-text-[10px] tabular-nums
+text-sm font-semibold uppercase tracking-widest tabular-nums
 ```
-Claims count, flag count, verified count — small numbers the eye skips to when it wants them.
 
-**Empty state (center of right panel when no data):**
+**Empty state:**
 ```
 flex h-full flex-col items-center justify-center gap-3 text-center
 ```
-Primary (T2): `text-sm text-text-secondary`. Secondary (T3): `text-xs text-muted-foreground/40`.
+Primary — Body: `text-base text-text-secondary`. Secondary — Chrome: `text-sm text-muted-foreground/40`.
 
 ### Layout
 
@@ -201,7 +196,7 @@ Primary (T2): `text-sm text-text-secondary`. Secondary (T3): `text-xs text-muted
 ```
 flex items-center justify-between border-b border-border px-6 py-3
 ```
-Logo (T1): `text-base font-bold tracking-wider text-foreground`. Status indicators right-aligned (T5).
+Logo — Heading: `text-lg font-bold tracking-wider text-foreground`. Status indicators right-aligned — Chrome.
 
 **Sticky chart area (top of right panel):**
 ```
@@ -540,20 +535,24 @@ body {
 
 ## Phase 3 — Replace Hex Values + Typography Scale
 
-**This phase combines two sweeps across the same files:** (1) replacing all remaining `[#...]` hex values with semantic tokens, and (2) migrating font sizes to the 5-tier hierarchy defined in the Design Specification. Since both touches hit the same components, doing them together avoids a second pass.
+**This phase combines two sweeps across the same files:** (1) replacing all remaining `[#...]` hex values with semantic tokens, and (2) migrating font sizes to the 3-tier hierarchy (Heading 18px / Body 16px / Chrome 14px) defined in the Design Specification. Since both hit the same components, doing them together avoids a second pass.
 
 ### Typography migration (apply alongside hex replacements)
 
-When touching each file for hex replacements below, also apply the font size migration map from the Design Specification. The key changes per file:
+When touching each file for hex replacements below, also apply the 3-tier migration map from the Design Specification. The rule is simple:
 
-- **`text-[9px]` → `text-[11px]`** everywhere (Lbl components, toggle buttons, badge text, segment tags)
-- **`text-[8px]` → `text-[10px]`** everywhere (session history kind labels)
-- **`text-[10px]` on labels/buttons → `text-[11px]`** (section labels, disclosure tabs, loading hints, bordered buttons)
-- **`text-[10px]` on metadata → keep `text-[10px]`** (stat counters, timestamps, chunk indices)
-- **`text-[11px]` on readable content → `text-xs` (12px)** (flag labels in feed, disclosure body text, fixture labels, menu items, error messages, query input)
-- **Add `text-base` (16px) headings** where section titles currently have no distinct heading size (disclosure tab headers when expanded, TLDR opener, source title)
+- **If it's content the user reads** → `text-base` (16px) **Body**
+- **If it's a label, button, tab, counter, or badge** → `text-sm` (14px) **Chrome** (+ `uppercase tracking-widest` if not already)
+- **If it anchors a section** → `text-lg` (18px) **Heading** (new — add where no heading exists)
 
-**Do NOT change** `text-sm` (14px) or `text-xs` (12px) where they already exist — these are already at the correct tier.
+Concrete substitutions:
+- **`text-[8px]`, `text-[9px]`, `text-[10px]` on labels/buttons/metadata** → `text-sm` (Chrome)
+- **`text-[10px]`, `text-[11px]` on readable content** → `text-base` (Body)
+- **`text-[11px]` on labels/buttons** → `text-sm` (Chrome)
+- **`text-xs` (12px) on readable content** → `text-base` (Body)
+- **`text-sm` (14px) on readable content** → `text-base` (Body)
+- **`text-sm` (14px) on labels/buttons** → keep `text-sm` (already Chrome)
+- **Add `text-lg font-semibold`** for section headings where none exist
 
 ### Hex color replacements
 
@@ -668,7 +667,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 - `TruthPanelSections.tsx` L208: `bg-bg` → `bg-background`
 - `TruthPanelSections.tsx` L26: `text-bg` → `text-background`
 
-**Typography:** Apply 5-tier migration map to both files. Key changes: `Lbl` component 9px → 11px, disclosure tabs 10px → 11px, readable 11px content → 12px, add T1 headings.
+**Typography:** Apply 3-tier map. Readable content (11px, 12px, 14px) → `text-base` Body. Labels/buttons/tabs (9px, 10px) → `text-sm` Chrome. Add `text-lg` Headings for section titles.
 
 ### Phase 3b — TruthPanelExtras.tsx + TranscriptInputFixtures.tsx
 
@@ -682,7 +681,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 - `TranscriptInputFixtures.tsx` L18: `bg-surface` → `bg-card`
 - `TranscriptInputFixtures.tsx` L78: `bg-bg` → `bg-background`
 
-**Typography:** Apply 5-tier migration map. Key changes: `Lbl` component 9px → 11px, segment type tags 9px → 11px, readable 11px content → 12px, fixture label sizes.
+**Typography:** Apply 3-tier map. Readable content → `text-base` Body. Labels/buttons (9px, 10px, 11px) → `text-sm` Chrome. Add `text-lg` Headings.
 
 ### Phase 3c — SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
 
@@ -694,7 +693,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 **Alias renames:**
 - `SessionHistory.tsx` L53: `bg-surface` → `bg-card`
 
-**Typography:** Apply 5-tier migration map. Key changes: SessionHistory 8px kind labels → 10px, Flag badge 10px → 11px.
+**Typography:** Apply 3-tier map. SessionHistory 8px kind labels → `text-sm` Chrome. Flag badge → `text-sm` Chrome. Readable content → `text-base` Body.
 
 **DO NOT TOUCH** (inline styles — confirmed exclusions):
 - `ShareCapture.tsx` lines 18-129 — canvas `fillStyle`/`strokeStyle` hex values
@@ -716,7 +715,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 - `page.tsx` L37, L41: `bg-bg` → `bg-background`
 - `page.tsx` L62: `bg-surface` → `bg-card`
 
-**Typography:** Apply 5-tier migration map. Key changes: InputHeader label sizes, page header logo text-sm → text-base.
+**Typography:** Apply 3-tier map. InputHeader label → `text-sm` Chrome. Body content → `text-base` Body. Page header logo → `text-lg` Heading.
 
 ### Phase 3 verify — Browser verification
 
@@ -725,7 +724,7 @@ Runs after **all** Phase 3a–3d sub-tasks complete. See the Verification Workfl
 - Mobile screenshot to confirm no clipping
 - Grep sweep: zero `[#` remaining in `.tsx` className strings
 - Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg` remaining
-- Typography spot-check: T1 headings (16px) visually larger than T2 body (14px), T4 labels (11px) clearly structural chrome
+- Typography spot-check: Headings (18px) visually anchor each section, Body (16px) is comfortable reading, Chrome (14px uppercase) reads as controls not content. No text below 14px anywhere.
 
 ## Phase 4 — Final Cleanup
 
@@ -804,7 +803,7 @@ If the browser verification reveals issues:
 | 1 | tsc + lint | — | Nothing visual changes — just infrastructure |
 | 2 | tsc + lint | Desktop + mobile, both modes | Tokens resolve correctly, body/scrollbar/selection use var(), no regressions |
 | 3a–3d | tsc + lint (each agent) | — | Each agent confirms their files compile. No browser check yet — wait for 3 verify. |
-| 3 verify | grep sweeps | Desktop + mobile, both modes | All hex gone, all aliases gone, typography tiers visually distinct, colors correct in both modes |
+| 3 verify | grep sweeps | Desktop + mobile, both modes | All hex gone, all aliases gone, 3 typography tiers visually distinct (18/16/14), no text below 14px, colors correct in both modes |
 | 4 | tsc + lint + smoke | Desktop + mobile, both modes | Final visual: alias defs removed from CSS, grep confirms zero legacy tokens, smoke tests pass |
 
 ### Dependency graph
