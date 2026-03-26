@@ -15,20 +15,20 @@ function PageHeader({ isRecording, flagCount, canStartNew, historyDisabled, onSt
 }) {
   return (
     <header className="flex items-center justify-between border-b border-border px-6 py-3">
-      <h1 className="text-sm font-bold tracking-wider text-foreground">TRUTHLENS</h1>
+      <h1 className="text-lg font-bold tracking-wider text-foreground">TRUTHLENS</h1>
       <div className="flex items-center gap-4">
         {isRecording && (
-          <span className="flex items-center gap-1.5 text-[10px] text-accent">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" /> LIVE
+          <span className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-widest text-brand">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-brand" /> LIVE
           </span>
         )}
         {flagCount > 0 && (
-          <span className="text-[10px] tabular-nums text-accent">
+          <span className="text-sm font-semibold uppercase tracking-widest tabular-nums text-brand">
             {flagCount} flag{flagCount !== 1 ? "s" : ""}
           </span>
         )}
         <button type="button" onClick={onStartNew} disabled={!canStartNew}
-          className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-[#555]">
+          className="text-sm font-semibold uppercase tracking-widest text-text-secondary transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-text-secondary">
           New Session
         </button>
         <SessionHistory onRestore={onRestore} disabled={historyDisabled} />
@@ -39,7 +39,7 @@ function PageHeader({ isRecording, flagCount, canStartNew, historyDisabled, onSt
 
 function InputColumn({ session }: { session: TruthSessionState }) {
   return (
-    <div className="w-[320px] shrink-0 border-r border-border bg-bg xl:w-[400px]">
+    <div className="w-[320px] shrink-0 border-r border-border bg-background xl:w-[400px]">
       <TranscriptInput
         key={session.resetSignal}
         onAnalyze={(text, fixtureKey) => {
@@ -66,7 +66,7 @@ function InputColumn({ session }: { session: TruthSessionState }) {
 
 function OutputColumn({ session }: { session: TruthSessionState }) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col bg-surface">
+    <div className="flex min-w-0 flex-1 flex-col bg-card">
       <TruthPanel
         pulseEntries={session.pulseEntries}
         snapshot={session.snapshot}
@@ -103,7 +103,7 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-full flex-col bg-bg">
+    <div className="flex h-full flex-col bg-background">
       <PageHeader
         isRecording={s.isRecording}
         flagCount={s.flagCount}
