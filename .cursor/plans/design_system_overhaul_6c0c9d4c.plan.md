@@ -1,6 +1,6 @@
 ---
 name: Design System Overhaul
-overview: Reconcile the existing shadcn/ui scaffold with the app's current dark-first token stack, expand the migration inventory to cover the newly split UI files, replace remaining arbitrary hex class values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), align verification with the current smoke scripts, and remove legacy aliases once the repo is truly ready.
+overview: Migrate to the shadcn/ui canonical OKLCH token system, introduce --brand (not --accent) for the TruthLens identity orange, expand the migration inventory to cover the newly split UI files, replace remaining arbitrary hex class values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), ensure WCAG AA contrast on every text token, align verification with the current smoke scripts, and remove legacy aliases once the repo is truly ready.
 todos:
   - id: phase-1a-reaudit
     content: "[Phase 1A] Re-audit the existing shadcn/ui setup against the updated plan and confirm the required scaffold is already present"
@@ -170,7 +170,7 @@ Reference screenshots saved in `assets/`. Factory uses **light mode for marketin
 
 These are mode-agnostic structural rules — they apply to both dark and light:
 
-- **Single-hue canvas** with orange-led chrome — allow extra hues only when they are data-driven domain signals (for example, segment-type colors), not ad hoc decorative theme choices
+- **Single-hue canvas** with brand-orange chrome — allow extra hues only when they are data-driven domain signals (for example, segment-type colors), not ad hoc decorative theme choices
 - **Monospace typography** (JetBrains Mono) — hierarchy via size, weight, tracking, not color variety
 - **Small uppercase tracking-widest labels** with orange dot prefix for section markers
 - **Bordered buttons**, never filled (invert on hover) — the Factory signature
@@ -187,7 +187,7 @@ TruthLens follows the same approach:
 - **Dark:** near-black canvas → dark-gray card → medium border → light foreground
 - **Light:** near-white canvas → white card → light-gray border → dark foreground
 
-Semantic colors (accent orange, green, yellow) stay constant in hue; their lightness adjusts per mode for WCAG contrast on the respective background. The orange accent reads well on both — #ff4400 is high-contrast against both near-black and near-white.
+Semantic colors (brand orange, green, yellow) adjust per mode for WCAG AA contrast on the respective background. The brand orange uses a slightly lighter variant in dark mode (`oklch(0.673 0.218 36.9)`) and a darker variant in light mode (`oklch(0.535 0.184 35.8)`) to hit 4.5:1 on every surface.
 
 ---
 
@@ -280,7 +280,7 @@ Menu items — Body: `px-4 py-2 text-base text-muted-foreground hover:bg-muted h
 inline-flex items-center gap-1.5 px-2 py-0.5 text-sm font-semibold uppercase tracking-widest
 ```
 
-Background and text from semantic color at 15% opacity (e.g. `bg-accent/15 text-accent`).
+Background and text from semantic color at 15% opacity (e.g. `bg-brand/15 text-brand`).
 
 **Loading hint — Chrome:**
 
@@ -306,7 +306,7 @@ Flag label — Body: `text-base text-foreground`. Type badge — Chrome: `text-s
 
 **Dot separator:** `·` in `text-muted-foreground/40`.
 
-**Cards/elevated panels:** `border border-border bg-card`. Optional `shadow-lg` for floating. Semantic-tinted: `border-{color}/30 bg-{color}/5`.
+**Cards/elevated panels:** `border border-border bg-card`. Optional `shadow-lg` for floating. Semantic-tinted: `border-{color}/30 bg-{color}/5` (where `{color}` is `brand`, `green`, `yellow`, etc.).
 
 **Stats bar — Chrome:**
 
@@ -372,7 +372,7 @@ These are the canonical technical references. Agents MUST follow these patterns.
 
 Tailwind v4 uses **CSS-first configuration**. There is no `tailwind.config.ts`. All customization happens in CSS via `@theme`.
 
-- `@theme { }` — defines design tokens that generate utility classes. Variables like `--color-accent: #ff4400` create `.text-accent`, `.bg-accent`, etc.
+- `@theme { }` — defines design tokens that generate utility classes. Variables like `--color-brand: var(--brand)` create `.text-brand`, `.bg-brand`, etc.
 - `@theme inline { }` — same but does NOT generate `:root` CSS variables for the defaults (avoids conflicts when using runtime CSS custom properties).
 - The pattern we use: `@theme inline` maps `--color-X: var(--X)` where `--X` is a CSS custom property defined in `:root` and `.dark`. This lets the same utility class (e.g., `bg-card`) resolve to different values per mode.
 
@@ -380,7 +380,7 @@ Reference: https://tailwindcss.com/docs/theme
 
 ### shadcn/ui CSS variable conventions
 
-shadcn uses a `background`/`foreground` naming convention. The `background` suffix is omitted:
+shadcn uses a `background`/`foreground` naming convention with **OKLCH** color values (as of Tailwind v4). The `background` suffix is omitted:
 
 ```css
 --primary: oklch(0.205 0 0); /* ← used as bg-primary */
@@ -388,16 +388,18 @@ shadcn uses a `background`/`foreground` naming convention. The `background` suff
 ```
 
 Standard shadcn tokens (all must exist for components to render correctly):
-`background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `border`, `input`, `ring`.
+`background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `destructive-foreground`, `border`, `input`, `ring`.
 
-**Adding custom colors** (TruthLens extensions): define in `:root`/`.dark`, reference in `@theme inline`:
+**Critical: `--accent` is a neutral hover surface, not the brand color.** shadcn components use `bg-accent` for hover states, dropdown highlights, and sidebar active items. Overriding it to a brand hue breaks those surfaces. The TruthLens identity orange lives in `--brand` / `--brand-foreground` / `--brand-muted`.
+
+**Adding custom colors** (TruthLens extensions): define in `:root`/`.dark` with OKLCH values, reference in `@theme inline`:
 
 ```css
 :root {
-  --green: #00994d;
+  --green: oklch(0.527 0.137 150.1);
 }
 .dark {
-  --green: #00cc66;
+  --green: oklch(0.740 0.197 151.4);
 }
 
 @theme inline {
@@ -457,67 +459,73 @@ TruthLens started with this Factory-like intent but drifted: the repo now has th
 
 - Dieter Rams: "Good design is as little design as possible."
 - TruthLens soul.md: "Respect every glance — every element earns its presence or gets cut."
-- Factory's lesson: if you need hierarchy, use typography and spacing. If you need separation, use borders and cards. Color is for meaning (accent, success, warning), not for decoration.
+- Factory's lesson: if you need hierarchy, use typography and spacing. If you need separation, use borders and cards. Color is for meaning (brand, success, warning), not for decoration.
 
 ## Rationalized Palette
 
-**4 text levels, 3 background levels, 2 border levels, 3 semantic colors — per mode.**
+**All values in OKLCH per the shadcn v4 convention. Standard shadcn tokens use the official neutral defaults. TruthLens extensions add `--brand`, `--green`, `--yellow`, and `--text-secondary` on top.**
 
-Following the Factory pattern: each mode uses almost no color variety in the grayscale. Hierarchy comes from type size and weight. Separation comes from borders and card elevation. The same token names resolve to mode-appropriate values via CSS custom properties.
+**Key design decision:** `--accent` stays as the shadcn neutral hover surface (not the TruthLens orange). The identity orange lives in `--brand` / `--brand-foreground` / `--brand-muted`. This prevents any future shadcn component from rendering with an orange background where it expects a subtle hover.
 
-### Text Hierarchy (4 levels — down from 10)
+**WCAG AA compliance:** Every text token has been verified at 4.5:1 contrast against both the `background` and `card` surfaces in its mode. 14px text (Chrome tier) is NOT "large text" per WCAG (which requires 18pt/24px or 14pt bold/18.67px), so all tiers require 4.5:1.
 
-| Token              | Dark                         | Light   | Role                                             |
-| ------------------ | ---------------------------- | ------- | ------------------------------------------------ |
-| `foreground`       | #e5e5e5                      | #171717 | Primary content, anything worth reading          |
-| `muted-foreground` | #888888                      | #737373 | Secondary content, evidence detail, explanations |
-| `text-secondary`   | #666666                      | #a3a3a3 | Structural labels, meta, captions                |
-| Opacity variants   | `muted-foreground/50`, `/40` | same    | Placeholders, hints, dot separators              |
+### Standard shadcn tokens (neutral base, OKLCH)
 
-Dark consolidation: #ccc → `foreground`, #999/#aaa → `muted-foreground`, #555 → `text-secondary`, #444 → `muted-foreground/50`, #333-as-text → `muted-foreground/40`.
+These are the official shadcn neutral defaults. No custom values -- use them as-is so every shadcn component works out of the box.
 
-### Backgrounds (3 levels — Factory pattern)
+| Token | Light (`:root`) | Dark (`.dark`) |
+| --- | --- | --- |
+| `background` | `oklch(1 0 0)` | `oklch(0.145 0 0)` |
+| `foreground` | `oklch(0.145 0 0)` | `oklch(0.985 0 0)` |
+| `card` | `oklch(1 0 0)` | `oklch(0.205 0 0)` |
+| `card-foreground` | `oklch(0.145 0 0)` | `oklch(0.985 0 0)` |
+| `popover` | `oklch(1 0 0)` | `oklch(0.205 0 0)` |
+| `popover-foreground` | `oklch(0.145 0 0)` | `oklch(0.985 0 0)` |
+| `primary` | `oklch(0.205 0 0)` | `oklch(0.922 0 0)` |
+| `primary-foreground` | `oklch(0.985 0 0)` | `oklch(0.205 0 0)` |
+| `secondary` | `oklch(0.97 0 0)` | `oklch(0.269 0 0)` |
+| `secondary-foreground` | `oklch(0.205 0 0)` | `oklch(0.985 0 0)` |
+| `muted` | `oklch(0.97 0 0)` | `oklch(0.269 0 0)` |
+| `muted-foreground` | `oklch(0.556 0 0)` | `oklch(0.708 0 0)` |
+| `accent` | `oklch(0.97 0 0)` | `oklch(0.269 0 0)` |
+| `accent-foreground` | `oklch(0.205 0 0)` | `oklch(0.985 0 0)` |
+| `destructive` | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)` |
+| `destructive-foreground` | `oklch(0.985 0 0)` | `oklch(0.985 0 0)` |
+| `border` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 10%)` |
+| `input` | `oklch(0.922 0 0)` | `oklch(1 0 0 / 15%)` |
+| `ring` | `oklch(0.708 0 0)` | `oklch(0.556 0 0)` |
 
-| Token        | Dark    | Light   | Role                                                         |
-| ------------ | ------- | ------- | ------------------------------------------------------------ |
-| `background` | #0a0a0a | #fafafa | Base canvas                                                  |
-| `card`       | #141414 | #ffffff | Elevated panels, sidebar, dropdowns. Replaces old `surface`. |
-| `muted`      | #1a1a1a | #f5f5f5 | Hover states, active tab fills, subtle emphasis              |
+Plus `chart-1` through `chart-5` and `sidebar-*` tokens from the shadcn neutral scaffold (see Phase 2 target CSS for full listing).
 
-### Borders (2 levels — Factory pattern)
+### TruthLens extensions (OKLCH, WCAG AA verified)
 
-| Token    | Dark    | Light   | Role                                          |
-| -------- | ------- | ------- | --------------------------------------------- |
-| `border` | #222222 | #e5e5e5 | Standard structural dividers between sections |
-| `input`  | #333333 | #d4d4d4 | Interactive/form borders, stronger emphasis   |
+| Token | Dark | Light | Contrast check | Role |
+| --- | --- | --- | --- | --- |
+| `brand` | `oklch(0.673 0.218 36.9)` | `oklch(0.535 0.184 35.8)` | dark ≥ 4.66:1 on card, light ≥ 5.65:1 | Identity orange -- flags, active states, the orange dot |
+| `brand-foreground` | `oklch(1 0 0)` | `oklch(1 0 0)` | -- | Text on brand backgrounds |
+| `brand-muted` | `oklch(0.829 0.098 37.8)` | `oklch(0.506 0.176 35.3)` | dark ≥ 8.6:1, light ≥ 6.4:1 | Softer brand for secondary emphasis |
+| `green` | `oklch(0.740 0.197 151.4)` | `oklch(0.527 0.137 150.1)` | dark ≥ 7.1:1, light ≥ 5.0:1 | Verified / success |
+| `yellow` | `oklch(0.802 0.171 73.3)` | `oklch(0.476 0.103 61.9)` | dark ≥ 7.9:1, light ≥ 6.9:1 | Warning / caution |
+| `text-secondary` | `oklch(0.660 0 0)` | `oklch(0.566 0 0)` | dark ≥ 4.86:1 on card, light ≥ 4.54:1 | Structural labels, meta, captions |
 
-### Semantic Colors (meaning, not decoration)
-
-| Token               | Dark      | Light     | Role                                                  |
-| ------------------- | --------- | --------- | ----------------------------------------------------- |
-| `accent`            | #ff4400   | #ff4400   | Attention, flags, active states, the orange dot       |
-| `accent-foreground` | #ffffff   | #ffffff   | Text on accent backgrounds                            |
-| `accent-muted`      | #ffb199   | #e63900   | Softer accent text (lighter on dark, darker on light) |
-| `green`             | #00cc66   | #00994d   | Verified/success (darkened for light-bg contrast)     |
-| `yellow`            | #ffaa00   | #b37700   | Warning/caution (darkened for light-bg contrast)      |
-| `destructive`       | #ff4400   | #ff4400   | Error state (aliases accent)                          |
-| `ring`              | #ff440066 | #ff440066 | Focus ring (40% alpha orange)                         |
+`--ring` is overridden to use the brand hue at 25% alpha: `oklch(0.673 0.218 36.9 / 25%)` (dark) / `oklch(0.535 0.184 35.8 / 25%)` (light).
 
 ### Consolidation Map (class-name replacements — mode-agnostic)
 
 These replacements use semantic token names that resolve correctly in both modes:
 
-- #ccc → `foreground` (+10% brighter in dark — Factory principle: if it's content, make it readable)
-- #888 → `muted-foreground` (no change in dark)
-- #999, #aaa → `muted-foreground` (slightly darker in dark)
-- #666 → `text-secondary` (no change in dark)
-- #555 → `text-secondary` (+7% brighter in dark)
-- #444 → `text-muted-foreground/50` (slight shift, same intent)
-- #333 text → `text-muted-foreground/40` (slight shift, same intent)
-- #333 border → `border-input` (no change in dark)
-- #1a1a1a → `bg-muted` (no change in dark)
-- #111, #0f0f0f → `bg-card` (slight shift in dark)
-- #ffb199 → `text-accent-muted` (no change in dark)
+- #ccc → `foreground`
+- #888 → `muted-foreground`
+- #999, #aaa → `muted-foreground`
+- #666, #555 → `text-secondary`
+- #444 → `text-muted-foreground/50`
+- #333 text → `text-muted-foreground/40`
+- #333 border → `border-input`
+- #1a1a1a → `bg-muted`
+- #111, #0f0f0f → `bg-card`
+- #ff4400, #ffb199 → `text-brand`, `text-brand-muted` (was `text-accent`)
+- old `text-accent` → `text-brand`
+- old `bg-accent/15` → `bg-brand/15`
 
 ---
 
@@ -548,11 +556,11 @@ Validation: `bunx tsc --noEmit` and `bun run lint` pass.
 
 Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css](src/app/globals.css) with the full TruthLens-flavored token set. Uses CSS custom property indirection (the pattern shadcn established in Phase 1) so Tailwind utility classes like `bg-card` and `text-muted-foreground` resolve to the correct value per mode.
 
-**Current repo reality to fix in Phase 2:** `@theme inline` is still hardcoded to TruthLens dark hex, `:root` and `.dark` still contain the default shadcn OKLCH palette, and the plain `body` / scrollbar / `::selection` rules still use literal hex outside the shared token system. Because those `body` rules are unlayered, they can override the later `@layer base` body styling. Phase 2 is therefore both a token rewrite and a cascade cleanup.
+**Current repo reality to fix in Phase 2:** `@theme inline` is still hardcoded to TruthLens dark hex values, `:root` and `.dark` still contain the default shadcn OKLCH palette (which conflicts with the hardcoded `@theme` hex), and the plain `body` / scrollbar / `::selection` rules still use literal hex outside the shared token system. Because those `body` rules are unlayered, they defeat the `@layer base` body styling per the CSS cascade spec. Phase 2 is therefore a token rewrite, an OKLCH migration, a `--brand` introduction, and a cascade cleanup.
 
-**Architecture:** `@theme inline` maps Tailwind color-\* tokens to `var()` references. `:root` provides light values, `.dark` provides dark values, and the raw global rules must also move onto `var()` references. The `@custom-variant dark` directive (already present from Phase 1) makes `dark:` prefixed utilities work once the class is actually applied.
+**Architecture:** `@theme inline` maps Tailwind `--color-*` tokens to `var()` references. `:root` provides light OKLCH values, `.dark` provides dark OKLCH values. All color values use OKLCH per the shadcn v4 convention -- no hex in the token system. The unlayered `body` block is deleted so the `@layer base` body rule is the single source of truth. The `@custom-variant dark` directive (already present from Phase 1) makes `dark:` prefixed utilities work once the `.dark` class is applied on `<html>`.
 
-**Exact target CSS:**
+**Exact target CSS (OKLCH throughout, shadcn neutral defaults + TruthLens brand layer):**
 
 ```css
 @import "tailwindcss";
@@ -562,6 +570,7 @@ Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* --- shadcn standard mappings --- */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -577,21 +586,41 @@ Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
+  /* --- TruthLens brand layer --- */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
   --color-green: var(--green);
   --color-yellow: var(--yellow);
-  --color-accent-muted: var(--accent-muted);
   --color-text-secondary: var(--text-secondary);
 
+  /* --- backward-compat aliases (removed in Phase 4A) --- */
   --color-surface: var(--card);
   --color-bg: var(--background);
 
+  /* --- fonts (resolve to Next.js --font-* vars) --- */
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
 
+  /* --- radius --- */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -602,83 +631,115 @@ Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css
 }
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --popover: #ffffff;
-  --popover-foreground: #171717;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #ff4400;
-  --accent-foreground: #ffffff;
-  --destructive: #ff4400;
-  --border: #e5e5e5;
-  --input: #d4d4d4;
-  --ring: #ff440066;
-
-  --green: #00994d;
-  --yellow: #b37700;
-  --accent-muted: #e63900;
-  --text-secondary: #a3a3a3;
   --radius: 0.625rem;
+
+  /* shadcn neutral (light) */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* TruthLens brand layer (light) — WCAG AA verified */
+  --brand: oklch(0.535 0.184 35.8);
+  --brand-foreground: oklch(1 0 0);
+  --brand-muted: oklch(0.506 0.176 35.3);
+  --green: oklch(0.527 0.137 150.1);
+  --yellow: oklch(0.476 0.103 61.9);
+  --text-secondary: oklch(0.566 0 0);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #e5e5e5;
-  --card: #141414;
-  --card-foreground: #e5e5e5;
-  --popover: #141414;
-  --popover-foreground: #e5e5e5;
-  --primary: #e5e5e5;
-  --primary-foreground: #0a0a0a;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #e5e5e5;
-  --muted: #1a1a1a;
-  --muted-foreground: #888888;
-  --accent: #ff4400;
-  --accent-foreground: #ffffff;
-  --destructive: #ff4400;
-  --border: #222222;
-  --input: #333333;
-  --ring: #ff440066;
+  /* shadcn neutral (dark) */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 
-  --green: #00cc66;
-  --yellow: #ffaa00;
-  --accent-muted: #ffb199;
-  --text-secondary: #666666;
+  /* TruthLens brand layer (dark) — WCAG AA verified */
+  --brand: oklch(0.673 0.218 36.9);
+  --brand-foreground: oklch(1 0 0);
+  --brand-muted: oklch(0.829 0.098 37.8);
+  --green: oklch(0.740 0.197 151.4);
+  --yellow: oklch(0.802 0.171 73.3);
+  --text-secondary: oklch(0.660 0 0);
 }
 ```
 
 Last two `@theme inline` entries (`surface`, `bg`) are backward-compat aliases removed in `Phase 4A`. They are still actively used across the app today, so do not treat them as dead cleanup-only tokens until `Phase 3E` confirms the alias sweep is complete.
 
-**body/scrollbar/selection** use `var()`:
+**`--ring` override:** The shadcn default `--ring` is a neutral gray. To give focus rings the brand hue, override it in each mode block above (replace the shadcn `--ring` values with `oklch(0.673 0.218 36.9 / 25%)` dark / `oklch(0.535 0.184 35.8 / 25%)` light). This is optional; the target CSS above keeps the shadcn neutral ring for maximum compatibility, and brand-tinted rings can be added as a follow-on.
+
+**body/scrollbar/selection** — move to `var()` references and remove the unlayered `body` block entirely (the `@layer base` body rule handles it):
 
 ```css
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
 
 ::selection {
-  background: var(--color-ring);
+  background: oklch(0.673 0.218 36.9 / 25%);
   color: var(--color-foreground);
 }
 ```
 
-**`@layer base`** (from shadcn, kept as-is):
+**`@layer base`** (from shadcn, kept as-is — this is now the sole body styling):
 
 ```css
 @layer base {
@@ -694,9 +755,9 @@ body {
 }
 ```
 
-**Note:** `::selection` changes from `#ff440033` (20% alpha) to `#ff440066` (40% alpha via ring). Slightly more visible selection highlight — acceptable.
+**Cascade note:** The current repo has an unlayered `body { background: #0a0a0a; color: #e5e5e5; }` which defeats the `@layer base` body rule. Phase 2C must delete that unlayered block so the layered `@apply` is the single source of truth.
 
-**Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic once the rewrite lands: `text-foreground` resolves to #e5e5e5 in dark, #171717 in light.
+**Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic once the rewrite lands: `text-foreground` resolves to the OKLCH foreground value in each mode.
 
 ### Phase 2 verification and handoff criteria
 
@@ -735,19 +796,19 @@ Concrete substitutions:
 
 - `src/app/components/TruthPanel.tsx` — stats rail, flag rows, disclosure tabs, retry states, idle copy, plus `bg-bg` / `bg-surface`
 - `src/app/components/TruthPanelSections.tsx` — verdict CTA, empty states, unverifiable rows, pattern descriptions, plus `bg-bg`
-- `src/app/components/AnalysisContent.tsx` — appeals toggle, yellow evidence blocks, quoted excerpts, and `text-bg` in the selected state
-- `src/app/components/TruthPanelExtras.tsx` — topic segments, query tabs, evidence rows, input placeholder, and `text-bg` in the selected state
+- `src/app/components/AnalysisContent.tsx` — appeals toggle, yellow evidence blocks, quoted excerpts, `text-bg` in the selected state, and `text-accent` → `text-brand` rename
+- `src/app/components/TruthPanelExtras.tsx` — topic segments, query tabs, evidence rows, input placeholder, `text-bg` in the selected state, and `text-accent` → `text-brand` rename
 - `src/app/components/TranscriptInputFixtures.tsx` — menu shell, fixture card, hover states, preview box, and `bg-surface` / `bg-bg`
 - `src/app/components/SessionHistory.tsx` — history trigger, dropdown shell, empty state, and `bg-surface`
 - `src/app/components/SessionHistoryRow.tsx` — title button, session kind label, age metadata, editor input, and row divider
 - `src/app/components/TrustChart.tsx` — chart shell background and chrome label (SVG stroke/fill stays excluded)
 - `src/app/components/ShareCapture.tsx` — share button label only (canvas drawing code stays excluded)
-- `src/app/components/Flag.tsx` — badge background token map still contains `bg-[#444]/15`
-- `src/app/page.tsx` — header action still uses `text-[#555]`, and the page shell still relies on `bg-bg` / `bg-surface`
+- `src/app/components/Flag.tsx` — badge background token map still contains `bg-[#444]/15`, and existing `text-accent` / `bg-accent` usages must become `text-brand` / `bg-brand`
+- `src/app/page.tsx` — header action still uses `text-[#555]`, the page shell still relies on `bg-bg` / `bg-surface`, and any `text-accent` usages become `text-brand`
 
 **Files that still need alias cleanup even without arbitrary hex class values:**
 
-- `src/app/components/TranscriptInputParts.tsx` — `bg-bg`, `hover:text-bg`, and typography cleanup
+- `src/app/components/TranscriptInputParts.tsx` — `bg-bg`, `hover:text-bg`, `text-accent` → `text-brand`, and typography cleanup
 
 **Files already clean for this phase's purposes:**
 
@@ -772,6 +833,8 @@ Concrete substitutions:
 
 **Hex replacements:** Truth panel shell, tab states, error / retry copy, verdict and pattern empty states, appeals toggle, excerpt blocks, and any remaining `text-[#...]`, `border-[#...]`, `bg-[#...]`, or hover-state equivalents in these three files.
 
+**`accent` → `brand` rename:** All `text-accent`, `bg-accent`, `border-accent` usages in these files that refer to the TruthLens orange become `text-brand`, `bg-brand`, `border-brand`. The shadcn `accent` token is now a neutral hover surface and must not be used for brand identity.
+
 **cn() sites (add `import { cn } from "@/lib/utils"` where needed):**
 
 - `TruthPanel.tsx`: disclosure tab active/inactive ternary
@@ -783,6 +846,7 @@ Concrete substitutions:
 - `TruthPanel.tsx`: `bg-bg` → `bg-background`
 - `TruthPanelSections.tsx`: `bg-bg` → `bg-background`
 - `AnalysisContent.tsx`: `text-bg` → `text-background`
+- All files: `text-accent-muted` → `text-brand-muted`
 
 **Typography:** Apply 3-tier map. Readable content (11px, 12px, 14px) → `text-base` Body. Labels/buttons/tabs (9px, 10px) → `text-sm` Chrome. Add `text-lg` Headings for section titles.
 
@@ -794,17 +858,22 @@ Concrete substitutions:
 
 - `TruthPanelExtras.tsx`: query type tab selected/unselected ternary
 
+**`accent` → `brand` rename:** Same rule as Phase 3A — any `text-accent`, `bg-accent/15` etc. referring to the orange identity become `text-brand`, `bg-brand/15`.
+
 **Alias renames:**
 
 - `TruthPanelExtras.tsx`: `text-bg` → `text-background`
 - `TranscriptInputFixtures.tsx`: `bg-surface` → `bg-card`
 - `TranscriptInputFixtures.tsx`: `bg-bg` → `bg-background`
+- Both files: `text-accent-muted` → `text-brand-muted`
 
 **Typography:** Apply 3-tier map. Readable content → `text-base` Body. Labels/buttons (9px, 10px, 11px) → `text-sm` Chrome. Add `text-lg` Headings.
 
 ### Phase 3C — SessionHistory.tsx + SessionHistoryRow.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
 
 **Hex replacements:** History trigger, dropdown shell, row title / metadata states, session kind label, row dividers, chart shell label, share button label, and the `Flag.tsx` badge map.
+
+**`accent` → `brand` rename:** Flag badge map (`bg-accent/15 text-accent` → `bg-brand/15 text-brand`), and any other orange-identity references in these files.
 
 **cn() sites:**
 
@@ -833,12 +902,15 @@ Concrete substitutions:
 - `TranscriptInputParts.tsx`: severity border class composition (multi-condition)
 - `TranscriptInputParts.tsx`: progress bar inner class composition
 
+**`accent` → `brand` rename:** `text-accent` on the LIVE badge, voice error, and any other orange-identity usage becomes `text-brand`.
+
 **Alias renames:**
 
 - `TranscriptInputParts.tsx`: `bg-bg` → `bg-background`
 - `TranscriptInputParts.tsx`: `hover:text-bg` → `hover:text-background`
 - `page.tsx`: `bg-bg` → `bg-background`
 - `page.tsx`: `bg-surface` → `bg-card`
+- Both files: `text-accent` (orange identity) → `text-brand`
 
 **Typography:** Apply 3-tier map. InputHeader label → `text-sm` Chrome. Body content → `text-base` Body. Page header logo → `text-lg` Heading, and header status/actions should also land on the 14px chrome tier.
 
@@ -848,6 +920,8 @@ Runs after **all** `Phase 3A-3D` sub-tasks complete. Merge the four implementati
 
 - Grep sweep: zero `[#` remaining in `.tsx` className strings
 - Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` remaining in `.tsx` files
+- Grep sweep: zero `text-accent`, `bg-accent/15`, `border-accent` remaining where they refer to the brand orange (shadcn `accent` neutral usages from `button.tsx` etc. are fine)
+- Grep sweep: zero `text-accent-muted` remaining (replaced by `text-brand-muted`)
 - Resolve any cross-branch conflicts before final verification
 - Run `bunx tsc --noEmit`, `bun run lint`, and `bun run smoke:readiness` on the merged branch before handing off to `Phase 3F`
 
@@ -872,7 +946,7 @@ Runs after `Phase 3E` is clean. See the Verification Workflow section for full i
 
 ### Remove alias definitions from globals.css
 
-Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from the `@theme inline` block. (`--color-text` was already removed in Phase 1.)
+Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from the `@theme inline` block. (`--color-text` was already removed in Phase 1.) Also confirm `--color-accent-muted` is gone — it has been replaced by `--color-brand-muted`.
 
 ### Final verification
 
@@ -882,6 +956,8 @@ Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from t
 - `bun run test:smoke` — 2/2 pass
 - Grep: zero `[#` in `.tsx` className strings
 - Grep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` in `.tsx` files
+- Grep: zero `text-accent-muted` remaining (replaced by `text-brand-muted`)
+- Grep: confirm no orange-identity `text-accent` / `bg-accent/15` remain (shadcn neutral `accent` usages are expected and correct)
 - Browser verification in both modes (see Verification Workflow)
 
 ### Phase 4 closeout criteria
@@ -941,7 +1017,7 @@ These phases change visual output. Use the browser MCP tools to verify.
    - **Header:** logo left-aligned, status indicators right-aligned, single border-bottom
    - **Sidebar:** correct background token (should be `background` color), bordered section labels, bordered buttons
    - **Right panel:** chart area with sticky header, flag feed with colored left-border indicators, disclosure tabs with correct active/inactive states
-   - **Colors:** no hex values bleeding through — all semantic tokens should resolve. In dark mode: near-black canvas, light foreground. In light mode: near-white canvas, dark foreground. Orange accent visible in both.
+   - **Colors:** no hex values bleeding through — all semantic tokens should resolve. In dark mode: dark canvas, light foreground. In light mode: white canvas, dark foreground. Brand orange visible and WCAG AA compliant in both.
    - **Typography:** monospace throughout, uppercase labels, correct size hierarchy (small labels < body text)
 
 **Mobile verification (375×812 viewport):**
@@ -958,7 +1034,7 @@ These phases change visual output. Use the browser MCP tools to verify.
    - Background inverts (near-black ↔ near-white)
    - Text inverts (light ↔ dark foreground)
    - Borders adjust (dark subtle ↔ light subtle)
-   - Orange accent is visible and high-contrast in both modes
+   - Brand orange is visible and high-contrast (4.5:1+) in both modes
    - Cards (dropdowns, fixture card, disclosure content) show clear elevation from background
    - No "ghost" hex colors that look wrong in the other mode
 
