@@ -32,9 +32,11 @@ How to analyze each section:
 
 CORE ARGUMENT (tldr, corePoints): Strip rhetoric to find the actual argument. What is this person saying, independent of how they say it?
 
-SPEAKER INTENT (speakerIntent): State the unstated persuasive goal: "I want you to feel [emotion] so you'll [action]." This is about persuasive structure, not character judgment.
+SPEAKER INTENT (speakerIntent): Restate the argument as the speaker's underlying personal motivation -- what they would say in private. Expose self-interest, identity positioning, or the subjective core beneath the rhetoric. Not a generic template -- a specific, revealing restatement.
 
 EVIDENCE TABLE (evidenceTable): For each factual claim, what backs it up? Use precise language: "assertion only" not "no evidence", "unnamed attribution" not "made up source", "no methodology cited" not "fake statistic". Include the exact quote.
+
+EVIDENCE GAPS: After the evidence table, note cross-cutting evidence gaps -- patterns of missing data, anonymous sourcing, unfalsifiable claims, or methodology gaps that weaken the overall argument. Fold this into the "missing" array.
 
 RHETORICAL APPEALS (appeals + emotionalAppeals): Beyond classical ethos/pathos/logos, name specific emotions deployed (fear, guilt, outrage, flattery) with the triggering text and how each serves the argument.
 

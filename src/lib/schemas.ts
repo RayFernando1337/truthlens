@@ -77,7 +77,7 @@ export const rhetoricalCoreSchema = z.object({
   tldr: z.string().describe("1-2 sentence summary of the core argument"),
   corePoints: z.array(z.string()).describe("Key arguments stripped of rhetoric"),
   speakerIntent: z.string().describe(
-    "Unstated persuasive goal: 'I want you to feel X so you'll do Y'"
+    "Speaker's underlying personal motivation -- what they would say in private about why they're making this argument"
   ),
   evidenceTable: z.array(
     z.object({

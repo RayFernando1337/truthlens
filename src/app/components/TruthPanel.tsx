@@ -208,6 +208,24 @@ function usePanelDerived(
   return { batch, flatFlags, claims, verified, tabs, scores, overlay, flagged };
 }
 
+function EmptyState({ error, onRetry }: { error: string | null; onRetry: () => void }) {
+  if (error) return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <p className="text-[11px] text-[#ffb199]">{error}</p>
+      <button type="button" onClick={onRetry}
+        className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+        Retry analysis
+      </button>
+    </div>
+  );
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
+      <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
+    </div>
+  );
+}
+
 export default function TruthPanel({
   pulseEntries: entries, snapshot, verificationRun, verificationError, analysisError,
   topicSegments, queryResult, pipelineStatus, processingChunk, isStreaming,
@@ -224,21 +242,7 @@ export default function TruthPanel({
   } : null;
 
   if (entries.length === 0 && !processingChunk && !snapshot) {
-    if (analysisError) return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <p className="text-[11px] text-[#ffb199]">{analysisError}</p>
-        <button type="button" onClick={onRetryAnalysis}
-          className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
-          Retry analysis
-        </button>
-      </div>
-    );
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
-        <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
-      </div>
-    );
+    return <EmptyState error={analysisError} onRetry={onRetryAnalysis} />;
   }
   return (
     <div className="flex h-full flex-col" data-testid="truth-panel">
