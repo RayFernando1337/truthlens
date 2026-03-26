@@ -2,29 +2,56 @@
 name: Design System Overhaul
 overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to semantic tokens (dual light/dark mode via CSS custom properties), replace all arbitrary hex values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), and remove legacy aliases.
 todos:
-  - id: phase-1-shadcn
-    content: "[Phase 1] Install shadcn/ui — run init, get cn(), components.json, dependencies"
+  - id: phase-1a-reaudit
+    content: "[Phase 1A] Re-audit the existing shadcn/ui setup against the updated plan and confirm the required scaffold is already present"
     status: completed
-  - id: phase-2-tokens
-    content: "[Phase 2] Rationalize token palette in globals.css — full shadcn token set, TruthLens extensions (green, yellow, accent-muted, text-secondary), light/dark mode (:root/.dark), backward-compat aliases"
+  - id: phase-1b-validation
+    content: "[Phase 1B] Validate the Phase 1 scaffold with bunx tsc --noEmit and bun run lint"
+    status: completed
+  - id: phase-2a-theme-map
+    content: "[Phase 2A] Rewrite src/app/globals.css @theme inline mappings to the canonical shadcn + TruthLens semantic token architecture"
+    status: pending
+  - id: phase-2b-light-dark-values
+    content: "[Phase 2B] Replace src/app/globals.css :root and .dark values with the canonical light/dark palette and backward-compat aliases"
+    status: pending
+  - id: phase-2c-global-base-rules
+    content: "[Phase 2C] Align body, scrollbar, selection, and @layer base rules in src/app/globals.css with the updated token system"
+    status: pending
+  - id: phase-2d-automated-validation
+    content: "[Phase 2D] Run Phase 2 automated validation with bunx tsc --noEmit and bun run lint after the globals.css rewrite"
+    status: pending
+  - id: phase-2e-browser-validation
+    content: "[Phase 2E] Run Phase 2 browser verification in light/dark mode on desktop and mobile after the globals.css rewrite"
     status: pending
   - id: phase-3a-right-panel
-    content: "[Phase 3a] Migrate TruthPanel.tsx + TruthPanelSections.tsx — 26 hex replacements, typography to 3-tier (18/16/14), cn() (2 sites), alias renames (bg-surface, bg-bg, text-bg)"
+    content: "[Phase 3A] Migrate TruthPanel.tsx and TruthPanelSections.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
     status: pending
   - id: phase-3b-extras-fixtures
-    content: "[Phase 3b] Migrate TruthPanelExtras.tsx + TranscriptInputFixtures.tsx — 25 hex replacements, typography to 3-tier (18/16/14), cn() (1 site), alias renames (text-bg, bg-surface, bg-bg)"
+    content: "[Phase 3B] Migrate TruthPanelExtras.tsx and TranscriptInputFixtures.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
     status: pending
   - id: phase-3c-supporting
-    content: "[Phase 3c] Migrate SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx — 14 hex replacements, typography to 3-tier (18/16/14), cn() (1 site), alias renames (bg-surface)"
+    content: "[Phase 3C] Migrate SessionHistory.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
     status: pending
   - id: phase-3d-input-page
-    content: "[Phase 3d] Migrate TranscriptInputParts.tsx + page.tsx — typography to 3-tier (18/16/14), cn() (4 sites), alias renames (bg-bg, bg-surface, hover:text-bg)"
+    content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: typography tiers, cn() adoption, and alias renames"
     status: pending
-  - id: phase-3v-verify
-    content: "[Phase 3 verify] Browser verification — screenshot both modes at desktop (1440×900) and mobile (375×812), confirm hex sweep is clean, typography tiers are visually distinct"
+  - id: phase-3e-grep-merge
+    content: "[Phase 3E] Merge the Phase 3 implementation slices and run grep sweeps for remaining hex classNames and legacy aliases"
     status: pending
-  - id: phase-4-final
-    content: "[Phase 4] Final cleanup — remove --color-surface and --color-bg from globals.css, grep sweep for any remaining [# in classNames, tsc + lint + smoke tests, final browser verification both modes"
+  - id: phase-3f-browser-verify
+    content: "[Phase 3F] Run integrated Phase 3 browser verification and confirm the 18/16/14 typography hierarchy is visually correct"
+    status: pending
+  - id: phase-4a-remove-aliases
+    content: "[Phase 4A] Remove the temporary --color-surface and --color-bg aliases from src/app/globals.css once all component migrations are merged"
+    status: pending
+  - id: phase-4b-automated-checks
+    content: "[Phase 4B] Run final automated checks: bunx tsc --noEmit, bun run lint, and bun run test:smoke"
+    status: pending
+  - id: phase-4c-final-browser
+    content: "[Phase 4C] Run final browser verification in both modes after alias removal and confirm there are no visual regressions"
+    status: pending
+  - id: phase-4d-plan-closeout
+    content: "[Phase 4D] Sync this plan document with the shipped repo state, update status headings, and record final file status before declaring the overhaul complete"
     status: pending
 isProject: false
 ---
@@ -39,7 +66,15 @@ Phase 1 has been re-audited against this updated plan. The repo already contains
 
 ### Phase 2 -- NEXT
 
-Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. No token reconciliation or component migration work should be treated as complete until that rewrite lands.
+Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. Execute it as five sequential handoff units (`Phase 2A` through `Phase 2E`) because every step touches the same file or its immediate verification path. No token reconciliation or component migration work should be treated as complete until that rewrite lands.
+
+### Phase 3 -- READY AFTER PHASE 2
+
+Phase 3 is the parallel implementation wave. `Phase 3A` through `Phase 3D` can fan out once `Phase 2E` is complete, then `Phase 3E` and `Phase 3F` collapse back to a single integration owner for merge, grep sweeps, and browser review.
+
+### Phase 4 -- BLOCKED ON PHASE 3
+
+Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4D` should stay with one owner after `Phase 3F` confirms the merged UI is clean.
 
 ## Current File Status
 
@@ -49,6 +84,30 @@ Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonica
 - `src/app/globals.css` contains the Phase 1 shadcn imports and base layer, but its token blocks are still transitional and must be replaced in Phase 2
 - `src/app/layout.tsx` already imports `cn()`, loads the font variables, and applies the mono font on `<body>`
 - `src/components/ui/button.tsx` exists from the initial shadcn setup and is outside the Phase 2 token rewrite
+
+## Execution Orchestration
+
+### Sequential waves
+
+- `Phase 1A-1B` are complete and establish the shared scaffold baseline
+- `Phase 2A-2E` should stay with one owner because all work centers on `src/app/globals.css` and its immediate visual verification
+- `Phase 4A-4D` should stay with one owner because alias removal, final checks, and plan closeout depend on the fully merged Phase 3 output
+
+### Parallel wave
+
+- `Phase 3A-3D` are the main fan-out tasks and can be assigned to four engineers or agents in parallel once `Phase 2E` is complete
+- Each Phase 3 owner should touch only the files in their slice, plus the minimum import changes needed for `cn()`
+- `Phase 3E-3F` collapse back to one integration owner after the four Phase 3 slices merge
+
+### Recommended handoff units
+
+- `Phase 2A-2E`: 1 engineer or agent working sequentially
+- `Phase 3A`: 1 engineer or agent for `TruthPanel.tsx` and `TruthPanelSections.tsx`
+- `Phase 3B`: 1 engineer or agent for `TruthPanelExtras.tsx` and `TranscriptInputFixtures.tsx`
+- `Phase 3C`: 1 engineer or agent for `SessionHistory.tsx`, `Flag.tsx`, `TrustChart.tsx`, and `ShareCapture.tsx`
+- `Phase 3D`: 1 engineer or agent for `TranscriptInputParts.tsx` and `page.tsx`
+- `Phase 3E-3F`: 1 integration engineer or agent after the parallel wave lands
+- `Phase 4A-4D`: 1 finisher engineer or agent for cleanup, verification, and plan sync
 
 ## Design Reference: Factory.ai
 
@@ -545,7 +604,7 @@ Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css
 }
 ```
 
-Last two `@theme inline` entries (`surface`, `bg`) are backward-compat aliases removed in Phase 5.
+Last two `@theme inline` entries (`surface`, `bg`) are backward-compat aliases removed in `Phase 4A`.
 
 **body/scrollbar/selection** use `var()`:
 
@@ -705,11 +764,11 @@ Concrete substitutions:
 
 ## Phase 3 sub-task assignments
 
-Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, cn() adoption, and alias renames. This avoids multiple passes over the same files.
+`Phase 3A` through `Phase 3D` run **in parallel** after `Phase 2E` completes. `Phase 3E` and `Phase 3F` are sequential integration tasks after those four implementation slices merge. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, `cn()` adoption, and alias renames. This avoids multiple passes over the same files.
 
 **Each agent should:** read the full Design Specification and Technical Implementation Notes in this plan before starting. Apply the hex color map, typography migration map, cn() sites, and alias renames listed below for their assigned files. Run `bunx tsc --noEmit` and `bun run lint` after completing their files.
 
-### Phase 3a — TruthPanel.tsx + TruthPanelSections.tsx
+### Phase 3A — TruthPanel.tsx + TruthPanelSections.tsx
 
 **Hex replacements:** See the per-file manifests above (13 + 13 = 26 replacements).
 
@@ -727,7 +786,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 
 **Typography:** Apply 3-tier map. Readable content (11px, 12px, 14px) → `text-base` Body. Labels/buttons/tabs (9px, 10px) → `text-sm` Chrome. Add `text-lg` Headings for section titles.
 
-### Phase 3b — TruthPanelExtras.tsx + TranscriptInputFixtures.tsx
+### Phase 3B — TruthPanelExtras.tsx + TranscriptInputFixtures.tsx
 
 **Hex replacements:** See manifests above (13 + 12 = 25 replacements).
 
@@ -743,7 +802,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 
 **Typography:** Apply 3-tier map. Readable content → `text-base` Body. Labels/buttons (9px, 10px, 11px) → `text-sm` Chrome. Add `text-lg` Headings.
 
-### Phase 3c — SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
+### Phase 3C — SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
 
 **Hex replacements:** See manifests above (10 + 1 + 2 + 1 = 14 replacements).
 
@@ -762,7 +821,7 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 - `ShareCapture.tsx` lines 18-129 — canvas `fillStyle`/`strokeStyle` hex values
 - `TrustChart.tsx` lines 7-10 (trustColor), 38-45 (SVG stroke/fill)
 
-### Phase 3d — TranscriptInputParts.tsx + page.tsx
+### Phase 3D — TranscriptInputParts.tsx + page.tsx
 
 **Hex replacements:** None — these files have zero `[#...]` in classNames.
 
@@ -782,19 +841,27 @@ Phases 3a–3d run **in parallel** after Phase 2 completes. Each sub-task handle
 
 **Typography:** Apply 3-tier map. InputHeader label → `text-sm` Chrome. Body content → `text-base` Body. Page header logo → `text-lg` Heading.
 
-### Phase 3 verify — Browser verification
+### Phase 3E — Merge + grep sweeps
 
-Runs after **all** Phase 3a–3d sub-tasks complete. See the Verification Workflow section for full instructions. Key checks:
+Runs after **all** `Phase 3A-3D` sub-tasks complete. Merge the four implementation slices into one branch or worktree before final visual verification. Key checks:
+
+- Grep sweep: zero `[#` remaining in `.tsx` className strings
+- Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` remaining in `.tsx` files
+- Resolve any cross-branch conflicts before final verification
+- Run `bunx tsc --noEmit` and `bun run lint` on the merged branch before handing off to `Phase 3F`
+
+### Phase 3F — Browser verification
+
+Runs after `Phase 3E` is clean. See the Verification Workflow section for full instructions. Key checks:
 
 - Desktop screenshots in both light and dark mode
 - Mobile screenshot to confirm no clipping
-- Grep sweep: zero `[#` remaining in `.tsx` className strings
-- Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg` remaining
-- Typography spot-check: Headings (18px) visually anchor each section, Body (16px) is comfortable reading, Chrome (14px uppercase) reads as controls not content. No text below 14px anywhere.
+- Typography spot-check: Headings (18px) visually anchor each section, Body (16px) is comfortable reading, Chrome (14px uppercase) reads as controls not content
+- Confirm no text below 14px anywhere in the integrated UI
 
 ## Phase 4 — Final Cleanup
 
-**After Phase 3 verify confirms everything is clean.**
+**After `Phase 3F` confirms everything is clean.** Execute `Phase 4A` through `Phase 4D` sequentially.
 
 ### Remove alias definitions from globals.css
 
@@ -819,7 +886,7 @@ bun run lint             # zero warnings
 bun run test:smoke       # 2/2 pass
 ```
 
-### Browser verification (run after Phases 2, 3, and 5)
+### Browser verification (run after `Phase 2E`, `Phase 3F`, and `Phase 4C`)
 
 These phases change visual output. Use the browser MCP tools to verify.
 
@@ -868,33 +935,41 @@ If the browser verification reveals issues:
 
 ### Per-phase verification checklist
 
-| Phase    | Automated               | Browser                      | What to check visually                                                                                                            |
-| -------- | ----------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | tsc + lint              | —                            | Nothing visual changes — just infrastructure                                                                                      |
-| 2        | tsc + lint              | Desktop + mobile, both modes | Tokens resolve correctly, body/scrollbar/selection use var(), no regressions                                                      |
-| 3a–3d    | tsc + lint (each agent) | —                            | Each agent confirms their files compile. No browser check yet — wait for 3 verify.                                                |
-| 3 verify | grep sweeps             | Desktop + mobile, both modes | All hex gone, all aliases gone, 3 typography tiers visually distinct (18/16/14), no text below 14px, colors correct in both modes |
-| 4        | tsc + lint + smoke      | Desktop + mobile, both modes | Final visual: alias defs removed from CSS, grep confirms zero legacy tokens, smoke tests pass                                     |
+| Phase    | Automated                            | Browser                      | What to check visually                                                                                                                |
+| -------- | ------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1A-1B    | `tsc` + `lint`                       | —                            | Nothing visual changes — just infrastructure                                                                                            |
+| 2A-2C    | —                                    | —                            | Internal `globals.css` build-up only; do not hand off Phase 3 yet                                                                      |
+| 2D       | `tsc` + `lint`                       | —                            | The full token rewrite compiles cleanly                                                                                                 |
+| 2E       | —                                    | Desktop + mobile, both modes | Tokens resolve correctly, body/scrollbar/selection use `var()`, and there are no mode regressions                                     |
+| 3A-3D    | `tsc` + `lint` (each agent)          | —                            | Each slice compiles cleanly in isolation; no browser check yet                                                                          |
+| 3E       | Grep sweeps + merged `tsc` + `lint`  | —                            | All hex classNames and legacy aliases are gone after merge                                                                              |
+| 3F       | —                                    | Desktop + mobile, both modes | All hex gone, all aliases gone, 3 typography tiers visually distinct (18/16/14), no text below 14px, colors correct in both modes    |
+| 4A       | `tsc` + `lint`                       | —                            | Alias removal does not break the merged UI                                                                                              |
+| 4B       | `tsc` + `lint` + smoke               | —                            | Final automated baseline is clean                                                                                                       |
+| 4C       | —                                    | Desktop + mobile, both modes | Final visual pass after alias removal                                                                                                   |
+| 4D       | Plan sync                            | —                            | Prose headings, file status, and readiness notes match the repo                                                                         |
 
 ### Dependency graph
 
 ```
-Phase 1 (DONE)
-    │
-    ▼
-Phase 2 (1 agent, sequential)
-    │
-    ├──────┬──────┬──────┐
-    ▼      ▼      ▼      ▼
-  3a      3b     3c     3d    ← 4 agents in parallel
-    │      │      │      │
-    └──────┴──────┴──────┘
-           │
-           ▼
-     3 verify (1 agent)
-           │
-           ▼
-     Phase 4 (1 agent, sequential)
+Phase 1A -> Phase 1B
+          │
+          ▼
+Phase 2A -> Phase 2B -> Phase 2C -> Phase 2D -> Phase 2E
+                                                   │
+                         ┌───────────┬───────────┬───────────┐
+                         ▼           ▼           ▼           ▼
+                      Phase 3A    Phase 3B    Phase 3C    Phase 3D
+                         └───────────┴───────────┴───────────┘
+                                                   │
+                                                   ▼
+                                                Phase 3E
+                                                   │
+                                                   ▼
+                                                Phase 3F
+                                                   │
+                                                   ▼
+Phase 4A -> Phase 4B -> Phase 4C -> Phase 4D
 ```
 
-**Total agents possible:** 4 concurrent during Phase 3. All other phases are sequential (1 agent).
+**Total agents possible:** 4 concurrent during `Phase 3A-3D`. All other phases are single-owner sequential work.
