@@ -1,13 +1,16 @@
 "use client";
 
-import { useTruthSession } from "@/hooks/useTruthSession";
+import { useTruthSession, type TruthSessionState } from "@/hooks/useTruthSession";
 import type { SessionHistoryEntry } from "@/lib/types";
 import TranscriptInput from "./components/TranscriptInput";
 import TruthPanel from "./components/TruthPanel";
 import SessionHistory from "./components/SessionHistory";
 
-function PageHeader({ isRecording, flagCount, onRestore }: {
+function PageHeader({ isRecording, flagCount, canStartNew, historyDisabled, onStartNew, onRestore }: {
   isRecording: boolean; flagCount: number;
+  canStartNew: boolean;
+  historyDisabled: boolean;
+  onStartNew: () => void;
   onRestore: (entry: SessionHistoryEntry) => void;
 }) {
   return (
@@ -24,59 +27,93 @@ function PageHeader({ isRecording, flagCount, onRestore }: {
             {flagCount} flag{flagCount !== 1 ? "s" : ""}
           </span>
         )}
-        <SessionHistory onRestore={onRestore} />
+        <button type="button" onClick={onStartNew} disabled={!canStartNew}
+          className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-[#555]">
+          New Session
+        </button>
+        <SessionHistory onRestore={onRestore} disabled={historyDisabled} />
       </div>
     </header>
   );
 }
 
+function InputColumn({ session }: { session: TruthSessionState }) {
+  return (
+    <div className="w-[320px] shrink-0 border-r border-border bg-bg xl:w-[400px]">
+      <TranscriptInput
+        key={session.resetSignal}
+        onAnalyze={(text, fixtureKey) => {
+          void session.handleAnalyze(text, "paste", undefined, fixtureKey);
+        }}
+        onFetchUrl={(url, fixtureKey) => {
+          void session.handleFetchUrl(url, fixtureKey);
+        }}
+        isRecording={session.isRecording}
+        isProcessing={session.isProcessing}
+        isFetchingUrl={session.isFetchingUrl}
+        voiceTranscript={session.voiceTranscript}
+        voiceError={session.voiceError}
+        onStartRecording={(fixtureKey) => {
+          session.handleStartRecording(fixtureKey);
+        }}
+        onStopRecording={session.handleStopRecording}
+        chunkProgress={session.chunkProgress}
+        voiceChunkSeverities={session.voiceChunkSeverities}
+      />
+    </div>
+  );
+}
+
+function OutputColumn({ session }: { session: TruthSessionState }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col bg-surface">
+      <TruthPanel
+        pulseEntries={session.pulseEntries}
+        snapshot={session.snapshot}
+        verificationRun={session.verificationRun}
+        verificationError={session.verificationError}
+        topicSegments={session.topicSegments}
+        queryResult={session.queryResult}
+        pipelineStatus={session.pipelineStatus}
+        processingChunk={session.processingChunk}
+        isStreaming={session.isRecording || session.isProcessing}
+        sourceTitle={session.session?.sourceAsset?.title}
+        onSeekTranscriptChunk={session.seekTranscriptChunk}
+        onTriggerVerification={session.triggerVerification}
+        onTriggerTopicSegmentation={session.triggerTopicSegmentation}
+        onSubmitQuery={session.submitQuery}
+      />
+    </div>
+  );
+}
+
 export default function Home() {
   const s = useTruthSession();
+  const isBusy = s.isRecording || s.isProcessing || s.isFetchingUrl;
+  const canStartNewSession = !isBusy && (
+    !!s.session
+    || !!s.snapshot
+    || !!s.verificationRun
+    || !!s.topicSegments
+    || !!s.queryResult
+    || s.pulseEntries.length > 0
+    || s.voiceTranscript.length > 0
+  );
 
   return (
     <div className="flex h-full flex-col bg-bg">
-      <PageHeader isRecording={s.isRecording} flagCount={s.flagCount} onRestore={s.restoreSession} />
+      <PageHeader
+        isRecording={s.isRecording}
+        flagCount={s.flagCount}
+        canStartNew={canStartNewSession}
+        historyDisabled={isBusy}
+        onStartNew={s.clearSession}
+        onRestore={s.restoreSession}
+      />
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[320px] shrink-0 border-r border-border bg-bg xl:w-[400px]">
-          <TranscriptInput
-            onAnalyze={(text, fixtureKey) => {
-              void s.handleAnalyze(text, "paste", undefined, fixtureKey);
-            }}
-            onFetchUrl={(url, fixtureKey) => {
-              void s.handleFetchUrl(url, fixtureKey);
-            }}
-            isRecording={s.isRecording}
-            isProcessing={s.isProcessing}
-            isFetchingUrl={s.isFetchingUrl}
-            voiceTranscript={s.voiceTranscript}
-            voiceError={s.voiceError}
-            onStartRecording={(fixtureKey) => {
-              s.handleStartRecording(fixtureKey);
-            }}
-            onStopRecording={s.handleStopRecording}
-            chunkProgress={s.chunkProgress}
-            voiceChunkSeverities={s.voiceChunkSeverities}
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col bg-surface">
-          <TruthPanel
-            pulseEntries={s.pulseEntries}
-            snapshot={s.snapshot}
-            verificationRun={s.verificationRun}
-            verificationError={s.verificationError}
-            topicSegments={s.topicSegments}
-            queryResult={s.queryResult}
-            pipelineStatus={s.pipelineStatus}
-            processingChunk={s.processingChunk}
-            isStreaming={s.isRecording || s.isProcessing}
-            sourceTitle={s.session?.sourceAsset?.title}
-            onSeekTranscriptChunk={s.seekTranscriptChunk}
-            onTriggerVerification={s.triggerVerification}
-            onTriggerTopicSegmentation={s.triggerTopicSegmentation}
-            onSubmitQuery={s.submitQuery}
-          />
-        </div>
+        <InputColumn session={s} />
+        <OutputColumn session={s} />
       </div>
     </div>
   );

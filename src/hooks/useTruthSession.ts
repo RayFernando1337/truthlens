@@ -38,6 +38,7 @@ export function useTruthSession() {
   const [voiceTranscript, setVoiceTranscript] = useState<string[]>([]);
   const [topicSegments, setTopicSegments] = useState<TopicSegment[] | null>(null);
   const [queryResult, setQueryResult] = useState<PostAnalysisQueryResult | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
   const mem = useRef(createTruthSessionMem());
   const recordingState = useRef(false);
 
@@ -45,6 +46,7 @@ export function useTruthSession() {
     setPipeline((prev) => ({ ...prev, [key]: status })), []);
 
   const resetState = useCallback(() => {
+    setSession(null);
     setPulseEntries([]);
     setSnapshot(null);
     setRunningSummary(null);
@@ -58,9 +60,18 @@ export function useTruthSession() {
     setIsFetchingUrl(false);
     setTopicSegments(null);
     setQueryResult(null);
+    mem.current.session = null;
     resetTruthSessionMem(mem.current);
   }, []);
   const { maybeFinishTrace, closePreviousTrace, startTraceSession, beginTraceStage, endTraceStage } = useTruthSessionTrace(mem, isFetchingUrl, recordingState);
+
+  const clearSession = useCallback(() => {
+    closePreviousTrace();
+    mem.current.era += 1;
+    resetState();
+    setResetSignal((value) => value + 1);
+  }, [closePreviousTrace, resetState]);
+
   const runSummaryUpdate = useCallback(async () => {
     await runSummaryUpdateTask({
       mem,
@@ -201,6 +212,7 @@ export function useTruthSession() {
     const trace = beginTraceStage("extract", { url });
     const result = await fetchUrlExtract(url);
     setIsFetchingUrl(false);
+    if (era !== mem.current.era) return;
     if (result) {
       const asset: SourceAsset = { url, title: result.title, excerpt: result.excerpt };
       attachSourceAsset(mem, sess, asset, setSession);
@@ -267,7 +279,7 @@ export function useTruthSession() {
   return {
     session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult, pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
     voiceTranscript, voiceChunkSeverities, isRecording, voiceError, isProcessing, isFetchingUrl, processingChunk, chunkProgress,
-    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk, restoreSession,
+    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk, restoreSession, clearSession, resetSignal,
   };
 }
 

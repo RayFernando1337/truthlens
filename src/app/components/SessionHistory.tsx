@@ -19,9 +19,10 @@ function formatAge(ts: number): string {
 
 interface Props {
   onRestore: (entry: SessionHistoryEntry) => void;
+  disabled?: boolean;
 }
 
-export default function SessionHistory({ onRestore }: Props) {
+export default function SessionHistory({ onRestore, disabled = false }: Props) {
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -30,6 +31,7 @@ export default function SessionHistory({ onRestore }: Props) {
   const handleOpen = useCallback(() => { refresh(); setOpen(true); }, [refresh]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
+    if (disabled) return;
     e.stopPropagation();
     deleteSession(id);
     refresh();
@@ -37,8 +39,8 @@ export default function SessionHistory({ onRestore }: Props) {
 
   if (!open) {
     return (
-      <button type="button" onClick={handleOpen}
-        className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground">
+      <button type="button" onClick={handleOpen} disabled={disabled}
+        className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-[#555]">
         History
       </button>
     );
@@ -54,9 +56,9 @@ export default function SessionHistory({ onRestore }: Props) {
         {sessions.length === 0 ? (
           <p className="px-3 py-4 text-center text-[10px] text-[#444]">No saved sessions.</p>
         ) : sessions.map((s) => (
-          <button key={s.sessionId} type="button"
+          <button key={s.sessionId} type="button" disabled={disabled}
             onClick={() => { onRestore(s); setOpen(false); }}
-            className="group flex w-full items-center gap-2 border-b border-[#1a1a1a] px-3 py-2 text-left transition-colors hover:bg-[#1a1a1a]">
+            className="group flex w-full items-center gap-2 border-b border-[#1a1a1a] px-3 py-2 text-left transition-colors hover:bg-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent">
             <span className="w-7 text-[8px] font-semibold uppercase tracking-wider text-[#555]">
               {KIND_LABEL[s.inputKind] ?? "?"}
             </span>
