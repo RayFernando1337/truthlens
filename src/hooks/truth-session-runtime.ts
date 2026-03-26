@@ -168,14 +168,16 @@ export function restoreTrackedSession(args: {
   mem: MutableRefObject<TruthSessionMem>;
   resetState: () => void;
   closePreviousTrace: () => void;
+  setPulseEntries: Dispatch<SetStateAction<PulseEntry[]>>;
   setSession: Dispatch<SetStateAction<TruthSession | null>>;
   setSnapshot: Dispatch<SetStateAction<AnalysisSnapshot | null>>;
   setVerificationRun: Dispatch<SetStateAction<VerificationRun | null>>;
   setTopicSegments: Dispatch<SetStateAction<TopicSegment[] | null>>;
+  setVoiceTranscript: Dispatch<SetStateAction<string[]>>;
 }) {
   const {
-    entry, mem, resetState, closePreviousTrace, setSession,
-    setSnapshot, setVerificationRun, setTopicSegments,
+    entry, mem, resetState, closePreviousTrace, setPulseEntries,
+    setSession, setSnapshot, setVerificationRun, setTopicSegments, setVoiceTranscript,
   } = args;
   closePreviousTrace();
   ++mem.current.era;
@@ -189,7 +191,13 @@ export function restoreTrackedSession(args: {
   };
   mem.current.session = session;
   mem.current.segments = [...entry.segments];
+  mem.current.pulses = entry.pulseEntries.map((pulse) => ({
+    ...pulse.result,
+    segmentId: pulse.id,
+  }));
+  setPulseEntries(entry.pulseEntries);
   setSession(session);
+  setVoiceTranscript(entry.voiceTranscript);
   if (entry.snapshot) {
     mem.current.snap = entry.snapshot;
     setSnapshot(entry.snapshot);

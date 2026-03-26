@@ -247,11 +247,14 @@ export function useTruthSession() {
       mem,
       resetState,
       closePreviousTrace,
+      setPulseEntries,
       setSession,
       setSnapshot,
       setVerificationRun,
       setTopicSegments,
+      setVoiceTranscript,
     });
+    setResetSignal((value) => value + 1);
   }, [closePreviousTrace, resetState]);
 
   const voiceChunkSeverities = useMemo(
@@ -269,8 +272,16 @@ export function useTruthSession() {
 
   useEffect(() => {
     if (!session || !snapshot) return;
-    saveSession(buildHistoryEntry(session, mem.current.segments, snapshot, verificationRun, topicSegments));
-  }, [session, snapshot, verificationRun, topicSegments]);
+    saveSession(buildHistoryEntry(
+      session,
+      mem.current.segments,
+      voiceTranscript,
+      pulseEntries,
+      snapshot,
+      verificationRun,
+      topicSegments,
+    ));
+  }, [pulseEntries, session, snapshot, topicSegments, verificationRun, voiceTranscript]);
 
   useEffect(() => {
     maybeFinishTrace();

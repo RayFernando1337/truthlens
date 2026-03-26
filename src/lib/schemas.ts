@@ -15,6 +15,7 @@ export const pulseFlagTypeEnum = z.enum([
 ]);
 
 export const analysisModeEnum = z.enum(["streaming", "full", "batch"]);
+export const inputKindEnum = z.enum(["voice", "paste", "url"]);
 export const analysisProvenanceHorizonEnum = z.enum([
   "sliding-window",
   "full-transcript",
@@ -336,4 +337,23 @@ export const postAnalysisQueryResultSchema = z.object({
   answer: z.string(),
   relevantSegmentIds: z.array(z.string()),
   evidence: z.array(queryEvidenceSchema),
+});
+
+// ─── Session Titles ──────────────────────────────────
+
+export const sessionTitleContextSchema = z.object({
+  tldr: z.string(),
+  corePoints: z.array(z.string()).max(6),
+  speakerIntent: z.string(),
+  overallAssessment: z.string(),
+});
+
+export const sessionTitleRequestSchema = z.object({
+  inputKind: inputKindEnum,
+  sourceTitle: z.string().optional(),
+  context: sessionTitleContextSchema,
+});
+
+export const sessionTitleResultSchema = z.object({
+  title: z.string().min(3).max(80),
 });

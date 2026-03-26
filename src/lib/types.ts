@@ -335,22 +335,29 @@ export interface PostAnalysisQueryResult {
 
 // ─── Extract ──────────────────────────────────────────
 
-export interface ExtractResult {
-  title: string;
-  text: string;
-  excerpt: string;
-}
+export interface ExtractResult { title: string; text: string; excerpt: string; }
+
+export type SessionTitleSource = "default" | "generated" | "manual";
+
+export interface SessionTitleContext { tldr: string; corePoints: string[]; speakerIntent: string; overallAssessment: string; }
+
+export interface SessionTitleRequest { inputKind: InputKind; sourceTitle?: string; context: SessionTitleContext; }
+
+export interface SessionTitleResult { title: string; }
 
 // ─── Session History ──────────────────────────────────
 
 export interface SessionHistoryEntry {
   sessionId: string;
   title: string;
+  titleSource: SessionTitleSource;
   inputKind: InputKind;
   mode: SessionMode;
   createdAt: number;
   sourceAsset?: SourceAsset;
   segments: TranscriptSegment[];
+  voiceTranscript: string[];
+  pulseEntries: PulseEntry[];
   snapshot: AnalysisSnapshot | null;
   verificationRun: VerificationRun | null;
   topicSegments: TopicSegment[] | null;
@@ -359,11 +366,6 @@ export interface SessionHistoryEntry {
 // ─── Share ────────────────────────────────────────────
 
 export interface ShareFrameData {
-  scores: number[];
-  latestFlag?: PulseFlag;
-  sourceTitle?: string;
-  tldr?: string;
-  flagCount: number;
-  claimCount: number;
-  verifiedCount: number;
+  scores: number[]; latestFlag?: PulseFlag; sourceTitle?: string; tldr?: string;
+  flagCount: number; claimCount: number; verifiedCount: number;
 }

@@ -152,3 +152,16 @@ Requirements:
 The summary serves as context for future analysis passes. Prioritize information that helps evaluate the TRAJECTORY of the argument, not just its content.
 
 Do not editorialize. Summarize what was said, track what's developing, note what was claimed.`;
+
+export const SESSION_TITLE_PROMPT = `You write short session titles for TruthLens history.
+
+The title should help the user recognize what this session was about at a glance.
+
+Requirements:
+- 2-6 words when possible
+- Prefer calm, descriptive noun phrases
+- Name the topic or central claim, not your judgment of it
+- Do not use clickbait, scare quotes, or sensational wording
+- Avoid generic labels like "Analysis", "Voice session", or "Interesting discussion"
+- If a source title is provided, refine it only when the analysis suggests a clearer, more useful label
+- Return plain text only through the schema field`;
