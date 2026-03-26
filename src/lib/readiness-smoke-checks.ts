@@ -95,6 +95,25 @@ async function checkBatchAnalyze() {
   assert.equal(response.body.windowEnd, undefined);
 }
 
+async function checkBatchAnalyzeCoarseSegment() {
+  // Simulates the new coarse segmentation: a whole article as a single segment
+  const longText = Array.from(
+    { length: 20 },
+    (_, i) => `Paragraph ${i + 1} of the article with substantial content.`,
+  ).join("\n\n");
+
+  const response = await postJson(analyzeRoute.POST, "/api/analyze", {
+    mode: "batch",
+    segments: [{ segmentId: "batch-analysis-0", text: longText, index: 0 }],
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.provenance.horizon, "batch-document");
+  assert.equal(response.body.provenance.analyzedSegmentCount, 1);
+  assert.equal(response.body.trustTrajectory.length, 1);
+  assert.ok(response.body.evidenceTable.length > 0);
+}
+
 async function checkInvalidTrajectory() {
   const originalConsoleError = console.error;
   console.error = () => {};
@@ -126,6 +145,7 @@ async function runAnalyzeChecks() {
   await checkStreamingAnalyze();
   await checkFullAnalyze();
   await checkBatchAnalyze();
+  await checkBatchAnalyzeCoarseSegment();
   await checkInvalidTrajectory();
 }
 

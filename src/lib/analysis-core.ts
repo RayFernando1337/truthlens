@@ -84,7 +84,7 @@ export function buildAnalysisPrompt(request: AnalysisRequest): string {
     "Return a complete structured analysis for the provided segments only.",
     "Every evidenceTable row must include the exact supporting quote from the provided text.",
     request.mode === "batch"
-      ? `The trustTrajectory array should contain approximately ${request.segments.length} values (one per segment). Close counts are acceptable; the trajectory will be resampled if needed.`
+      ? "The trustTrajectory array should contain a single overall trust score for the document (one value)."
       : `The trustTrajectory array must contain exactly ${request.segments.length} values.`,
   ].join("\n");
 }
@@ -127,11 +127,15 @@ function buildAnalysisProvenance(request: AnalysisRequest): AnalysisProvenance {
 
 function resampleTrajectory(src: number[], targetLen: number): number[] {
   if (src.length === targetLen) return src;
-  if (src.length < 2) {
+  if (src.length === 0) {
     throw new Error(
-      `Analysis contract violation: expected trustTrajectory length ${targetLen}, received ${src.length}`
+      `Analysis contract violation: expected trustTrajectory length ${targetLen}, received 0`
     );
   }
+  // Single value can be replicated to fill any target length (common in batch mode)
+  if (src.length === 1) return Array.from({ length: targetLen }, () => src[0]);
+  // Collapse multiple values into one representative score (mean) when target is a single point
+  if (targetLen === 1) return [src.reduce((a, b) => a + b, 0) / src.length];
   const out: number[] = [];
   for (let i = 0; i < targetLen; i++) {
     const pos = (i / (targetLen - 1)) * (src.length - 1);

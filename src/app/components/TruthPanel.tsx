@@ -54,6 +54,7 @@ interface TruthPanelProps {
   snapshot: AnalysisSnapshot | null;
   verificationRun: VerificationRun | null;
   verificationError: string | null;
+  analysisError: string | null;
   topicSegments: TopicSegment[] | null;
   queryResult: PostAnalysisQueryResult | null;
   pipelineStatus: {
@@ -67,6 +68,7 @@ interface TruthPanelProps {
   onSeekTranscriptChunk: (index: number) => void;
   onTriggerVerification: () => void;
   onTriggerTopicSegmentation: () => void;
+  onRetryAnalysis: () => void;
   onSubmitQuery: (query: string, queryType: PostQueryType) => void;
 }
 
@@ -143,17 +145,30 @@ function DisclosureTabs(
   );
 }
 
+function AnalysisErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-[11px] text-[#ffb199]">{error}</p>
+      <button type="button" onClick={onRetry}
+        className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+        Retry
+      </button>
+    </div>
+  );
+}
+
 function DisclosureBody(
-  { active, snapshot, verificationRun, verificationError, topicSegments, queryResult,
-    pipelineStatus, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
-  }: Pick<TruthPanelProps, "snapshot" | "verificationRun" | "verificationError" |
+  { active, snapshot, verificationRun, verificationError, analysisError, topicSegments, queryResult,
+    pipelineStatus, onTriggerVerification, onTriggerTopicSegmentation, onRetryAnalysis, onSubmitQuery,
+  }: Pick<TruthPanelProps, "snapshot" | "verificationRun" | "verificationError" | "analysisError" |
     "topicSegments" | "queryResult" | "pipelineStatus" | "onTriggerVerification" |
-    "onTriggerTopicSegmentation" | "onSubmitQuery"> & { active: Disclosure | null },
+    "onTriggerTopicSegmentation" | "onRetryAnalysis" | "onSubmitQuery"> & { active: Disclosure | null },
 ) {
   switch (active) {
-    case "analysis": return snapshot
-      ? <AnalysisContent snapshot={snapshot} />
-      : <LoadingHint text={pipelineStatus.analysis === "running" ? "Analyzing\u2026" : "Appears after more content."} />;
+    case "analysis":
+      if (snapshot) return <AnalysisContent snapshot={snapshot} />;
+      if (analysisError) return <AnalysisErrorState error={analysisError} onRetry={onRetryAnalysis} />;
+      return <LoadingHint text={pipelineStatus.analysis === "running" ? "Analyzing\u2026" : "Appears after more content."} />;
     case "verdicts": return (
       <VerdictsContent run={verificationRun} error={verificationError}
         onVerify={onTriggerVerification} isLoading={pipelineStatus.verification === "running"} />
@@ -193,10 +208,28 @@ function usePanelDerived(
   return { batch, flatFlags, claims, verified, tabs, scores, overlay, flagged };
 }
 
+function EmptyState({ error, onRetry }: { error: string | null; onRetry: () => void }) {
+  if (error) return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <p className="text-[11px] text-[#ffb199]">{error}</p>
+      <button type="button" onClick={onRetry}
+        className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+        Retry analysis
+      </button>
+    </div>
+  );
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
+      <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
+    </div>
+  );
+}
+
 export default function TruthPanel({
-  pulseEntries: entries, snapshot, verificationRun, verificationError,
+  pulseEntries: entries, snapshot, verificationRun, verificationError, analysisError,
   topicSegments, queryResult, pipelineStatus, processingChunk, isStreaming,
-  sourceTitle, onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onSubmitQuery,
+  sourceTitle, onSeekTranscriptChunk, onTriggerVerification, onTriggerTopicSegmentation, onRetryAnalysis, onSubmitQuery,
 }: TruthPanelProps) {
   const [os, setOs] = useState({ tab: null as Disclosure | null, autoTs: null as number | null });
   const d = usePanelDerived(entries, snapshot, verificationRun, isStreaming);
@@ -208,12 +241,9 @@ export default function TruthPanel({
     tldr: snapshot.tldr, flagCount: d.flagged, claimCount: d.claims, verifiedCount: d.verified,
   } : null;
 
-  if (entries.length === 0 && !processingChunk && !snapshot) return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-      <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
-      <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
-    </div>
-  );
+  if (entries.length === 0 && !processingChunk && !snapshot) {
+    return <EmptyState error={analysisError} onRetry={onRetryAnalysis} />;
+  }
   return (
     <div className="flex h-full flex-col" data-testid="truth-panel">
       <div className="sticky top-0 z-10 border-b border-border bg-surface">
@@ -231,9 +261,11 @@ export default function TruthPanel({
         )}
         <DisclosureTabs active={active} onToggle={toggle} tabs={d.tabs} />
         <DisclosureBody active={active} snapshot={snapshot} verificationRun={verificationRun}
-          verificationError={verificationError} topicSegments={topicSegments} queryResult={queryResult}
+          verificationError={verificationError} analysisError={analysisError}
+          topicSegments={topicSegments} queryResult={queryResult}
           pipelineStatus={pipelineStatus} onTriggerVerification={onTriggerVerification}
-          onTriggerTopicSegmentation={onTriggerTopicSegmentation} onSubmitQuery={onSubmitQuery} />
+          onTriggerTopicSegmentation={onTriggerTopicSegmentation} onRetryAnalysis={onRetryAnalysis}
+          onSubmitQuery={onSubmitQuery} />
       </div>
     </div>
   );

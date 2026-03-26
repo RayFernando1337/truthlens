@@ -4,81 +4,89 @@ overview: Rearchitect the batch (paste/URL) analysis pipeline to fix silent fail
 todos:
   - id: p1a-model-tier
     content: "[Phase 1A] Add mini model tier to generate-object.ts, add maxOutputTokens parameter, use mini for analysis route"
-    status: pending
+    status: completed
   - id: p1b-error-surface
     content: "[Phase 1B] Update fetchAnalysis in api-client.ts to return error messages instead of bare null (mirror fetchVerification pattern)"
-    status: pending
+    status: completed
   - id: p1c-error-ui
     content: "[Phase 1C] Add analysisError state to useTruthSession, wire through to TruthPanel, show error + retry button on batch failure"
-    status: pending
+    status: completed
   - id: p1d-truncation
     content: "[Phase 1D] Detect finishReason=length in generateTypedObject retry loop, skip futile retries on truncation"
-    status: pending
+    status: completed
   - id: p2a-batch-segment
     content: "[Phase 2A] Add splitForBatchAnalysis to segment-utils.ts -- returns whole text as 1 segment (or 2-3 for very long docs)"
-    status: pending
+    status: completed
   - id: p2b-runtime-update
     content: "[Phase 2B] Update runBatchAnalysis to use splitForBatchAnalysis for the analysis call while keeping fine segments for verification/topics"
-    status: pending
+    status: completed
   - id: p2c-fine-coarse
     content: "[Phase 2C] Ensure fine-grained paragraph segments still stored in mem.current.segments for downstream verification and topic segmentation"
-    status: pending
+    status: completed
   - id: p2d-smoke-tests
     content: "[Phase 2D] Update smoke tests to cover batch analysis with new segmentation strategy"
-    status: pending
+    status: completed
   - id: p3a-evidence-quotes
     content: "[Phase 3A] Render evidenceTable[].quote in AnalysisContent as italic blockquote below each evidence row"
-    status: pending
+    status: completed
   - id: p3b-hidden-fields
     content: "[Phase 3B] Add emotionalAppeals, namedFallacies, cognitiveBiases sections to AnalysisContent with quote + description rendering"
-    status: pending
+    status: completed
   - id: p3c-fix-truncation
     content: "[Phase 3C] Replace truncated chips for assumptions and missing with readable numbered list items showing full text"
-    status: pending
+    status: completed
   - id: p3d-file-split
     content: "[Phase 3D] Split TruthPanelSections.tsx if it exceeds 300 lines after adding new sections"
-    status: pending
+    status: completed
   - id: p4a-speaker-intent
     content: "[Phase 4A] Widen speakerIntent prompt from narrow template to original scratchpad's richer personal-motivation framing"
-    status: pending
+    status: completed
   - id: p4b-evidence-gaps
     content: "[Phase 4B] Add evidence gap synthesis guidance to ANALYSIS_SYSTEM_PROMPT for cross-cutting methodology/sourcing critique"
-    status: pending
+    status: completed
   - id: p4c-batch-trajectory
     content: "[Phase 4C] Simplify trustTrajectory prompt for batch mode -- single document-level trust score instead of per-micro-segment"
-    status: pending
+    status: completed
   - id: p5a-e2e-test
     content: "[Phase 5A] Manual end-to-end test: paste article.txt, verify all sections render, verify error/retry on failure"
-    status: pending
+    status: completed
   - id: p5b-readiness
     content: "[Phase 5B] Run smoke:readiness, tsc --noEmit, and lint to verify no regressions"
-    status: pending
+    status: completed
   - id: p5c-plan-sync
     content: "[Phase 5C] Update active plan document to reflect batch analysis changes per phase-hygiene rules"
-    status: pending
+    status: completed
 isProject: false
 ---
 
-# Batch Analysis Pipeline Rearchitecture
+# Batch Analysis Pipeline Rearchitecture -- COMPLETE
 
 ## Context
 
-When a user pastes an article (~500 lines), `splitIntoChunks` produces ~226 micro-segments. The analysis prompt demands one `trustTrajectory` value per segment. GPT-5.4-nano (a classification/extraction model) cannot reliably produce 226 trajectory values alongside a full rhetorical analysis, and `maxOutputTokens` is never set -- risking silent truncation. When the API returns 502, `fetchAnalysis` swallows the error and the UI shows the empty hero state with no feedback.
+When a user pastes an article (~500 lines), `splitIntoChunks` produced ~226 micro-segments. The analysis prompt demanded one `trustTrajectory` value per segment. GPT-5.4-nano (a classification/extraction model) could not reliably produce 226 trajectory values alongside a full rhetorical analysis, and `maxOutputTokens` was never set -- risking silent truncation. When the API returned 502, `fetchAnalysis` swallowed the error and the UI showed the empty hero state with no feedback.
 
-The original scratchpad approach (whole article + analytical prompt, GPT-4o) produced analyst-quality briefs. The current pipeline fragments that quality across micro-segments and an underpowered model.
+The original scratchpad approach (whole article + analytical prompt, GPT-4o) produced analyst-quality briefs. The current pipeline fragmented that quality across micro-segments and an underpowered model.
 
-**Key files in scope:**
+**All issues addressed. Implementation complete.**
 
-- [src/lib/generate-object.ts](src/lib/generate-object.ts) -- model config, no `maxOutputTokens`
-- [src/lib/segment-utils.ts](src/lib/segment-utils.ts) -- `splitIntoChunks` micro-segmentation
-- [src/lib/analysis-core.ts](src/lib/analysis-core.ts) -- prompt builder, trajectory handling
-- [src/lib/prompts.ts](src/lib/prompts.ts) -- `ANALYSIS_SYSTEM_PROMPT`, `speakerIntent` template
-- [src/lib/schemas.ts](src/lib/schemas.ts) -- `rhetoricalCoreSchema`, `analysisModelSchema`
-- [src/lib/api-client.ts](src/lib/api-client.ts) -- `fetchAnalysis` swallows errors
-- [src/hooks/truth-session-runtime.ts](src/hooks/truth-session-runtime.ts) -- `runBatchAnalysis`, no error state
-- [src/app/components/TruthPanel.tsx](src/app/components/TruthPanel.tsx) -- empty-state fallback, no error UI
-- [src/app/components/TruthPanelSections.tsx](src/app/components/TruthPanelSections.tsx) -- missing fields, truncated chips
-- [src/app/api/analyze/route.ts](src/app/api/analyze/route.ts) -- API route, `maxDuration`
+**Files changed:**
+
+- [src/lib/generate-object.ts](src/lib/generate-object.ts) -- added `mini` model tier, `maxOutputTokens` param, truncation detection
+- [src/lib/segment-utils.ts](src/lib/segment-utils.ts) -- added `splitForBatchAnalysis` coarse segmentation
+- [src/lib/analysis-core.ts](src/lib/analysis-core.ts) -- simplified batch trajectory to single score, graceful 1-value resampling
+- [src/lib/prompts.ts](src/lib/prompts.ts) -- widened `speakerIntent`, added evidence gap synthesis
+- [src/lib/schemas.ts](src/lib/schemas.ts) -- updated `speakerIntent` schema description
+- [src/lib/types.ts](src/lib/types.ts) -- added `AnalysisFetchResult` discriminated union
+- [src/lib/api-client.ts](src/lib/api-client.ts) -- `fetchAnalysis` returns discriminated union with error info
+- [src/lib/readiness-smoke-checks.ts](src/lib/readiness-smoke-checks.ts) -- added coarse batch segment test
+- [src/hooks/truth-session-runtime.ts](src/hooks/truth-session-runtime.ts) -- coarse/fine segment split, error state, retry support
+- [src/hooks/truth-session-streaming.ts](src/hooks/truth-session-streaming.ts) -- analysis error state wiring
+- [src/hooks/useTruthSession.ts](src/hooks/useTruthSession.ts) -- `analysisError` state, `retryAnalysis` callback
+- [src/app/components/TruthPanel.tsx](src/app/components/TruthPanel.tsx) -- error + retry UI, extracted EmptyState
+- [src/app/components/TruthPanelSections.tsx](src/app/components/TruthPanelSections.tsx) -- extracted analysis to AnalysisContent.tsx
+- [src/app/components/AnalysisContent.tsx](src/app/components/AnalysisContent.tsx) -- NEW: evidence quotes, emotional appeals, fallacies, biases, readable gaps/assumptions
+- [src/app/api/analyze/route.ts](src/app/api/analyze/route.ts) -- uses `mini` model + 16K max tokens
+- [src/app/page.tsx](src/app/page.tsx) -- passes `analysisError` + `retryAnalysis` to TruthPanel
 
 ---
 

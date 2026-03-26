@@ -9,7 +9,7 @@ import type {
   PulseResult,
   TraceStage,
 } from "@/lib/types";
-import type { StageKey } from "@/hooks/truth-session-helpers";
+import { analysisTraceOutput, type StageKey } from "@/hooks/truth-session-helpers";
 import type { TruthSessionMem } from "./truth-session-runtime";
 
 type TraceToken = { sessionId: string; stage: TraceStage; startedAt: number } | null;
@@ -19,6 +19,7 @@ export async function runAnalysisPass(args: {
   mem: MutableRefObject<TruthSessionMem>;
   setStage: (key: StageKey, status: PipelineStageStatus) => void;
   setSnapshot: Dispatch<SetStateAction<AnalysisSnapshot | null>>;
+  setAnalysisError: Dispatch<SetStateAction<string | null>>;
   beginTraceStage: (stage: "analysis", input?: Record<string, unknown>) => TraceToken;
   endTraceStage: (
     token: TraceToken,
@@ -28,7 +29,7 @@ export async function runAnalysisPass(args: {
   runSummaryUpdate: () => Promise<void> | void;
   triggerVerification: () => Promise<void> | void;
 }) {
-  const { mode, mem, setStage, setSnapshot, beginTraceStage, endTraceStage, runSummaryUpdate, triggerVerification } = args;
+  const { mode, mem, setStage, setSnapshot, setAnalysisError, beginTraceStage, endTraceStage, runSummaryUpdate, triggerVerification } = args;
   if (mem.current.segments.length === 0) return;
   const segments = mode === "streaming"
     ? mem.current.segments.slice(-getSlidingWindowSize(mem.current.segments.length))
@@ -45,22 +46,17 @@ export async function runAnalysisPass(args: {
   if (reqId !== mem.current.analysisReq) return;
   if (mode === "streaming") mem.current.rollingAt = Date.now();
   else mem.current.fullPassElapsed = Date.now() - mem.current.sessionStart;
-  if (!result) {
+  if (!result.ok) {
+    setAnalysisError(result.error.message);
     setStage("analysis", "error");
-    endTraceStage(trace, "error", { error: "Analysis request failed." });
+    endTraceStage(trace, "error", { error: result.error.message });
     return;
   }
-  mem.current.snap = result;
-  setSnapshot(result);
+  setAnalysisError(null);
+  mem.current.snap = result.data;
+  setSnapshot(result.data);
   setStage("analysis", "success");
-  endTraceStage(trace, "success", {
-    output: {
-      evidenceRows: result.evidenceTable.length,
-      patterns: result.patterns.length,
-      trajectoryPoints: result.trustTrajectory.length,
-      mode: result.mode,
-    },
-  });
+  endTraceStage(trace, "success", { output: analysisTraceOutput(result.data) });
   void runSummaryUpdate();
   if (mode === "full") void triggerVerification();
 }

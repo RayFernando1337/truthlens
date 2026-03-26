@@ -1,4 +1,5 @@
 import type {
+  AnalysisFetchResult,
   ApiError,
   AnalysisMode,
   AnalysisSnapshot,
@@ -64,18 +65,29 @@ export async function fetchAnalysis(
   segments: TranscriptSegment[],
   priorPulses?: SegmentPulse[],
   runningSummary?: SessionSummary
-): Promise<AnalysisSnapshot | null> {
+): Promise<AnalysisFetchResult> {
   try {
     const res = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode, segments, priorPulses, runningSummary }),
     });
-    if (res.ok) return res.json();
+
+    if (res.ok) {
+      const data = (await res.json()) as AnalysisSnapshot;
+      return { ok: true, data };
+    }
+
+    return {
+      ok: false,
+      error: await readApiError(res, "Analysis could not complete right now."),
+    };
   } catch {
-    /* network error */
+    return {
+      ok: false,
+      error: { message: "Analysis could not reach the server." },
+    };
   }
-  return null;
 }
 
 export async function fetchSummary(
