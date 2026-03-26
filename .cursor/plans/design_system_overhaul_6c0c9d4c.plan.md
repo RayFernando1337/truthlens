@@ -8,6 +8,9 @@ todos:
   - id: phase-1b-validation
     content: "[Phase 1B] Validate the Phase 1 scaffold with bunx tsc --noEmit and bun run lint"
     status: completed
+  - id: phase-1c-plan-sync-handoff
+    content: "[Phase 1C] Update the plan after the Phase 1 re-audit, record discoveries, and confirm that Phase 2 prerequisites are ready for handoff"
+    status: completed
   - id: phase-2a-theme-map
     content: "[Phase 2A] Rewrite src/app/globals.css @theme inline mappings to the canonical shadcn + TruthLens semantic token architecture"
     status: pending
@@ -23,23 +26,29 @@ todos:
   - id: phase-2e-browser-validation
     content: "[Phase 2E] Run Phase 2 browser verification in light/dark mode on desktop and mobile after the globals.css rewrite"
     status: pending
+  - id: phase-2f-plan-sync-handoff
+    content: "[Phase 2F] Update the plan after the globals.css rewrite, record new discoveries and remaining token work, and confirm that the Phase 3 slices are ready to hand off"
+    status: pending
   - id: phase-3a-right-panel
-    content: "[Phase 3A] Migrate TruthPanel.tsx and TruthPanelSections.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
+    content: "[Phase 3A] Migrate TruthPanel.tsx and TruthPanelSections.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3b-extras-fixtures
-    content: "[Phase 3B] Migrate TruthPanelExtras.tsx and TranscriptInputFixtures.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
+    content: "[Phase 3B] Migrate TruthPanelExtras.tsx and TranscriptInputFixtures.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3c-supporting
-    content: "[Phase 3C] Migrate SessionHistory.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, and alias renames"
+    content: "[Phase 3C] Migrate SessionHistory.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3d-input-page
-    content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: typography tiers, cn() adoption, and alias renames"
+    content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3e-grep-merge
     content: "[Phase 3E] Merge the Phase 3 implementation slices and run grep sweeps for remaining hex classNames and legacy aliases"
     status: pending
   - id: phase-3f-browser-verify
     content: "[Phase 3F] Run integrated Phase 3 browser verification and confirm the 18/16/14 typography hierarchy is visually correct"
+    status: pending
+  - id: phase-3g-plan-sync-handoff
+    content: "[Phase 3G] Update the plan after the parallel migration wave, record integrated discoveries and residual issues, and confirm that Phase 4 cleanup is ready to hand off"
     status: pending
   - id: phase-4a-remove-aliases
     content: "[Phase 4A] Remove the temporary --color-surface and --color-bg aliases from src/app/globals.css once all component migrations are merged"
@@ -51,7 +60,7 @@ todos:
     content: "[Phase 4C] Run final browser verification in both modes after alias removal and confirm there are no visual regressions"
     status: pending
   - id: phase-4d-plan-closeout
-    content: "[Phase 4D] Sync this plan document with the shipped repo state, update status headings, and record final file status before declaring the overhaul complete"
+    content: "[Phase 4D] Sync this plan document with the shipped repo state, update status headings, record final file status, and capture remaining follow-on questions before declaring the overhaul complete"
     status: pending
 isProject: false
 ---
@@ -66,15 +75,15 @@ Phase 1 has been re-audited against this updated plan. The repo already contains
 
 ### Phase 2 -- NEXT
 
-Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. Execute it as five sequential handoff units (`Phase 2A` through `Phase 2E`) because every step touches the same file or its immediate verification path. No token reconciliation or component migration work should be treated as complete until that rewrite lands.
+Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. Execute it as six sequential handoff units (`Phase 2A` through `Phase 2F`) because every step touches the same file, its immediate verification path, or the handoff packet for the next wave. No token reconciliation or component migration work should be treated as complete until that rewrite lands and the Phase 2 handoff is written down.
 
 ### Phase 3 -- READY AFTER PHASE 2
 
-Phase 3 is the parallel implementation wave. `Phase 3A` through `Phase 3D` can fan out once `Phase 2E` is complete, then `Phase 3E` and `Phase 3F` collapse back to a single integration owner for merge, grep sweeps, and browser review.
+Phase 3 is the parallel implementation wave. `Phase 3A` through `Phase 3D` can fan out once `Phase 2F` is complete, then `Phase 3E`, `Phase 3F`, and `Phase 3G` collapse back to a single integration owner for merge, grep sweeps, browser review, and the Phase 4 handoff packet.
 
 ### Phase 4 -- BLOCKED ON PHASE 3
 
-Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4D` should stay with one owner after `Phase 3F` confirms the merged UI is clean.
+Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4D` should stay with one owner after `Phase 3G` confirms the merged UI is clean and the final cleanup scope is stable.
 
 ## Current File Status
 
@@ -89,25 +98,50 @@ Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4
 
 ### Sequential waves
 
-- `Phase 1A-1B` are complete and establish the shared scaffold baseline
-- `Phase 2A-2E` should stay with one owner because all work centers on `src/app/globals.css` and its immediate visual verification
+- `Phase 1A-1C` are complete and establish the shared scaffold baseline plus the first handoff packet
+- `Phase 2A-2F` should stay with one owner because all work centers on `src/app/globals.css`, its verification, and the resulting handoff packet for the parallel wave
 - `Phase 4A-4D` should stay with one owner because alias removal, final checks, and plan closeout depend on the fully merged Phase 3 output
 
 ### Parallel wave
 
-- `Phase 3A-3D` are the main fan-out tasks and can be assigned to four engineers or agents in parallel once `Phase 2E` is complete
+- `Phase 3A-3D` are the main fan-out tasks and can be assigned to four engineers or agents in parallel once `Phase 2F` is complete
 - Each Phase 3 owner should touch only the files in their slice, plus the minimum import changes needed for `cn()`
-- `Phase 3E-3F` collapse back to one integration owner after the four Phase 3 slices merge
+- `Phase 3E-3G` collapse back to one integration owner after the four Phase 3 slices merge
 
 ### Recommended handoff units
 
-- `Phase 2A-2E`: 1 engineer or agent working sequentially
+- `Phase 2A-2F`: 1 engineer or agent working sequentially
 - `Phase 3A`: 1 engineer or agent for `TruthPanel.tsx` and `TruthPanelSections.tsx`
 - `Phase 3B`: 1 engineer or agent for `TruthPanelExtras.tsx` and `TranscriptInputFixtures.tsx`
 - `Phase 3C`: 1 engineer or agent for `SessionHistory.tsx`, `Flag.tsx`, `TrustChart.tsx`, and `ShareCapture.tsx`
 - `Phase 3D`: 1 engineer or agent for `TranscriptInputParts.tsx` and `page.tsx`
-- `Phase 3E-3F`: 1 integration engineer or agent after the parallel wave lands
+- `Phase 3E-3G`: 1 integration engineer or agent after the parallel wave lands
 - `Phase 4A-4D`: 1 finisher engineer or agent for cleanup, verification, and plan sync
+
+### Phase brief before work starts
+
+- Before any phase or sub-phase begins, the owner should restate the exact scope, likely files to touch, non-goals, verification plan, and what would block a clean handoff
+- If discovery changes the scope materially, pause and update the plan or handoff packet before silently widening the task
+- Treat gut-level adjacency concerns as valid signals; if a change feels like it should affect another surface, investigate instead of assuming the blast radius is limited
+
+### Discovery and sub-agent policy
+
+- Owners are encouraged to launch focused sub-agents for unfamiliar areas, impact analysis, repo sweeps, visual regression investigation, or verification setup
+- Keep each sub-agent bounded to a concrete question, file set, or dependency chain; the parent owner stays accountable for the final phase output
+- Good triggers include: "where else is this token or alias used?", "what adjacent UI surfaces depend on this component?", "what verification flow covers this slice?", and "if this class changes, what else might regress?"
+- If discovery reveals additional required work outside the assigned slice, either capture it as a follow-on item for the orchestrator or explicitly widen the phase with approval before editing
+
+### Required closeout packet
+
+- Every phase owner should end with a concise handoff note that covers: shipped scope, files touched, verification run, plan sections updated, new repo discoveries, unresolved questions, and whether the next phase is ready or blocked
+- The closeout packet should call out anything newly learned that changes sequencing, file ownership, risk, or verification expectations
+- If a phase is not ready to hand off, say so explicitly and list the blockers rather than letting the next owner discover them indirectly
+
+### Readiness gate before the next phase
+
+- Do not begin the next phase until the previous phase's closeout packet exists, the plan has been updated, and the relevant readiness checks for that phase have passed
+- The next owner should read the prior phase's closeout packet before editing, then restate their own phase brief so the orchestrator can confirm the handoff stayed intact
+- If the previous phase uncovered new questions, missing files, or cross-cutting risk, resolve them or split new work before moving the dependency graph forward
 
 ## Design Reference: Factory.ai
 
@@ -495,6 +529,13 @@ The old `--color-text` token is already absent from `@theme` (the codebase uses 
 
 Validation: `bunx tsc --noEmit` and `bun run lint` pass.
 
+### Phase 1 verification and handoff criteria
+
+- The scaffold exists and matches the updated Phase 1 contract
+- `bunx tsc --noEmit` and `bun run lint` pass
+- The plan status, current file status, and current understanding of repo state are updated
+- The remaining Phase 2 work is clearly called out: `src/app/globals.css` is still transitional and must be rewritten before any parallel component migration begins
+
 ## Phase 2 -- NEXT: Rationalize the Token Palette
 
 Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css](src/app/globals.css) with the full TruthLens-flavored token set. Uses CSS custom property indirection (the pattern shadcn established in Phase 1) so Tailwind utility classes like `bg-card` and `text-muted-foreground` resolve to the correct value per mode.
@@ -647,6 +688,13 @@ body {
 
 **Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic: `text-foreground` resolves to #e5e5e5 in dark, #171717 in light.
 
+### Phase 2 verification and handoff criteria
+
+- `Phase 2D` passes `bunx tsc --noEmit` and `bun run lint`
+- `Phase 2E` confirms token behavior in both modes on desktop and mobile
+- `Phase 2F` updates the plan, current file status, and any newly discovered token, alias, or affected-file information
+- Before handing off to `Phase 3A-3D`, confirm the parallel slice boundaries still make sense and call out any newly discovered files that should join or leave a slice
+
 ## Phase 3 — Replace Hex Values + Typography Scale
 
 **This phase combines two sweeps across the same files:** (1) replacing all remaining `[#...]` hex values with semantic tokens, and (2) migrating font sizes to the 3-tier hierarchy (Heading 18px / Body 16px / Chrome 14px) defined in the Design Specification. Since both hit the same components, doing them together avoids a second pass.
@@ -764,9 +812,9 @@ Concrete substitutions:
 
 ## Phase 3 sub-task assignments
 
-`Phase 3A` through `Phase 3D` run **in parallel** after `Phase 2E` completes. `Phase 3E` and `Phase 3F` are sequential integration tasks after those four implementation slices merge. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, `cn()` adoption, and alias renames. This avoids multiple passes over the same files.
+`Phase 3A` through `Phase 3D` run **in parallel** after `Phase 2F` completes. `Phase 3E`, `Phase 3F`, and `Phase 3G` are sequential integration tasks after those four implementation slices merge. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, `cn()` adoption, and alias renames. This avoids multiple passes over the same files.
 
-**Each agent should:** read the full Design Specification and Technical Implementation Notes in this plan before starting. Apply the hex color map, typography migration map, cn() sites, and alias renames listed below for their assigned files. Run `bunx tsc --noEmit` and `bun run lint` after completing their files.
+**Each agent should:** read the full Design Specification and Technical Implementation Notes in this plan before starting. Apply the hex color map, typography migration map, `cn()` sites, and alias renames listed below for their assigned files. Run `bunx tsc --noEmit` and `bun run lint` after completing their files. Produce a slice closeout note that lists files touched, checks run, new discoveries, adjacent files that may also be affected, and whether the slice is ready for `Phase 3E` merge.
 
 ### Phase 3A — TruthPanel.tsx + TruthPanelSections.tsx
 
@@ -859,9 +907,15 @@ Runs after `Phase 3E` is clean. See the Verification Workflow section for full i
 - Typography spot-check: Headings (18px) visually anchor each section, Body (16px) is comfortable reading, Chrome (14px uppercase) reads as controls not content
 - Confirm no text below 14px anywhere in the integrated UI
 
+### Phase 3G — Plan sync + handoff criteria
+
+- Update the plan after the merged parallel wave, including status headings, current file status, and any scope discoveries that the slice owners surfaced
+- Record residual issues, newly affected files, verification follow-ups, or product questions that were discovered during the migration
+- Hand off to `Phase 4A-4D` only if the remaining work is truly cleanup/finalization rather than undiscovered migration work
+
 ## Phase 4 — Final Cleanup
 
-**After `Phase 3F` confirms everything is clean.** Execute `Phase 4A` through `Phase 4D` sequentially.
+**After `Phase 3G` confirms everything is clean and the cleanup scope is stable.** Execute `Phase 4A` through `Phase 4D` sequentially.
 
 ### Remove alias definitions from globals.css
 
@@ -876,6 +930,12 @@ Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from t
 - Grep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` in `.tsx` files
 - Browser verification in both modes (see Verification Workflow)
 
+### Phase 4 closeout criteria
+
+- The alias cleanup is complete and all final automated and browser checks pass
+- The plan is fully synced with the shipped repo state, including prose headings, file status, verification notes, and any learned constraints
+- Remaining follow-on questions, future design improvements, or non-blocking cleanup ideas are captured explicitly so the orchestrator can schedule them later instead of losing them at the end of the overhaul
+
 ## Verification Workflow
 
 ### Automated checks (run after every phase)
@@ -884,6 +944,27 @@ Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from t
 bunx tsc --noEmit        # zero type errors
 bun run lint             # zero warnings
 bun run test:smoke       # 2/2 pass
+```
+
+### Readiness gate before starting any new phase
+
+1. Read the prior phase's closeout packet and confirm that the plan is updated
+2. Re-state the next phase's exact scope, expected files, non-goals, and verification plan
+3. Launch sub-agents for additional discovery if the repo area is unfamiliar or the blast radius is unclear
+4. Stop and split new work if discovery changes the task enough that the existing handoff is no longer accurate
+
+### Handoff packet template (required after every phase)
+
+```md
+Phase:
+Shipped scope:
+Files touched:
+Verification run:
+Plan updates made:
+New discoveries:
+Remaining gaps or questions:
+Next phase ready or blocked:
+Suggested follow-on tasks:
 ```
 
 ### Browser verification (run after `Phase 2E`, `Phase 3F`, and `Phase 4C`)
@@ -935,41 +1016,46 @@ If the browser verification reveals issues:
 
 ### Per-phase verification checklist
 
-| Phase    | Automated                            | Browser                      | What to check visually                                                                                                                |
-| -------- | ------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1A-1B    | `tsc` + `lint`                       | —                            | Nothing visual changes — just infrastructure                                                                                            |
-| 2A-2C    | —                                    | —                            | Internal `globals.css` build-up only; do not hand off Phase 3 yet                                                                      |
-| 2D       | `tsc` + `lint`                       | —                            | The full token rewrite compiles cleanly                                                                                                 |
-| 2E       | —                                    | Desktop + mobile, both modes | Tokens resolve correctly, body/scrollbar/selection use `var()`, and there are no mode regressions                                     |
-| 3A-3D    | `tsc` + `lint` (each agent)          | —                            | Each slice compiles cleanly in isolation; no browser check yet                                                                          |
-| 3E       | Grep sweeps + merged `tsc` + `lint`  | —                            | All hex classNames and legacy aliases are gone after merge                                                                              |
-| 3F       | —                                    | Desktop + mobile, both modes | All hex gone, all aliases gone, 3 typography tiers visually distinct (18/16/14), no text below 14px, colors correct in both modes    |
-| 4A       | `tsc` + `lint`                       | —                            | Alias removal does not break the merged UI                                                                                              |
-| 4B       | `tsc` + `lint` + smoke               | —                            | Final automated baseline is clean                                                                                                       |
-| 4C       | —                                    | Desktop + mobile, both modes | Final visual pass after alias removal                                                                                                   |
-| 4D       | Plan sync                            | —                            | Prose headings, file status, and readiness notes match the repo                                                                         |
+| Phase    | Automated                            | Browser                      | Plan / discovery sync                                                                                     | Handoff gate                                                                                                      |
+| -------- | ------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1A-1C    | `tsc` + `lint`                       | —                            | Status headings and file status updated; remaining Phase 2 work called out                                | `Phase 2` only starts once the scaffold baseline and transitional `globals.css` state are clearly documented     |
+| 2A-2C    | —                                    | —                            | Capture any newly discovered token, alias, or shared-style dependencies before the validation pass        | Do not hand off `Phase 3` yet; the `globals.css` rewrite is still in flight                                      |
+| 2D       | `tsc` + `lint`                       | —                            | Note any compiler or lint surprises that change the planned component slices                              | `Phase 2E` only if the token rewrite compiles cleanly                                                            |
+| 2E       | —                                    | Desktop + mobile, both modes | Record any visual regressions, light-mode surprises, or newly affected files found during browser review  | `Phase 2F` only if the new token system behaves correctly in both modes                                          |
+| 2F       | —                                    | —                            | Update the plan, current file status, and discovered follow-on work; confirm `Phase 3A-3D` slice mapping | `Phase 3A-3D` only if the slice boundaries and prerequisites are still accurate                                  |
+| 3A-3D    | `tsc` + `lint` (each agent)          | —                            | Each slice owner writes a closeout note with discoveries, affected neighbors, and ready/not-ready status  | `Phase 3E` only after all slice handoffs exist and the merge owner has read them                                 |
+| 3E       | Grep sweeps + merged `tsc` + `lint`  | —                            | Consolidate discoveries from all slice owners and note any merge-only issues                              | `Phase 3F` only if the merged branch is clean and no hidden alias/hex debt remains                               |
+| 3F       | —                                    | Desktop + mobile, both modes | Record integrated UI findings, typography issues, and any residual regressions                            | `Phase 3G` only if the integrated UI is visually coherent in both modes                                          |
+| 3G       | —                                    | —                            | Update the plan, file status, residual issue list, and Phase 4 cleanup scope                              | `Phase 4A-4D` only if the remaining work is true cleanup rather than missing migration work                      |
+| 4A       | `tsc` + `lint`                       | —                            | Note any cleanup fallout or alias-removal surprises                                                       | `Phase 4B` only if alias removal is mechanically safe                                                            |
+| 4B       | `tsc` + `lint` + smoke               | —                            | Record any test gaps or regressions that change final-closeout confidence                                 | `Phase 4C` only if the automated baseline is clean                                                               |
+| 4C       | —                                    | Desktop + mobile, both modes | Record final visual findings and any non-blocking follow-up ideas                                         | `Phase 4D` only if final visuals are acceptable and any remaining issues are explicitly classified               |
+| 4D       | Plan sync                            | —                            | Prose headings, file status, learned constraints, and follow-on questions match the repo                  | Overhaul is complete only when the plan is synced and any remaining work has been captured for the orchestrator  |
 
 ### Dependency graph
 
 ```
-Phase 1A -> Phase 1B
-          │
-          ▼
-Phase 2A -> Phase 2B -> Phase 2C -> Phase 2D -> Phase 2E
-                                                   │
-                         ┌───────────┬───────────┬───────────┐
-                         ▼           ▼           ▼           ▼
-                      Phase 3A    Phase 3B    Phase 3C    Phase 3D
-                         └───────────┴───────────┴───────────┘
-                                                   │
-                                                   ▼
-                                                Phase 3E
-                                                   │
-                                                   ▼
-                                                Phase 3F
-                                                   │
-                                                   ▼
+Phase 1A -> Phase 1B -> Phase 1C
+                       │
+                       ▼
+Phase 2A -> Phase 2B -> Phase 2C -> Phase 2D -> Phase 2E -> Phase 2F
+                                                                │
+                                      ┌───────────┬───────────┬───────────┐
+                                      ▼           ▼           ▼           ▼
+                                   Phase 3A    Phase 3B    Phase 3C    Phase 3D
+                                      └───────────┴───────────┴───────────┘
+                                                                │
+                                                                ▼
+                                                             Phase 3E
+                                                                │
+                                                                ▼
+                                                             Phase 3F
+                                                                │
+                                                                ▼
+                                                             Phase 3G
+                                                                │
+                                                                ▼
 Phase 4A -> Phase 4B -> Phase 4C -> Phase 4D
 ```
 
-**Total agents possible:** 4 concurrent during `Phase 3A-3D`. All other phases are single-owner sequential work.
+**Total agents possible:** 4 concurrent during `Phase 3A-3D`, with focused discovery sub-agents launched opportunistically inside any phase when additional context or impact analysis is needed. All primary phases outside that wave are single-owner sequential work.
