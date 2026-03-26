@@ -31,6 +31,25 @@ isProject: false
 
 # Design System Overhaul
 
+## Phase Status
+
+### Phase 1 -- DONE
+
+Phase 1 has been re-audited against this updated plan. The repo already contains the required shadcn scaffold (`components.json`, `src/lib/utils.ts`, `src/components/ui/`), the supporting dependencies, and the Phase 1 CSS/runtime pieces (`@import "tw-animate-css"`, `@import "shadcn/tailwind.css"`, `@custom-variant dark`, `@layer base`). Validation passes: `bunx tsc --noEmit` and `bun run lint`.
+
+### Phase 2 -- NEXT
+
+Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. No token reconciliation or component migration work should be treated as complete until that rewrite lands.
+
+## Current File Status
+
+- `components.json` exists and points shadcn to `src/app/globals.css`, `@/lib/utils`, and `@/components/ui`
+- `src/lib/utils.ts` exists and exports `cn()`
+- `package.json` already includes `clsx`, `tailwind-merge`, `class-variance-authority`, `tw-animate-css`, `lucide-react`, and `shadcn`
+- `src/app/globals.css` contains the Phase 1 shadcn imports and base layer, but its token blocks are still transitional and must be replaced in Phase 2
+- `src/app/layout.tsx` already imports `cn()`, loads the font variables, and applies the mono font on `<body>`
+- `src/components/ui/button.tsx` exists from the initial shadcn setup and is outside the Phase 2 token rewrite
+
 ## Design Reference: Factory.ai
 
 The visual language is modeled after [Factory.ai](https://factory.ai) — a monospace, information-dense interface that achieves hierarchy through typography weight and spacing rather than a gradient of gray shades. Factory's own site is dark-primary, but the structural principles transfer cleanly to both modes.
@@ -401,11 +420,11 @@ These replacements use semantic token names that resolve correctly in both modes
 
 ---
 
-## Phase 1 — Install shadcn/ui
+## Phase 1 -- DONE: Install shadcn/ui
 
-**Audit confirmed:** no conflicts. No existing `components.json`, `src/lib/utils.ts`, or `src/components/ui/`. Path alias `@/*` -> `./src/*` is correct. Tailwind v4 + PostCSS are compatible.
+**Re-audit confirmed:** the repo already contains the Phase 1 scaffold. `components.json`, `src/lib/utils.ts`, and `src/components/ui/button.tsx` exist, the `@/*` -> `./src/*` path alias is correct, and Tailwind v4 + PostCSS remain compatible. Phase 1 is therefore a reconciliation pass, not a fresh init into an empty repo.
 
-Run `bunx shadcn@latest init` to scaffold:
+Validated Phase 1 scaffold:
 
 - `components.json` — config pointing to `src/components/ui/`, `@/lib/utils`, Tailwind v4 CSS-first
 - `src/lib/utils.ts` — exports `cn()` (clsx + tailwind-merge)
@@ -413,11 +432,11 @@ Run `bunx shadcn@latest init` to scaffold:
 
 **Risk:** The init may overwrite or append to `globals.css`. Merge carefully — Phase 2 defines the definitive theme. Keep `@import "tailwindcss"` and body/scrollbar/selection rules; let shadcn add `@import "tw-animate-css"` and any `@layer base` it needs.
 
-Also drop the old `--color-text` token from `@theme` (it was never used as `text-text` — only `text-foreground` and `text-text-secondary` are in the codebase).
+The old `--color-text` token is already absent from `@theme` (the codebase uses `text-foreground` and `text-text-secondary` instead).
 
-Verify: `bunx tsc --noEmit` and `bun run lint` pass.
+Validation: `bunx tsc --noEmit` and `bun run lint` pass.
 
-## Phase 2 — Rationalize the Token Palette
+## Phase 2 -- NEXT: Rationalize the Token Palette
 
 Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css](src/app/globals.css) with the full TruthLens-flavored token set. Uses CSS custom property indirection (the pattern shadcn established in Phase 1) so Tailwind utility classes like `bg-card` and `text-muted-foreground` resolve to the correct value per mode.
 
