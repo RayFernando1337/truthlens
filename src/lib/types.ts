@@ -265,6 +265,10 @@ export interface ApiError {
   status?: number;
 }
 
+export type AnalysisFetchResult =
+  | { ok: true; data: AnalysisSnapshot }
+  | { ok: false; error: ApiError };
+
 export type VerificationFetchResult =
   | { ok: true; data: VerificationRun }
   | { ok: false; error: ApiError };

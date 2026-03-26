@@ -106,12 +106,11 @@ export function openTrackedSession(args: {
   return { era, session };
 }
 
-export async function runBatchAnalysis(args: {
-  text: string;
-  era: number;
+interface BatchAnalysisHandlers {
   mem: MutableRefObject<TruthSessionMem>;
   setIsProcessing: Dispatch<SetStateAction<boolean>>;
   setProcessingChunk: Dispatch<SetStateAction<string | null>>;
+  setAnalysisError: Dispatch<SetStateAction<string | null>>;
   setStage: (key: StageKey, status: PipelineStageStatus) => void;
   setSnapshot: Dispatch<SetStateAction<AnalysisSnapshot | null>>;
   triggerVerification: () => Promise<void> | void;
@@ -122,36 +121,54 @@ export async function runBatchAnalysis(args: {
     status: "success" | "error",
     options?: { output?: Record<string, unknown>; error?: string },
   ) => void;
-}) {
-  const {
-    text, era, mem, setIsProcessing, setProcessingChunk, setStage, setSnapshot,
-    triggerVerification, triggerTopicSegmentation, beginTraceStage, endTraceStage,
-  } = args;
-  setIsProcessing(true);
-  setProcessingChunk("Analyzing full text...");
-  setStage("analysis", "running");
-  mem.current.segments = splitIntoChunks(text).map((chunk, index) => makeSegment(`batch-${index}`, chunk, index));
-  const trace = beginTraceStage("analysis", {
-    mode: "batch",
-    segmentCount: mem.current.segments.length,
-    pulseCount: 0,
-    hasSummary: false,
+}
+
+async function executeBatchAnalysis(
+  era: number, segments: TranscriptSegment[], hint: string,
+  h: BatchAnalysisHandlers, traceExtra?: Record<string, unknown>,
+) {
+  h.setIsProcessing(true);
+  h.setProcessingChunk(hint);
+  h.setStage("analysis", "running");
+  const trace = h.beginTraceStage("analysis", {
+    mode: "batch", segmentCount: segments.length, pulseCount: 0,
+    hasSummary: false, ...traceExtra,
   });
-  const result = await fetchAnalysis("batch", mem.current.segments);
-  setProcessingChunk(null);
-  setIsProcessing(false);
-  if (era !== mem.current.era) return;
-  if (!result) {
-    setStage("analysis", "error");
-    endTraceStage(trace, "error", { error: "Analysis request failed." });
+  const result = await fetchAnalysis("batch", segments);
+  h.setProcessingChunk(null);
+  h.setIsProcessing(false);
+  if (era !== h.mem.current.era) return;
+  if (!result.ok) {
+    h.setAnalysisError(result.error.message);
+    h.setStage("analysis", "error");
+    h.endTraceStage(trace, "error", { error: result.error.message });
     return;
   }
-  mem.current.snap = result;
-  setSnapshot(result);
-  setStage("analysis", "success");
-  endTraceStage(trace, "success", { output: batchTraceOutput(result) });
-  void triggerVerification();
-  void triggerTopicSegmentation();
+  h.setAnalysisError(null);
+  h.mem.current.snap = result.data;
+  h.setSnapshot(result.data);
+  h.setStage("analysis", "success");
+  h.endTraceStage(trace, "success", { output: batchTraceOutput(result.data) });
+  void h.triggerVerification();
+  void h.triggerTopicSegmentation();
+}
+
+export async function runBatchAnalysis(
+  args: BatchAnalysisHandlers & { text: string; era: number },
+) {
+  const { text, era, ...h } = args;
+  h.mem.current.segments = splitIntoChunks(text).map(
+    (chunk, index) => makeSegment(`batch-${index}`, chunk, index),
+  );
+  await executeBatchAnalysis(era, h.mem.current.segments, "Analyzing full text...", h);
+}
+
+export async function retryBatchAnalysis(args: BatchAnalysisHandlers) {
+  if (args.mem.current.segments.length === 0) return;
+  await executeBatchAnalysis(
+    args.mem.current.era, args.mem.current.segments,
+    "Retrying analysis...", args, { retry: true },
+  );
 }
 
 function batchTraceOutput(result: AnalysisSnapshot): Record<string, unknown> {

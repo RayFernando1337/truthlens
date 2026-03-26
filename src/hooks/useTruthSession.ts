@@ -14,6 +14,7 @@ import {
   openTrackedSession,
   resetTruthSessionMem,
   restoreTrackedSession,
+  retryBatchAnalysis,
   runBatchAnalysis,
 } from "@/hooks/truth-session-runtime";
 import {
@@ -30,6 +31,7 @@ export function useTruthSession() {
   const [runningSummary, setRunningSummary] = useState<SessionSummary | null>(null);
   const [verificationRun, setVerificationRun] = useState<VerificationRun | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [pipeline, setPipeline] = useState<Pipeline>(IDLE);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
@@ -52,6 +54,7 @@ export function useTruthSession() {
     setRunningSummary(null);
     setVerificationRun(null);
     setVerificationError(null);
+    setAnalysisError(null);
     setPipeline(IDLE);
     setVoiceTranscript([]);
     setProcessingChunk(null);
@@ -122,7 +125,7 @@ export function useTruthSession() {
   }, [topicSegments]);
 
   const runAnalysis = useCallback(async (mode: "streaming" | "full") => {
-    await runAnalysisPass({ mode, mem, setStage, setSnapshot, beginTraceStage, endTraceStage, runSummaryUpdate, triggerVerification });
+    await runAnalysisPass({ mode, mem, setStage, setSnapshot, setAnalysisError, beginTraceStage, endTraceStage, runSummaryUpdate, triggerVerification });
   }, [beginTraceStage, endTraceStage, setStage, runSummaryUpdate, triggerVerification]);
   const handleVoiceChunk = useCallback(async (text: string) => {
     await processVoiceChunk({ text, mem, setVoiceTranscript, setPulseEntries, setProcessingChunk, setStage, beginTraceStage, endTraceStage, runAnalysis });
@@ -186,6 +189,7 @@ export function useTruthSession() {
         mem,
         setIsProcessing,
         setProcessingChunk,
+        setAnalysisError,
         setStage,
         setSnapshot,
         triggerVerification,
@@ -229,6 +233,7 @@ export function useTruthSession() {
         mem,
         setIsProcessing,
         setProcessingChunk,
+        setAnalysisError,
         setStage,
         setSnapshot,
         triggerVerification,
@@ -240,6 +245,13 @@ export function useTruthSession() {
       endTraceStage(trace, "error", { error: "URL extraction failed." });
     }
   }, [beginTraceStage, closePreviousTrace, endTraceStage, resetState, setStage, startTraceSession, triggerTopicSegmentation, triggerVerification]);
+
+  const retryAnalysis = useCallback(async () => {
+    await retryBatchAnalysis({
+      mem, setIsProcessing, setProcessingChunk, setAnalysisError, setStage, setSnapshot,
+      triggerVerification, triggerTopicSegmentation, beginTraceStage, endTraceStage,
+    });
+  }, [beginTraceStage, endTraceStage, setStage, triggerTopicSegmentation, triggerVerification]);
 
   const restoreSession = useCallback((entry: SessionHistoryEntry) => {
     restoreTrackedSession({
@@ -288,9 +300,9 @@ export function useTruthSession() {
   }, [maybeFinishTrace, pipeline, queryResult, session, snapshot, topicSegments, verificationRun]);
 
   return {
-    session, snapshot, runningSummary, verificationRun, verificationError, topicSegments, queryResult, pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
+    session, snapshot, runningSummary, verificationRun, verificationError, analysisError, topicSegments, queryResult, pipelineStatus: pipeline, flagCount, isAnalysisLoading, pulseEntries,
     voiceTranscript, voiceChunkSeverities, isRecording, voiceError, isProcessing, isFetchingUrl, processingChunk, chunkProgress,
-    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, submitQuery, seekTranscriptChunk, restoreSession, clearSession, resetSignal,
+    handleAnalyze, handleFetchUrl, handleStartRecording, handleStopRecording, triggerVerification, triggerTopicSegmentation, retryAnalysis, submitQuery, seekTranscriptChunk, restoreSession, clearSession, resetSignal,
   };
 }
 

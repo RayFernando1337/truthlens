@@ -72,6 +72,7 @@ function OutputColumn({ session }: { session: TruthSessionState }) {
         snapshot={session.snapshot}
         verificationRun={session.verificationRun}
         verificationError={session.verificationError}
+        analysisError={session.analysisError}
         topicSegments={session.topicSegments}
         queryResult={session.queryResult}
         pipelineStatus={session.pipelineStatus}
@@ -81,6 +82,7 @@ function OutputColumn({ session }: { session: TruthSessionState }) {
         onSeekTranscriptChunk={session.seekTranscriptChunk}
         onTriggerVerification={session.triggerVerification}
         onTriggerTopicSegmentation={session.triggerTopicSegmentation}
+        onRetryAnalysis={session.retryAnalysis}
         onSubmitQuery={session.submitQuery}
       />
     </div>
