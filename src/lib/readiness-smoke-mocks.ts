@@ -10,7 +10,7 @@ function parseClaimPrompt(prompt: string, pattern: RegExp) {
 }
 
 function buildMockAnalysis(prompt: string) {
-  const countMatch = prompt.match(/exactly (\d+) values/);
+  const countMatch = prompt.match(/(?:exactly|approximately) (\d+) values/);
   const segmentCount = Number(countMatch?.[1] ?? 1);
   const badTrajectory = prompt.includes("FORCE_BAD_TRAJECTORY");
   const trustTrajectory = Array.from(

@@ -83,7 +83,9 @@ export function buildAnalysisPrompt(request: AnalysisRequest): string {
     "",
     "Return a complete structured analysis for the provided segments only.",
     "Every evidenceTable row must include the exact supporting quote from the provided text.",
-    `The trustTrajectory array must contain exactly ${request.segments.length} values.`,
+    request.mode === "batch"
+      ? `The trustTrajectory array should contain approximately ${request.segments.length} values (one per segment). Close counts are acceptable; the trajectory will be resampled if needed.`
+      : `The trustTrajectory array must contain exactly ${request.segments.length} values.`,
   ].join("\n");
 }
 
@@ -123,25 +125,40 @@ function buildAnalysisProvenance(request: AnalysisRequest): AnalysisProvenance {
   };
 }
 
-function assertTrustTrajectoryLength(
-  trustTrajectory: number[],
-  segmentCount: number
-): void {
-  if (trustTrajectory.length !== segmentCount) {
+function resampleTrajectory(src: number[], targetLen: number): number[] {
+  if (src.length === targetLen) return src;
+  if (src.length < 2) {
     throw new Error(
-      `Analysis contract violation: expected trustTrajectory length ${segmentCount}, received ${trustTrajectory.length}`
+      `Analysis contract violation: expected trustTrajectory length ${targetLen}, received ${src.length}`
     );
   }
+  const out: number[] = [];
+  for (let i = 0; i < targetLen; i++) {
+    const pos = (i / (targetLen - 1)) * (src.length - 1);
+    const lo = Math.floor(pos);
+    const hi = Math.min(lo + 1, src.length - 1);
+    const frac = pos - lo;
+    out.push(src[lo] * (1 - frac) + src[hi] * frac);
+  }
+  return out;
 }
 
 export function finalizeAnalysisSnapshot(
   body: AnalysisBody,
   request: AnalysisRequest
 ): AnalysisSnapshot {
-  assertTrustTrajectoryLength(body.trustTrajectory, request.segments.length);
+  const expected = request.segments.length;
+  let trajectory = body.trustTrajectory;
+  if (trajectory.length !== expected) {
+    console.warn(
+      `[analysis] trustTrajectory length ${trajectory.length} → resampled to ${expected}`
+    );
+    trajectory = resampleTrajectory(trajectory, expected);
+  }
 
   return {
     ...body,
+    trustTrajectory: trajectory,
     mode: request.mode,
     windowStart: getWindowStart(request.mode, request.segments),
     windowEnd: getWindowEnd(request.mode, request.segments),
