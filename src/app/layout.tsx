@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", mono.variable, "font-sans", geist.variable)}>
+    <html lang="en" className={cn("dark h-full", mono.variable, "font-sans", geist.variable)}>
       <body className="h-full font-[family-name:var(--font-mono)]">
         {children}
       </body>
