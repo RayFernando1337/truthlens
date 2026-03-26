@@ -247,11 +247,19 @@ export function useTruthSession() {
   }, [beginTraceStage, closePreviousTrace, endTraceStage, resetState, setStage, startTraceSession, triggerTopicSegmentation, triggerVerification]);
 
   const retryAnalysis = useCallback(async () => {
-    await retryBatchAnalysis({
-      mem, setIsProcessing, setProcessingChunk, setAnalysisError, setStage, setSnapshot,
-      triggerVerification, triggerTopicSegmentation, beginTraceStage, endTraceStage,
-    });
-  }, [beginTraceStage, endTraceStage, setStage, triggerTopicSegmentation, triggerVerification]);
+    const mode = mem.current.session?.mode;
+    if (mode === "streaming") {
+      await runAnalysisPass({
+        mode: "full", mem, setStage, setSnapshot, setAnalysisError,
+        beginTraceStage, endTraceStage, runSummaryUpdate, triggerVerification,
+      });
+    } else {
+      await retryBatchAnalysis({
+        mem, setIsProcessing, setProcessingChunk, setAnalysisError, setStage, setSnapshot,
+        triggerVerification, triggerTopicSegmentation, beginTraceStage, endTraceStage,
+      });
+    }
+  }, [beginTraceStage, endTraceStage, runSummaryUpdate, setStage, triggerTopicSegmentation, triggerVerification]);
 
   const restoreSession = useCallback((entry: SessionHistoryEntry) => {
     restoreTrackedSession({

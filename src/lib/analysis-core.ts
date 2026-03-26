@@ -134,6 +134,8 @@ function resampleTrajectory(src: number[], targetLen: number): number[] {
   }
   // Single value can be replicated to fill any target length (common in batch mode)
   if (src.length === 1) return Array.from({ length: targetLen }, () => src[0]);
+  // Collapse multiple values into one representative score (mean) when target is a single point
+  if (targetLen === 1) return [src.reduce((a, b) => a + b, 0) / src.length];
   const out: number[] = [];
   for (let i = 0; i < targetLen; i++) {
     const pos = (i / (targetLen - 1)) * (src.length - 1);
