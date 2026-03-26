@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import type { PostAnalysisQueryResult, PostQueryType, TopicSegment } from "@/lib/types";
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
+    <span className="text-sm font-semibold uppercase tracking-widest text-text-secondary">
       {children}
     </span>
   );
@@ -24,17 +25,17 @@ export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
   if (!segments) {
     if (isLoading) return (
       <div className="flex items-center gap-2 px-4 py-4">
-        <span className="h-1 w-1 animate-pulse bg-foreground" />
-        <span className="text-[10px] uppercase tracking-widest text-[#444]">
+        <span className="h-1.5 w-1.5 animate-pulse bg-foreground" />
+        <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/50">
           Mapping topic structure&hellip;
         </span>
       </div>
     );
     return (
       <div className="px-4 py-3">
-        <p className="text-[11px] text-[#444]">No topic segments yet.</p>
+        <p className="text-base text-muted-foreground/50">No topic segments yet.</p>
         <button type="button" onClick={onGenerate}
-          className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+          className="mt-2 border border-input px-3 py-1 text-sm font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
           Generate segments
         </button>
       </div>
@@ -47,16 +48,16 @@ export function TopicSegmentsContent({ segments, onGenerate, isLoading }: {
         return (
           <div key={i} className="border-l-2 py-1 pl-2" style={{ borderColor: color }}>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color }}>
+              <span className="text-sm font-semibold uppercase tracking-widest" style={{ color }}>
                 {seg.segmentType.replace(/-/g, " ")}
               </span>
-              <span className="text-[9px] tabular-nums text-[#444]">
+              <span className="text-sm tabular-nums text-muted-foreground/50">
                 [{seg.startSegmentIndex}&ndash;{seg.endSegmentIndex}]
               </span>
             </div>
-            <p className="text-[11px] text-foreground">{seg.topic}</p>
+            <p className="text-base text-foreground">{seg.topic}</p>
             {seg.claimCount > 0 && (
-              <span className="text-[9px] tabular-nums text-[#555]">
+              <span className="text-sm tabular-nums text-text-secondary">
                 {seg.claimCount} claims &middot; conf {Math.round(seg.avgConfidence * 100)}
               </span>
             )}
@@ -77,15 +78,15 @@ const QUERY_TYPES: { id: PostQueryType; label: string }[] = [
 function QueryResultDisplay({ result }: { result: PostAnalysisQueryResult }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs leading-relaxed text-foreground">{result.answer}</p>
+      <p className="text-base leading-relaxed text-foreground">{result.answer}</p>
       {result.evidence.length > 0 && (
         <div>
           <Lbl>Evidence</Lbl>
           {result.evidence.map((ev, i) => (
-            <div key={i} className="mt-1 border-l-2 border-[#333] pl-2">
-              <p className="text-[10px] text-[#888]">[{ev.segmentId}]</p>
-              <p className="text-[11px] italic text-[#ccc]">&ldquo;{ev.quote}&rdquo;</p>
-              <p className="text-[10px] text-text-secondary">{ev.relevance}</p>
+            <div key={i} className="mt-1 border-l-2 border-input pl-2">
+              <p className="text-sm text-muted-foreground">[{ev.segmentId}]</p>
+              <p className="text-base italic text-foreground">&ldquo;{ev.quote}&rdquo;</p>
+              <p className="text-sm text-text-secondary">{ev.relevance}</p>
             </div>
           ))}
         </div>
@@ -112,20 +113,21 @@ export function QueryContent({ result, onSubmit }: {
       <div className="flex gap-1.5">
         {QUERY_TYPES.map((qt) => (
           <button key={qt.id} type="button" onClick={() => setQueryType(qt.id)}
-            className={`border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
+            className={cn(
+              "border px-2 py-1 text-sm font-semibold uppercase tracking-widest transition-colors",
               queryType === qt.id
-                ? "border-foreground bg-foreground text-bg"
-                : "border-[#333] text-[#888] hover:border-text-secondary"
-            }`}>{qt.label}</button>
+                ? "border-foreground bg-foreground text-background"
+                : "border-input text-muted-foreground hover:border-text-secondary",
+            )}>{qt.label}</button>
         ))}
       </div>
       <div className="flex gap-2">
         <input value={query} onChange={(e) => setQuery(e.target.value)} disabled={loading}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Ask about the transcript..."
-          className="flex-1 border border-[#333] bg-transparent px-2 py-1.5 text-[11px] text-foreground placeholder:text-[#444] focus:border-text-secondary focus:outline-none" />
+          className="flex-1 border border-input bg-transparent px-2 py-1.5 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-text-secondary focus:outline-none" />
         <button type="button" onClick={handleSubmit} disabled={loading || !query.trim()}
-          className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground disabled:opacity-30">
+          className="border border-input px-3 py-1 text-sm font-semibold uppercase tracking-widest text-foreground hover:border-foreground disabled:opacity-30">
           {loading ? "\u2026" : "Ask"}
         </button>
       </div>
