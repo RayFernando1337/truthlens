@@ -1,0 +1,21 @@
+---
+description: ""
+globs: ""
+alwaysApply: true
+---
+
+Read and internalize @soul.md before writing any code in this project.
+
+Every prompt, label, color choice, animation, copy string, and architectural decision must reflect the five principles defined there:
+
+1. Name the unnamed — give the user the word for what they felt
+2. Silence is information — a quiet screen means the speaker is being straight
+3. The speaker deserves fairness — always generate the steelman
+4. Truth is a trajectory, not a verdict — the line, not a switch
+5. Respect every glance — every element earns its presence or gets cut
+
+When writing LLM prompts: analytical not adversarial, precise language ("unsupported" not "false"), treat every argument as a sincere attempt at reasoning.
+
+When writing UI copy: flags describe what happened not what the speaker is, loading states are calm, empty states invite.
+
+When choosing colors: red = "pay attention here", green = "this checks out", amber = "worth a closer look". Animations fire only on state changes.

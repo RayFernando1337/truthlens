@@ -7,6 +7,84 @@ interface UseVoiceInputOptions {
   chunkDurationMs?: number;
 }
 
+function mergeAndEncodeChunks(
+  chunks: Float32Array[],
+  sampleRate: number,
+): FormData | null {
+  if (chunks.length === 0) return null;
+
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  if (totalLength < 1600) return null;
+
+  const merged = new Float32Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  const int16 = new Int16Array(merged.length);
+  for (let i = 0; i < merged.length; i++) {
+    const s = Math.max(-1, Math.min(1, merged[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+
+  const blob = new Blob([int16.buffer], { type: "application/octet-stream" });
+  const formData = new FormData();
+  formData.append("audio", blob, "chunk.pcm");
+  formData.append("sampleRate", String(sampleRate));
+  return formData;
+}
+
+async function transcribeChunk(
+  formData: FormData,
+  onChunkTranscribed: (text: string) => void,
+): Promise<void> {
+  try {
+    const res = await fetch("/api/transcribe", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) return;
+    const { text } = await res.json();
+    if (text?.trim()) onChunkTranscribed(text.trim());
+  } catch {
+    // network error — continue recording
+  }
+}
+
+// ScriptProcessorNode is deprecated but universally supported;
+// for a hackathon demo this is acceptable.
+function beginCapture(
+  stream: MediaStream,
+  onSample: (data: Float32Array) => void,
+) {
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  const source = ctx.createMediaStreamSource(stream);
+  const processor = ctx.createScriptProcessor(4096, 1, 1);
+  processor.onaudioprocess = (e) =>
+    onSample(new Float32Array(e.inputBuffer.getChannelData(0)));
+  source.connect(processor);
+  processor.connect(ctx.destination);
+  return { ctx, source, processor };
+}
+
+function teardownAudio(
+  processorRef: { current: ScriptProcessorNode | null },
+  sourceRef: { current: MediaStreamAudioSourceNode | null },
+  ctxRef: { current: AudioContext | null },
+  streamRef: { current: MediaStream | null },
+) {
+  processorRef.current?.disconnect();
+  sourceRef.current?.disconnect();
+  ctxRef.current?.close();
+  streamRef.current?.getTracks().forEach((t) => t.stop());
+  processorRef.current = null;
+  sourceRef.current = null;
+  ctxRef.current = null;
+  streamRef.current = null;
+}
+
 export function useVoiceInput({
   onChunkTranscribed,
   chunkDurationMs = 4_000,
@@ -24,116 +102,40 @@ export function useVoiceInput({
 
   const flushChunk = useCallback(async () => {
     const chunks = samplesRef.current;
-    if (chunks.length === 0) return;
     samplesRef.current = [];
-
-    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-    if (totalLength < 1600) return; // less than 0.1s at 16kHz, skip
-
-    const merged = new Float32Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    const int16 = new Int16Array(merged.length);
-    for (let i = 0; i < merged.length; i++) {
-      const s = Math.max(-1, Math.min(1, merged[i]));
-      int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-    }
-
-    const blob = new Blob([int16.buffer], {
-      type: "application/octet-stream",
-    });
-    const formData = new FormData();
-    formData.append("audio", blob, "chunk.pcm");
-    formData.append(
-      "sampleRate",
-      String(audioContextRef.current?.sampleRate ?? 16000)
-    );
-
-    try {
-      const res = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const { text } = await res.json();
-        if (text && text.trim()) {
-          onChunkTranscribed(text.trim());
-        }
-      }
-    } catch {
-      // network error, continue recording
-    }
+    const sampleRate = audioContextRef.current?.sampleRate ?? 16000;
+    const formData = mergeAndEncodeChunks(chunks, sampleRate);
+    if (formData) await transcribeChunk(formData, onChunkTranscribed);
   }, [onChunkTranscribed]);
 
   const startRecording = useCallback(async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
+      const stream = await navigator.mediaDevices.getUserMedia(
+        { audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } },
+      );
       streamRef.current = stream;
-
-      const ctx = new AudioContext({ sampleRate: 16000 });
+      const { ctx, source, processor } = beginCapture(stream, (input) => {
+        if (recordingRef.current) samplesRef.current.push(input);
+      });
       audioContextRef.current = ctx;
-
-      const source = ctx.createMediaStreamSource(stream);
       sourceRef.current = source;
-
-      // ScriptProcessorNode is deprecated but universally supported.
-      // For a hackathon demo this is fine.
-      const processor = ctx.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
-
-      processor.onaudioprocess = (e) => {
-        if (!recordingRef.current) return;
-        const input = e.inputBuffer.getChannelData(0);
-        samplesRef.current.push(new Float32Array(input));
-      };
-
-      source.connect(processor);
-      processor.connect(ctx.destination);
-
       recordingRef.current = true;
       setIsRecording(true);
-
-      timerRef.current = setInterval(() => {
-        flushChunk();
-      }, chunkDurationMs);
+      timerRef.current = setInterval(flushChunk, chunkDurationMs);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Microphone access denied"
-      );
+      setError(e instanceof Error ? e.message : "Microphone access denied");
     }
   }, [chunkDurationMs, flushChunk]);
 
   const stopRecording = useCallback(async () => {
     recordingRef.current = false;
     setIsRecording(false);
-
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
     await flushChunk();
-
-    processorRef.current?.disconnect();
-    sourceRef.current?.disconnect();
-    audioContextRef.current?.close();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-
-    processorRef.current = null;
-    sourceRef.current = null;
-    audioContextRef.current = null;
-    streamRef.current = null;
+    teardownAudio(processorRef, sourceRef, audioContextRef, streamRef);
   }, [flushChunk]);
 
   return { isRecording, error, startRecording, stopRecording };

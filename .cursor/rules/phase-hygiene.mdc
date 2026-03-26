@@ -1,0 +1,40 @@
+---
+description: "Enforce plan-repo sync, gap analysis, and user checkpoints at phase boundaries"
+alwaysApply: true
+---
+
+# Phase Hygiene
+
+## After completing phase work
+
+Update the plan document before declaring the phase done:
+
+- Mark phase status in **prose headings**, not just YAML frontmatter (`-- DONE`, `-- COMPLETE`, `-- NEXT`)
+- Update "Current File Status" with any files added, removed, or significantly changed
+- Revise illustrative code blocks and contract examples that the implementation changed (scheduling math, type shapes, API examples)
+- Remove or rewrite stale risk notes and "needs hardening" warnings that no longer apply
+
+## Before declaring a phase complete
+
+Run a gap analysis between the plan and the repo:
+
+- Re-read the plan sections for the phase you just finished
+- Call out every claim that no longer matches the code: status labels, contract shapes, file paths, scheduling constants, design-decision examples
+- If gaps exist, fix them or flag them explicitly to the user -- do not silently move on
+- Distinguish **backend-complete** (routes/libs exist) from **product-complete** (client calls them) from **phase-ready** (plan synced, checks pass, next phase unblocked)
+
+## At phase boundaries
+
+Present a readiness summary to the user before starting the next phase:
+
+- What was shipped in the completed phase (files touched, contracts changed)
+- What the plan now says (confirm prose matches YAML matches repo)
+- What gaps remain (stale sections, unresolved warnings, missing validation)
+- Whether the next phase's prerequisites are satisfied
+- Run any existing readiness checks (`bun run smoke:readiness`, `bunx tsc --noEmit`, `bun run lint`)
+
+Do not begin the next phase until the user acknowledges the summary.
+
+## When touching shared contracts
+
+If implementation changes types, schemas, prompts, or scheduling policy, check whether the plan's design-decision sections reference stale versions. Flag drift immediately rather than leaving it for a future reconciliation pass.

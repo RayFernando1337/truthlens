@@ -18,18 +18,20 @@ progressively deeper, all streaming results as the content flows in.
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16.2.0, React 19.2.4, TypeScript 5 |
-| Styling | Tailwind CSS v4 (`@tailwindcss/postcss`), JetBrains Mono |
-| AI SDK | Vercel AI SDK v6 (`ai`, `@ai-sdk/openai-compatible`) |
-| Inference | Nemotron 3 Super 120B on Nebius Token Factory (~400 tok/s) |
-| ASR | NVIDIA Riva Speech Recognition via gRPC (NIM) |
-| Search/Verify | Tavily (agentic search, basic + advanced depth) |
-| Content Extract | Mozilla Readability + linkedom |
-| Validation | Zod v4 |
-| Package Manager | Bun |
-| Deployment | Vercel |
+
+| Layer           | Technology                                                 |
+| --------------- | ---------------------------------------------------------- |
+| Framework       | Next.js 16.2.0, React 19.2.4, TypeScript 5                 |
+| Styling         | Tailwind CSS v4 (`@tailwindcss/postcss`), JetBrains Mono   |
+| AI SDK          | Vercel AI SDK v6 (`ai`, `@ai-sdk/openai-compatible`)       |
+| Inference       | Nemotron 3 Super 120B on Nebius Token Factory (~400 tok/s) |
+| ASR             | NVIDIA Riva Speech Recognition via gRPC (NIM)              |
+| Search/Verify   | Tavily (agentic search, basic + advanced depth)            |
+| Content Extract | Mozilla Readability + linkedom                             |
+| Validation      | Zod v4                                                     |
+| Package Manager | Bun                                                        |
+| Deployment      | Vercel                                                     |
+
 
 ---
 
@@ -195,37 +197,43 @@ interface PatternsResult {
 
 Three schemas mirror the types above and are used with `generateStructured` for AI output validation:
 
-| Schema | Used By | Purpose |
-|--------|---------|---------|
-| `pulseSchema` | L1 `/api/analyze/pulse` | Validates claim extraction per chunk |
-| `analysisSchema` | L2 `/api/analyze/deep` | Validates rhetorical breakdown |
+
+| Schema           | Used By                    | Purpose                                     |
+| ---------------- | -------------------------- | ------------------------------------------- |
+| `pulseSchema`    | L1 `/api/analyze/pulse`    | Validates claim extraction per chunk        |
+| `analysisSchema` | L2 `/api/analyze/deep`     | Validates rhetorical breakdown              |
 | `patternsSchema` | L3 `/api/analyze/patterns` | Validates pattern detection + full analysis |
+
 
 ### Utility Types
 
-| Type | File | Definition |
-|------|------|-----------|
-| `ChunkSeverity` | `src/lib/pulse-utils.ts` | `"ok" \| "warn" \| "flag"` |
-| `Tab` | `src/app/page.tsx` | `"pulse" \| "analysis" \| "patterns"` |
-| `ViewMode` | `src/app/page.tsx` | `"debug" \| "insights"` |
-| `DemoKey` | `TranscriptInput.tsx` | `"generic" \| "andreessen" \| "lennypod"` |
-| `InputMode` | `TranscriptInput.tsx` | `"text" \| "url" \| "voice"` |
-| `UseVoiceInputOptions` | `src/hooks/useVoiceInput.ts` | `{ onChunkTranscribed, chunkDurationMs? }` |
-| `RivaAlternative` | `src/lib/nvidia-asr.ts` | `{ transcript, confidence }` |
-| `RivaResult` | `src/lib/nvidia-asr.ts` | `{ alternatives: RivaAlternative[] }` |
-| `RivaRecognizeResponse` | `src/lib/nvidia-asr.ts` | `{ results: RivaResult[] }` |
-| `TavilyResult` | `src/lib/tavily.ts` | `{ title, url, content, score }` |
-| `TavilyResponse` | `src/lib/tavily.ts` | `{ results: TavilyResult[], query }` |
+
+| Type                    | File                         | Definition                                 |
+| ----------------------- | ---------------------------- | ------------------------------------------ |
+| `ChunkSeverity`         | `src/lib/pulse-utils.ts`     | `"ok" | "warn" | "flag"`                   |
+| `Tab`                   | `src/app/page.tsx`           | `"pulse" | "analysis" | "patterns"`        |
+| `ViewMode`              | `src/app/page.tsx`           | `"debug" | "insights"`                     |
+| `DemoKey`               | `TranscriptInput.tsx`        | `"generic" | "andreessen" | "lennypod"`    |
+| `InputMode`             | `TranscriptInput.tsx`        | `"text" | "url" | "voice"`                 |
+| `UseVoiceInputOptions`  | `src/hooks/useVoiceInput.ts` | `{ onChunkTranscribed, chunkDurationMs? }` |
+| `RivaAlternative`       | `src/lib/nvidia-asr.ts`      | `{ transcript, confidence }`               |
+| `RivaResult`            | `src/lib/nvidia-asr.ts`      | `{ alternatives: RivaAlternative[] }`      |
+| `RivaRecognizeResponse` | `src/lib/nvidia-asr.ts`      | `{ results: RivaResult[] }`                |
+| `TavilyResult`          | `src/lib/tavily.ts`          | `{ title, url, content, score }`           |
+| `TavilyResponse`        | `src/lib/tavily.ts`          | `{ results: TavilyResult[], query }`       |
+
 
 ### API Request / Response Shapes
 
-| Route | Request | Response |
-|-------|---------|----------|
-| `POST /api/analyze/pulse` | `{ chunk: string }` | `PulseResult` |
-| `POST /api/analyze/deep` | `{ chunks: string[], claims?: string[] }` | `AnalysisResult & { sources: TavilySource[] }` |
-| `POST /api/analyze/patterns` | `{ transcript: string }` | `PatternsResult` |
-| `POST /api/extract` | `{ url: string }` | `{ title, text, excerpt }` |
-| `POST /api/transcribe` | FormData (`audio`, `sampleRate`) | `{ text: string }` |
+
+| Route                        | Request                                   | Response                                       |
+| ---------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| `POST /api/analyze/pulse`    | `{ chunk: string }`                       | `PulseResult`                                  |
+| `POST /api/analyze/deep`     | `{ chunks: string[], claims?: string[] }` | `AnalysisResult & { sources: TavilySource[] }` |
+| `POST /api/analyze/patterns` | `{ transcript: string }`                  | `PatternsResult`                               |
+| `POST /api/extract`          | `{ url: string }`                         | `{ title, text, excerpt }`                     |
+| `POST /api/transcribe`       | FormData (`audio`, `sampleRate`)          | `{ text: string }`                             |
+
 
 ---
 
@@ -245,7 +253,8 @@ export const model = nemotron.chatModel('nvidia/nemotron-3-super-120b-a12b');
 ### `structured-generate.ts` -- Output Parser
 
 Wraps Vercel AI SDK `generateText()` with:
-- JSON extraction from fenced or raw braces
+
+- factJSON extraction from fenced or raw braces
 - Zod validation
 - Retry loop (up to 2 retries) injecting validation errors back into the prompt
 
@@ -385,39 +394,45 @@ Layout (JetBrains Mono)
 
 ### Component Props
 
-| Component | Key Props |
-|-----------|-----------|
-| `TranscriptInput` | `onAnalyze`, `onFetchUrl`, `isRecording`, `isProcessing`, `isFetchingUrl`, `voiceTranscript`, `voiceError`, `onStartRecording`, `onStopRecording`, `chunkProgress`, `insightsMode?`, `voiceChunkSeverities?` |
-| `PulseFeed` | `entries: PulseEntry[]`, `processingChunk: string \| null` |
-| `AnalysisPanel` | `result: AnalysisResult \| null`, `isLoading` |
-| `PatternsPanel` | `result: PatternsResult \| null`, `isLoading` |
-| `InsightsPanel` | `entries`, `processingChunk`, `analysisResult`, `patternsResult`, `isAnalysisLoading`, `isPatternsLoading`, `onSeekTranscriptChunk` |
-| `ArchitectureDiagram` | `onClose` |
-| `Flag` | `flag: PulseFlag` |
-| `ConfidenceMeter` | `value: number`, `label?: string` |
+
+| Component             | Key Props                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TranscriptInput`     | `onAnalyze`, `onFetchUrl`, `isRecording`, `isProcessing`, `isFetchingUrl`, `voiceTranscript`, `voiceError`, `onStartRecording`, `onStopRecording`, `chunkProgress`, `insightsMode?`, `voiceChunkSeverities?` |
+| `PulseFeed`           | `entries: PulseEntry[]`, `processingChunk: string | null`                                                                                                                                                    |
+| `AnalysisPanel`       | `result: AnalysisResult | null`, `isLoading`                                                                                                                                                                 |
+| `PatternsPanel`       | `result: PatternsResult | null`, `isLoading`                                                                                                                                                                 |
+| `InsightsPanel`       | `entries`, `processingChunk`, `analysisResult`, `patternsResult`, `isAnalysisLoading`, `isPatternsLoading`, `onSeekTranscriptChunk`                                                                          |
+| `ArchitectureDiagram` | `onClose`                                                                                                                                                                                                    |
+| `Flag`                | `flag: PulseFlag`                                                                                                                                                                                            |
+| `ConfidenceMeter`     | `value: number`, `label?: string`                                                                                                                                                                            |
+
 
 ### State Management
 
 All state lives in `page.tsx` (no external store):
 
-| Category | State |
-|----------|-------|
-| View | `viewMode: ViewMode`, `showArch: boolean`, `activeTab: Tab` |
-| L1 Data | `pulseEntries: PulseEntry[]`, `processingChunk: string \| null` |
-| L2 Data | `analysisResult: AnalysisResult \| null`, `isAnalysisLoading` |
-| L3 Data | `patternsResult: PatternsResult \| null`, `isPatternsLoading` |
-| Input | `voiceTranscript: string[]`, `voiceError: string \| null`, `isProcessing`, `isFetchingUrl`, `chunkProgress` |
-| Refs | `abortRef`, `voiceChunksRef`, `voiceClaimsRef`, `voiceChunkIdRef`, `voiceLastL2AtChunkCountRef`, `voiceLastL3AtChunkCountRef` |
+
+| Category | State                                                                                                                         |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| View     | `viewMode: ViewMode`, `showArch: boolean`, `activeTab: Tab`                                                                   |
+| L1 Data  | `pulseEntries: PulseEntry[]`, `processingChunk: string | null`                                                                |
+| L2 Data  | `analysisResult: AnalysisResult | null`, `isAnalysisLoading`                                                                  |
+| L3 Data  | `patternsResult: PatternsResult | null`, `isPatternsLoading`                                                                  |
+| Input    | `voiceTranscript: string[]`, `voiceError: string | null`, `isProcessing`, `isFetchingUrl`, `chunkProgress`                    |
+| Refs     | `abortRef`, `voiceChunksRef`, `voiceClaimsRef`, `voiceChunkIdRef`, `voiceLastL2AtChunkCountRef`, `voiceLastL3AtChunkCountRef` |
+
 
 ### Chunk Routing Logic (Frontend)
 
 The frontend orchestrates when each analysis tier fires:
 
-| Tier | Paste Mode | Voice Mode |
-|------|-----------|------------|
-| L1 Pulse | Every chunk | Every chunk |
-| L2 Deep | After 3-4 chunks | After 8 chunks, then every +4 |
-| L3 Patterns | After 6 chunks | After 6 chunks, then every +4 |
+
+| Tier        | Paste Mode       | Voice Mode                    |
+| ----------- | ---------------- | ----------------------------- |
+| L1 Pulse    | Every chunk      | Every chunk                   |
+| L2 Deep     | After 3-4 chunks | After 8 chunks, then every +4 |
+| L3 Patterns | After 6 chunks   | After 6 chunks, then every +4 |
+
 
 Voice mode collects claims from L1 results and passes them to L2 for Tavily verification.
 
@@ -562,12 +577,14 @@ Strict mode, bundler module resolution, `@/*` path alias to `./src/*`.
 
 ## Environment Variables
 
-| Variable | Purpose |
-|----------|---------|
-| `NEBIUS_API_KEY` | Nebius Token Factory (Nemotron inference) |
-| `TAVILY_API_KEY` | Tavily search API |
-| `NVIDIA_API_KEY` | NVIDIA Riva ASR |
-| `NVIDIA_ASR_FUNCTION_ID` | Riva function ID (optional, has default) |
+
+| Variable                 | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
+| `NEBIUS_API_KEY`         | Nebius Token Factory (Nemotron inference) |
+| `TAVILY_API_KEY`         | Tavily search API                         |
+| `NVIDIA_API_KEY`         | NVIDIA Riva ASR                           |
+| `NVIDIA_ASR_FUNCTION_ID` | Riva function ID (optional, has default)  |
+
 
 ---
 
@@ -611,7 +628,7 @@ Add user authentication via Clerk to gate access and identify users.
 - **Provider:** Clerk (`@clerk/nextjs`)
 - **Scope:** Wrap app in `<ClerkProvider>`, add `middleware.ts` for route protection
 - **UI:** Sign-in/sign-up flow, user button in header
-- **Protected routes:** All `/api/analyze/*` endpoints require authenticated session
+- **Protected routes:** All `/api/analyze/`* endpoints require authenticated session
 
 ### Phase 2: Convex Database
 
@@ -667,13 +684,15 @@ export default defineSchema({
 
 **Key Convex functions:**
 
-| Function | Type | Purpose |
-|----------|------|---------|
-| `users.getOrCreate` | mutation | Upsert user from Clerk webhook / session |
-| `sessions.create` | mutation | Start a new analysis session |
-| `analyses.record` | mutation | Store L1/L2/L3 result after completion |
-| `usageLimits.check` | query | Check if user is within free-tier limits |
-| `usageLimits.increment` | mutation | Bump counters after each analysis |
+
+| Function                | Type     | Purpose                                  |
+| ----------------------- | -------- | ---------------------------------------- |
+| `users.getOrCreate`     | mutation | Upsert user from Clerk webhook / session |
+| `sessions.create`       | mutation | Start a new analysis session             |
+| `analyses.record`       | mutation | Store L1/L2/L3 result after completion   |
+| `usageLimits.check`     | query    | Check if user is within free-tier limits |
+| `usageLimits.increment` | mutation | Bump counters after each analysis        |
+
 
 ### Phase 3: Paywall & Usage Gating
 

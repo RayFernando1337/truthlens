@@ -5,9 +5,31 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  {
+    rules: {
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["warn", { max: 50, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    files: ["**/schemas.ts", "**/*.config.*", "**/*.generated.*", "**/prompts.ts"],
+    rules: {
+      "max-lines": "off",
+    },
+  },
+  {
+    files: ["src/app/page.tsx"],
+    rules: {
+      "max-lines": "off",
+    },
+  },
+  {
+    files: ["src/hooks/useTruthSession.ts"],
+    rules: {
+      "max-lines-per-function": "off",
+    },
+  },
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
