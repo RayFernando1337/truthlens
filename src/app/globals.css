@@ -47,10 +47,6 @@
   --color-yellow: var(--yellow);
   --color-text-secondary: var(--text-secondary);
 
-  /* --- backward-compat aliases (removed in Phase 4A) --- */
-  --color-surface: var(--card);
-  --color-bg: var(--background);
-
   /* --- fonts (resolve to Next.js --font-* vars) --- */
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
