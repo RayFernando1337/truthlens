@@ -13,55 +13,55 @@ todos:
     status: completed
   - id: phase-2a-theme-map
     content: "[Phase 2A] Rewrite src/app/globals.css @theme inline mappings to the canonical shadcn + TruthLens semantic token architecture"
-    status: pending
+    status: completed
   - id: phase-2b-light-dark-values
     content: "[Phase 2B] Replace src/app/globals.css :root and .dark values with the canonical light/dark palette and backward-compat aliases"
-    status: pending
+    status: completed
   - id: phase-2c-global-base-rules
     content: "[Phase 2C] Align body, scrollbar, selection, and @layer base rules in src/app/globals.css with the updated token system"
-    status: pending
+    status: completed
   - id: phase-2d-automated-validation
     content: "[Phase 2D] Run Phase 2 automated validation with bunx tsc --noEmit and bun run lint after the globals.css rewrite"
-    status: pending
+    status: completed
   - id: phase-2e-browser-validation
     content: "[Phase 2E] Run Phase 2 browser verification in light/dark mode on desktop and mobile after the globals.css rewrite"
-    status: pending
+    status: completed
   - id: phase-2f-plan-sync-handoff
     content: "[Phase 2F] Update the plan after the globals.css rewrite, record new discoveries and remaining token work, and confirm that the Phase 3 slices are ready to hand off"
-    status: pending
+    status: completed
   - id: phase-3a-right-panel
     content: "[Phase 3A] Migrate TruthPanel.tsx, TruthPanelSections.tsx, and AnalysisContent.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
-    status: pending
+    status: completed
   - id: phase-3b-extras-fixtures
     content: "[Phase 3B] Migrate TruthPanelExtras.tsx and TranscriptInputFixtures.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
-    status: pending
+    status: completed
   - id: phase-3c-supporting
     content: "[Phase 3C] Migrate SessionHistory.tsx, SessionHistoryRow.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
-    status: pending
+    status: completed
   - id: phase-3d-input-page
     content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: remaining header hex cleanup, typography tiers, cn() adoption, alias renames, and slice handoff notes"
-    status: pending
+    status: completed
   - id: phase-3e-grep-merge
     content: "[Phase 3E] Merge the Phase 3 implementation slices and run grep sweeps for remaining hex classNames and legacy aliases"
-    status: pending
+    status: completed
   - id: phase-3f-browser-verify
     content: "[Phase 3F] Run integrated Phase 3 browser verification and confirm the 18/16/14 typography hierarchy is visually correct"
-    status: pending
+    status: completed
   - id: phase-3g-plan-sync-handoff
     content: "[Phase 3G] Update the plan after the parallel migration wave, record integrated discoveries and residual issues, and confirm that Phase 4 cleanup is ready to hand off"
-    status: pending
+    status: completed
   - id: phase-4a-remove-aliases
     content: "[Phase 4A] Remove the temporary --color-surface and --color-bg aliases from src/app/globals.css once all component migrations are merged"
-    status: pending
+    status: completed
   - id: phase-4b-automated-checks
     content: "[Phase 4B] Run final automated checks: bunx tsc --noEmit, bun run lint, bun run smoke:readiness, and bun run test:smoke"
-    status: pending
+    status: completed
   - id: phase-4c-final-browser
     content: "[Phase 4C] Run final browser verification in both modes after alias removal and confirm there are no visual regressions"
-    status: pending
+    status: completed
   - id: phase-4d-plan-closeout
     content: "[Phase 4D] Sync this plan document with the shipped repo state, update status headings, record final file status, and capture remaining follow-on questions before declaring the overhaul complete"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -73,31 +73,40 @@ isProject: false
 
 Phase 1 has been re-audited against this updated plan. The repo already contains the required shadcn scaffold (`components.json`, `src/lib/utils.ts`, `src/components/ui/`), the supporting dependencies, and the Phase 1 CSS/runtime pieces (`@import "tw-animate-css"`, `@import "shadcn/tailwind.css"`, `@custom-variant dark`, `@layer base`). Validation passes: `bunx tsc --noEmit` and `bun run lint`.
 
-### Phase 2 -- NEXT
+### Phase 2 -- DONE
 
-Phase 2 starts with the full `src/app/globals.css` token rewrite to the canonical light/dark semantic palette. Execute it as six sequential handoff units (`Phase 2A` through `Phase 2F`) because every step touches the same file, its immediate verification path, or the handoff packet for the next wave. No token reconciliation or component migration work should be treated as complete until that rewrite lands and the Phase 2 handoff is written down.
+Phase 2 rewrote `src/app/globals.css` to the canonical OKLCH token architecture. The `@theme inline` block now maps all `--color-*` tokens via `var()` references (no hardcoded hex). `:root` and `.dark` contain the full shadcn neutral palette plus the TruthLens brand layer (`--brand`, `--brand-foreground`, `--brand-muted`, `--green`, `--yellow`, `--text-secondary`). The unlayered `body` block was deleted; `overflow-wrap` and `word-break` moved to `@layer base`. The `dark` class was added to `<html>` in `layout.tsx`. Validation: `tsc` and `lint` pass.
 
-### Phase 3 -- READY AFTER PHASE 2
+### Phase 3 -- DONE
 
-Phase 3 is the parallel implementation wave. `Phase 3A` through `Phase 3D` can fan out once `Phase 2F` is complete, then `Phase 3E`, `Phase 3F`, and `Phase 3G` collapse back to a single integration owner for merge, grep sweeps, browser review, and the Phase 4 handoff packet.
+Phase 3 migrated all 12 component files: hex → semantic tokens, `accent` → `brand` for orange identity, `bg-bg`/`bg-surface`/`text-bg` → `bg-background`/`bg-card`/`text-background`, typography to 3-tier hierarchy (18/16/14px), and `cn()` adoption for conditional class ternaries. Grep sweeps confirmed zero remaining hex classNames, zero legacy aliases, and zero misused `accent` references. Browser verification confirmed correct dark mode rendering with proper typography hierarchy. All automated checks pass.
 
-### Phase 4 -- BLOCKED ON PHASE 3
+### Phase 4 -- DONE
 
-Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4D` should stay with one owner after `Phase 3G` confirms the merged UI is clean and the final cleanup scope is stable.
+Phase 4 removed the backward-compat aliases (`--color-surface`, `--color-bg`) from `@theme inline`. Final automated checks pass: `tsc`, `lint`, `smoke:readiness`, `test:smoke` (2/2 Playwright). Browser verification confirmed no regressions after alias removal.
 
-## Current File Status
+## Current File Status (post-overhaul)
 
 - `components.json` exists and points shadcn to `src/app/globals.css`, `@/lib/utils`, and `@/components/ui`
 - `src/lib/utils.ts` exists and exports `cn()`
-- `package.json` already includes `clsx`, `tailwind-merge`, `class-variance-authority`, `tw-animate-css`, `lucide-react`, and `shadcn`
-- `src/app/globals.css` contains the Phase 1 shadcn imports and base layer, but it is still a split-brain file: TruthLens dark-first hex tokens live in `@theme inline`, shadcn OKLCH defaults live in `:root` / `.dark`, and raw `body` / scrollbar / `::selection` hex bypass the token system
-- `src/app/layout.tsx` already imports `cn()`, loads the font variables, and applies the mono font on `<body>`, but it does not currently set `class="dark"` on `<html>`
-- `src/components/ui/button.tsx` exists from the initial shadcn setup, is built on `@base-ui/react/button`, and the app shell still uses raw `<button>` elements almost everywhere else
-- `src/app/components/AnalysisContent.tsx` is now a first-class Phase 3 file; the previous plan incorrectly treated its appeals toggle and verdict copy as if they still lived inside `TruthPanelSections.tsx`
-- `src/app/components/SessionHistoryRow.tsx` is now a first-class Phase 3 file; `SessionHistory.tsx` alone no longer represents the whole history surface
-- `src/app/page.tsx` is not clean: it still carries `text-[#555]` on the header action and still uses the `bg-bg` / `bg-surface` aliases
-- `package.json` now exposes two distinct verification scripts: `bun run smoke:readiness` for mocked API contract checks and `bun run test:smoke` for Playwright UI smoke
-- `README.md` and `TRUTHLENS_ARCHITECTURE.md` are currently drifted from the live app; this plan should be treated as the execution truth for the overhaul until those docs are refreshed
+- `package.json` includes all required dependencies and verification scripts
+- `src/app/globals.css` — **CLEAN**: canonical OKLCH token architecture with shadcn neutral defaults + TruthLens brand layer. No hardcoded hex in the token system. `@theme inline` maps all tokens via `var()` references. Backward-compat aliases removed.
+- `src/app/layout.tsx` — **CLEAN**: imports `cn()`, loads fonts, applies mono on `<body>`, sets `class="dark"` on `<html>`
+- `src/components/ui/button.tsx` — untouched, uses shadcn `accent` (neutral) correctly
+- `src/app/page.tsx` — **CLEAN**: all hex replaced, aliases migrated (`bg-background`, `bg-card`), `accent` → `brand`, typography on 3-tier hierarchy
+- `src/app/components/TruthPanel.tsx` — **CLEAN**: hex → semantic tokens, `cn()` for DisclosureTabs, typography migrated
+- `src/app/components/TruthPanelSections.tsx` — **CLEAN**: hex → semantic tokens, `accent` → `brand`, typography migrated
+- `src/app/components/AnalysisContent.tsx` — **CLEAN**: hex → semantic tokens, `accent` → `brand`, `cn()` for AppealsToggle, typography migrated
+- `src/app/components/TruthPanelExtras.tsx` — **CLEAN**: hex → semantic tokens, `cn()` for query tabs, typography migrated
+- `src/app/components/TranscriptInputFixtures.tsx` — **CLEAN**: hex → semantic tokens, aliases migrated, typography migrated
+- `src/app/components/SessionHistory.tsx` — **CLEAN**: hex → semantic tokens, `bg-surface` → `bg-card`
+- `src/app/components/SessionHistoryRow.tsx` — **CLEAN**: hex → semantic tokens, `bg-bg` → `bg-background`, typography migrated
+- `src/app/components/Flag.tsx` — **CLEAN**: `accent` → `brand`, `bg-[#444]/15` → `bg-muted/15`, typography migrated
+- `src/app/components/TrustChart.tsx` — **CLEAN**: `bg-[#0f0f0f]` → `bg-card`, chrome label migrated (SVG untouched)
+- `src/app/components/ShareCapture.tsx` — **CLEAN**: share button chrome migrated (canvas untouched)
+- `src/app/components/TranscriptInputParts.tsx` — **CLEAN**: `accent` → `brand`, aliases migrated, `cn()` for mic ternaries, typography migrated
+- `src/app/components/TranscriptInput.tsx` — already clean, no changes needed
+- `README.md` and `TRUTHLENS_ARCHITECTURE.md` are still drifted — should be refreshed as a follow-on task
 
 ## Execution Orchestration
 

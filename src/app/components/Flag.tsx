@@ -4,14 +4,14 @@ import type { PulseFlag } from "@/lib/types";
 
 const FLAG_STYLES: Record<PulseFlag["type"], { bg: string; text: string }> = {
   vague: { bg: "bg-yellow/15", text: "text-yellow" },
-  stat: { bg: "bg-accent/15", text: "text-accent" },
+  stat: { bg: "bg-brand/15", text: "text-brand" },
   prediction: { bg: "bg-yellow/15", text: "text-yellow" },
-  attribution: { bg: "bg-accent/15", text: "text-accent" },
-  logic: { bg: "bg-accent/15", text: "text-accent" },
-  contradiction: { bg: "bg-accent/15", text: "text-accent" },
-  "emotional-appeal": { bg: "bg-accent/15", text: "text-accent" },
+  attribution: { bg: "bg-brand/15", text: "text-brand" },
+  logic: { bg: "bg-brand/15", text: "text-brand" },
+  contradiction: { bg: "bg-brand/15", text: "text-brand" },
+  "emotional-appeal": { bg: "bg-brand/15", text: "text-brand" },
   "cognitive-bias": { bg: "bg-yellow/15", text: "text-yellow" },
-  building: { bg: "bg-[#444]/15", text: "text-text-secondary" },
+  building: { bg: "bg-muted/15", text: "text-text-secondary" },
 };
 
 const FLAG_LABELS: Record<PulseFlag["type"], string> = {
@@ -31,7 +31,7 @@ export default function Flag({ flag }: { flag: PulseFlag }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.bg} ${style.text}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-sm font-semibold uppercase tracking-widest ${style.bg} ${style.text}`}
     >
       <span className="opacity-60">{FLAG_LABELS[flag.type]}</span>
       <span className="opacity-40">|</span>

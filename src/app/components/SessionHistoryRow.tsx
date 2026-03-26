@@ -31,7 +31,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="text-[9px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-[#555]"
+      className="text-sm font-semibold uppercase tracking-widest text-text-secondary transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-text-secondary"
     >
       {label}
     </button>
@@ -61,7 +61,7 @@ function SessionTitleField({
         if (e.key === "Enter") onCommit();
         if (e.key === "Escape") onCancel();
       }}
-      className="w-full border border-border bg-bg px-2 py-1 text-[11px] text-foreground focus:outline-none disabled:opacity-50"
+      className="w-full border border-border bg-background px-2 py-1 text-base text-foreground focus:outline-none disabled:opacity-50"
     />
   );
 }
@@ -80,7 +80,7 @@ function SessionTitleButton({
       type="button"
       onClick={() => onRestore(session)}
       disabled={disabled}
-      className="block w-full truncate text-left text-[11px] text-[#ccc] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-[#ccc]"
+      className="block w-full truncate text-left text-base text-text-secondary transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-text-secondary"
     >
       {session.title}
     </button>
@@ -153,7 +153,7 @@ function SessionRowSummary({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="w-7 shrink-0 pt-1 text-[8px] font-semibold uppercase tracking-wider text-[#555]">
+      <span className="w-7 shrink-0 pt-1 text-sm font-semibold uppercase tracking-widest text-text-secondary">
         {KIND_LABEL[session.inputKind] ?? "?"}
       </span>
       <div className="min-w-0 flex-1">
@@ -168,7 +168,7 @@ function SessionRowSummary({
         ) : (
           <SessionTitleButton disabled={disabled} session={session} onRestore={onRestore} />
         )}
-        <span className="mt-1 block text-[9px] tabular-nums text-[#444]">{formatAge(session.createdAt)}</span>
+        <span className="mt-1 block text-sm tabular-nums text-muted-foreground/50">{formatAge(session.createdAt)}</span>
       </div>
     </div>
   );
@@ -206,7 +206,7 @@ export default function SessionHistoryRow({
   onRestore,
 }: SessionHistoryRowProps) {
   return (
-    <div className="border-b border-[#1a1a1a] px-3 py-2">
+    <div className="border-b border-border px-3 py-2">
       <SessionRowSummary
         disabled={disabled}
         draftTitle={draftTitle}
