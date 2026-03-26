@@ -35,6 +35,7 @@ export async function runAnalysisPass(args: {
     ? mem.current.segments.slice(-getSlidingWindowSize(mem.current.segments.length))
     : [...mem.current.segments];
   const reqId = ++mem.current.analysisReq;
+  setAnalysisError(null);
   setStage("analysis", "running");
   const trace = beginTraceStage("analysis", {
     mode,

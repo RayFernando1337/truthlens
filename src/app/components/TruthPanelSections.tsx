@@ -1,16 +1,9 @@
 "use client";
 
 import type { AnalysisSnapshot, VerificationRun } from "@/lib/types";
+import { Lbl } from "./AnalysisContent";
 
-export { AnalysisContent } from "./AnalysisContent";
-
-function Lbl({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
-      {children}
-    </span>
-  );
-}
+export { AnalysisContent, Lbl } from "./AnalysisContent";
 
 function VerifyBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (

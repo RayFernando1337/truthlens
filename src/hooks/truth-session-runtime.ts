@@ -130,6 +130,7 @@ async function executeBatchAnalysis(
   era: number, segments: TranscriptSegment[], hint: string,
   h: BatchAnalysisHandlers, traceExtra?: Record<string, unknown>,
 ) {
+  h.setAnalysisError(null);
   h.setIsProcessing(true);
   h.setProcessingChunk(hint);
   h.setStage("analysis", "running");

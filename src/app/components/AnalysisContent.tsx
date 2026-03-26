@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { AnalysisSnapshot } from "@/lib/types";
 
-function Lbl({ children }: { children: React.ReactNode }) {
+export function Lbl({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
       {children}
