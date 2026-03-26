@@ -9,19 +9,10 @@ import type {
   PulseResult,
   TraceStage,
 } from "@/lib/types";
-import type { StageKey } from "@/hooks/truth-session-helpers";
+import { analysisTraceOutput, type StageKey } from "@/hooks/truth-session-helpers";
 import type { TruthSessionMem } from "./truth-session-runtime";
 
 type TraceToken = { sessionId: string; stage: TraceStage; startedAt: number } | null;
-
-function analysisTraceOutput(d: AnalysisSnapshot): Record<string, unknown> {
-  return {
-    evidenceRows: d.evidenceTable.length,
-    patterns: d.patterns.length,
-    trajectoryPoints: d.trustTrajectory.length,
-    mode: d.mode,
-  };
-}
 
 export async function runAnalysisPass(args: {
   mode: "streaming" | "full";

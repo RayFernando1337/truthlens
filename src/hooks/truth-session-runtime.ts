@@ -1,5 +1,5 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import { createSession, type StageKey } from "@/hooks/truth-session-helpers";
+import { analysisTraceOutput, createSession, type StageKey } from "@/hooks/truth-session-helpers";
 import { fetchAnalysis } from "@/lib/api-client";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
 import { makeSegment, splitForBatchAnalysis, splitIntoChunks } from "@/lib/segment-utils";
@@ -181,14 +181,7 @@ export async function retryBatchAnalysis(args: BatchAnalysisHandlers) {
   );
 }
 
-function batchTraceOutput(result: AnalysisSnapshot): Record<string, unknown> {
-  return {
-    evidenceRows: result.evidenceTable.length,
-    patterns: result.patterns.length,
-    trajectoryPoints: result.trustTrajectory.length,
-    mode: result.mode,
-  };
-}
+const batchTraceOutput = analysisTraceOutput;
 
 export function restoreTrackedSession(args: {
   entry: SessionHistoryEntry;
