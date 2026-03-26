@@ -1,123 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import type { AnalysisSnapshot, VerificationRun } from "@/lib/types";
+
+export { AnalysisContent } from "./AnalysisContent";
 
 function Lbl({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-[9px] font-semibold uppercase tracking-widest text-text-secondary">
       {children}
     </span>
-  );
-}
-
-function AppealsToggle({ appeals }: { appeals: AnalysisSnapshot["appeals"] }) {
-  const [open, setOpen] = useState<"ethos" | "pathos" | "logos" | null>(null);
-  return (
-    <div>
-      <Lbl>Appeals</Lbl>
-      <div className="mt-1 flex gap-1.5">
-        {(["ethos", "pathos", "logos"] as const).map((k) => (
-          <button
-            key={k} type="button"
-            onClick={() => setOpen((o) => (o === k ? null : k))}
-            className={`border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition-colors ${
-              open === k
-                ? "border-foreground bg-foreground text-bg"
-                : "border-[#333] text-[#888] hover:border-text-secondary"
-            }`}
-          >
-            {k}
-          </button>
-        ))}
-      </div>
-      {open && (
-        <p className="mt-1.5 max-w-md text-[11px] leading-snug text-foreground">
-          {appeals[open]}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function GapsAndAssumptions({ snapshot }: { snapshot: AnalysisSnapshot }) {
-  if (snapshot.missing.length === 0 && snapshot.assumptions.length === 0)
-    return null;
-  return (
-    <div className="flex flex-wrap gap-3">
-      {snapshot.missing.length > 0 && (
-        <div className="flex-1 basis-[180px]">
-          <Lbl>Gaps</Lbl>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {snapshot.missing.map((m, i) => (
-              <span
-                key={i} title={m}
-                className="truncate border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent"
-              >
-                {m.length > 50 ? m.slice(0, 50) + "\u2026" : m}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      {snapshot.assumptions.length > 0 && (
-        <div className="flex-1 basis-[180px]">
-          <Lbl>Assumptions</Lbl>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {snapshot.assumptions.map((a, i) => (
-              <span
-                key={i} title={a}
-                className="truncate border border-yellow/40 bg-yellow/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-yellow"
-              >
-                {a.length > 60 ? a.slice(0, 60) + "\u2026" : a}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function AnalysisContent({ snapshot }: { snapshot: AnalysisSnapshot }) {
-  return (
-    <div className="space-y-3 px-4 py-3">
-      <p className="text-xs leading-relaxed text-foreground">{snapshot.tldr}</p>
-      {snapshot.speakerIntent && (
-        <p className="border-l-2 border-accent pl-2 text-[11px] italic leading-snug text-accent">
-          &ldquo;{snapshot.speakerIntent}&rdquo;
-        </p>
-      )}
-      <div>
-        <Lbl>Core points</Lbl>
-        <ul className="mt-1 space-y-0.5">
-          {snapshot.corePoints.map((p, i) => (
-            <li key={i} className="text-[11px] leading-snug text-foreground">
-              <span className="mr-1.5 text-text-secondary">{i + 1}.</span>{p}
-            </li>
-          ))}
-        </ul>
-      </div>
-      {snapshot.evidenceTable.length > 0 && (
-        <div>
-          <Lbl>Evidence</Lbl>
-          {snapshot.evidenceTable.map((r, i) => (
-            <div key={i} className="mt-1 border-l-2 border-[#333] pl-2">
-              <p className="text-[11px] font-medium text-foreground">{r.claim}</p>
-              <p className="text-[10px] text-text-secondary">{r.evidence}</p>
-            </div>
-          ))}
-        </div>
-      )}
-      <GapsAndAssumptions snapshot={snapshot} />
-      <AppealsToggle appeals={snapshot.appeals} />
-      <div className="border border-green/30 bg-green/5 p-2.5">
-        <Lbl>Steelman</Lbl>
-        <p className="mt-1 text-[11px] leading-snug text-foreground">
-          {snapshot.steelman}
-        </p>
-      </div>
-    </div>
   );
 }
 
