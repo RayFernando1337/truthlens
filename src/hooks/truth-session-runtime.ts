@@ -2,7 +2,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { createSession, type StageKey } from "@/hooks/truth-session-helpers";
 import { fetchAnalysis } from "@/lib/api-client";
 import { severityFromPulse, type ChunkSeverity } from "@/lib/pulse-utils";
-import { makeSegment, splitIntoChunks } from "@/lib/segment-utils";
+import { makeSegment, splitForBatchAnalysis, splitIntoChunks } from "@/lib/segment-utils";
 import type {
   AnalysisSnapshot,
   InputKind,
@@ -23,6 +23,7 @@ type TraceToken = { sessionId: string; stage: TraceStage; startedAt: number } | 
 
 export interface TruthSessionMem {
   segments: TranscriptSegment[];
+  analysisSegments: TranscriptSegment[];
   pulses: SegmentPulse[];
   chunkId: number;
   analysisReq: number;
@@ -45,6 +46,7 @@ export interface TruthSessionMem {
 export function createTruthSessionMem(): TruthSessionMem {
   return {
     segments: [],
+    analysisSegments: [],
     pulses: [],
     chunkId: 0,
     analysisReq: 0,
@@ -67,6 +69,7 @@ export function createTruthSessionMem(): TruthSessionMem {
 
 export function resetTruthSessionMem(mem: TruthSessionMem): void {
   mem.segments = [];
+  mem.analysisSegments = [];
   mem.pulses = [];
   mem.chunkId = 0;
   mem.analysisReq = 0;
@@ -157,17 +160,24 @@ export async function runBatchAnalysis(
   args: BatchAnalysisHandlers & { text: string; era: number },
 ) {
   const { text, era, ...h } = args;
+  // Fine segments for citation, verification, and topic segmentation
   h.mem.current.segments = splitIntoChunks(text).map(
     (chunk, index) => makeSegment(`batch-${index}`, chunk, index),
   );
-  await executeBatchAnalysis(era, h.mem.current.segments, "Analyzing full text...", h);
+  // Coarse segments (typically 1) for the analysis LLM call
+  h.mem.current.analysisSegments = splitForBatchAnalysis(text).map(
+    (chunk, index) => makeSegment(`batch-analysis-${index}`, chunk, index),
+  );
+  await executeBatchAnalysis(era, h.mem.current.analysisSegments, "Analyzing full text...", h);
 }
 
 export async function retryBatchAnalysis(args: BatchAnalysisHandlers) {
-  if (args.mem.current.segments.length === 0) return;
+  const segs = args.mem.current.analysisSegments.length > 0
+    ? args.mem.current.analysisSegments
+    : args.mem.current.segments;
+  if (segs.length === 0) return;
   await executeBatchAnalysis(
-    args.mem.current.era, args.mem.current.segments,
-    "Retrying analysis...", args, { retry: true },
+    args.mem.current.era, segs, "Retrying analysis...", args, { retry: true },
   );
 }
 

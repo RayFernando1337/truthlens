@@ -8,6 +8,7 @@ export function makeSegment(
   return { segmentId, text, index };
 }
 
+/** Fine-grained paragraph-level chunks for streaming, verification, and topic segmentation. */
 export function splitIntoChunks(text: string): string[] {
   const paragraphs = text
     .split(/\n\s*\n/)
@@ -33,4 +34,31 @@ export function splitIntoChunks(text: string): string[] {
     }
   }
   return chunks;
+}
+
+const BATCH_SEGMENT_CHAR_LIMIT = 60_000;
+
+/**
+ * Coarse segmentation for batch analysis: returns the whole text as 1 segment
+ * (or 2-3 segments for very long documents exceeding ~60K chars).
+ * Preserves paragraph boundaries when splitting.
+ */
+export function splitForBatchAnalysis(text: string): string[] {
+  if (text.length <= BATCH_SEGMENT_CHAR_LIMIT) return [text];
+
+  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim());
+  const segments: string[] = [];
+  let current = "";
+
+  for (const para of paragraphs) {
+    if (current.length + para.length > BATCH_SEGMENT_CHAR_LIMIT && current) {
+      segments.push(current.trim());
+      current = para;
+    } else {
+      current += (current ? "\n\n" : "") + para;
+    }
+  }
+  if (current.trim()) segments.push(current.trim());
+
+  return segments;
 }
