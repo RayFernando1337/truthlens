@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import type {
   AnalysisSnapshot, PipelineStageStatus, PostAnalysisQueryResult,
   PostQueryType, PulseEntry, PulseFlag, TopicSegment, VerificationRun,
@@ -76,11 +77,11 @@ function StatsBar(
   { claims, flags, verified }: { claims: number; flags: number; verified: number },
 ) {
   return (
-    <div className="flex items-center gap-3 border-t border-[#1a1a1a] px-4 py-1.5 font-mono text-[10px] tabular-nums">
+    <div className="flex items-center gap-3 border-t border-border px-4 py-1.5 font-mono text-sm font-semibold uppercase tracking-widest tabular-nums">
       <span className="text-foreground">{claims} claims</span>
-      <span className="text-[#333]">&middot;</span>
+      <span className="text-muted-foreground/40">&middot;</span>
       <span style={{ color: flags > 0 ? "#ff4400" : "#666" }}>{flags} flagged</span>
-      <span className="text-[#333]">&middot;</span>
+      <span className="text-muted-foreground/40">&middot;</span>
       <span style={{ color: verified > 0 ? "#00cc66" : "#666" }}>
         {verified > 0 && <span className="mr-0.5 opacity-70">{"\u2713"}</span>}
         {verified} verified
@@ -97,16 +98,16 @@ function FlagFeed(
       {flags.map((f, i) => (
         <button
           key={i} type="button" onClick={() => onSeek(f.idx)}
-          className="flex w-full items-center gap-2.5 border-b border-[#1a1a1a] border-l-2 px-4 py-1.5 text-left transition-colors hover:bg-[#1a1a1a]"
+          className="flex w-full items-center gap-2.5 border-b border-border border-l-2 px-4 py-1.5 text-left transition-colors hover:bg-muted"
           style={{ borderLeftColor: FC[f.flag.type] }}
         >
-          <span className="text-xs font-bold" style={{ color: FC[f.flag.type] }}>
+          <span className="text-sm font-bold" style={{ color: FC[f.flag.type] }}>
             {FI[f.flag.type]}
           </span>
-          <span className="w-16 shrink-0 text-[9px] font-semibold uppercase tracking-wider" style={{ color: FC[f.flag.type] }}>
+          <span className="w-16 shrink-0 text-sm font-semibold uppercase tracking-widest" style={{ color: FC[f.flag.type] }}>
             {FL[f.flag.type]}
           </span>
-          <span className="min-w-0 truncate text-[11px] text-[#ccc]">{f.flag.label}</span>
+          <span className="min-w-0 truncate text-base text-foreground">{f.flag.label}</span>
         </button>
       ))}
     </>
@@ -116,8 +117,8 @@ function FlagFeed(
 function LoadingHint({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2 px-4 py-4">
-      <span className="h-1 w-1 animate-pulse bg-foreground" />
-      <span className="text-[10px] uppercase tracking-widest text-[#444]">{text}</span>
+      <span className="h-1.5 w-1.5 animate-pulse bg-foreground" />
+      <span className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/50">{text}</span>
     </div>
   );
 }
@@ -130,13 +131,16 @@ function DisclosureTabs(
   },
 ) {
   return (
-    <div className="sticky top-0 z-5 flex border-y border-border bg-bg">
+    <div className="sticky top-0 z-5 flex border-y border-border bg-background">
       {tabs.map((tab) => (
         <button
           key={tab} type="button" onClick={() => onToggle(tab)}
-          className={`flex-1 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest transition-colors ${
-            active === tab ? "bg-[#1a1a1a] text-foreground" : "text-[#555] hover:text-[#888]"
-          }`}
+          className={cn(
+            "flex-1 py-2.5 text-center text-sm font-semibold uppercase tracking-widest transition-colors",
+            active === tab
+              ? "bg-muted text-foreground"
+              : "text-text-secondary hover:text-muted-foreground",
+          )}
         >
           {active === tab ? "\u25BE" : "\u25B8"} {tab}
         </button>
@@ -148,9 +152,9 @@ function DisclosureTabs(
 function AnalysisErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div className="px-4 py-3">
-      <p className="text-[11px] text-[#ffb199]">{error}</p>
+      <p className="text-base text-brand-muted">{error}</p>
       <button type="button" onClick={onRetry}
-        className="mt-2 border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+        className="mt-2 border border-input px-3 py-1 text-sm font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
         Retry
       </button>
     </div>
@@ -175,7 +179,7 @@ function DisclosureBody(
     );
     case "patterns": return snapshot
       ? <PatternsContent snapshot={snapshot} />
-      : <p className="px-4 py-3 text-[11px] text-[#444]">No patterns detected yet.</p>;
+      : <p className="px-4 py-3 text-base text-muted-foreground/50">No patterns detected yet.</p>;
     case "segments": return <TopicSegmentsContent segments={topicSegments} onGenerate={onTriggerTopicSegmentation} isLoading={pipelineStatus.topics === "running"} />;
     case "query": return <QueryContent result={queryResult} onSubmit={onSubmitQuery} />;
     default: return null;
@@ -211,17 +215,17 @@ function usePanelDerived(
 function EmptyState({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   if (error) return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-      <p className="text-[11px] text-[#ffb199]">{error}</p>
+      <p className="text-base text-brand-muted">{error}</p>
       <button type="button" onClick={onRetry}
-        className="border border-[#333] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
+        className="border border-input px-3 py-1 text-sm font-semibold uppercase tracking-widest text-foreground hover:border-foreground">
         Retry analysis
       </button>
     </div>
   );
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-      <p className="text-sm text-[#555]">Real-time rhetorical analysis.</p>
-      <p className="text-[11px] text-[#333]">Paste. Speak. See through the rhetoric.</p>
+      <p className="text-base text-text-secondary">Real-time rhetorical analysis.</p>
+      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground/40">Paste. Speak. See through the rhetoric.</p>
     </div>
   );
 }
@@ -246,7 +250,7 @@ export default function TruthPanel({
   }
   return (
     <div className="flex h-full flex-col" data-testid="truth-panel">
-      <div className="sticky top-0 z-10 border-b border-border bg-surface">
+      <div className="sticky top-0 z-10 border-b border-border bg-card">
         <TrustChart scores={d.scores} overlay={d.overlay} />
         <div className="flex items-center justify-between">
           <StatsBar claims={d.claims} flags={d.flagged} verified={d.verified} />
@@ -257,7 +261,7 @@ export default function TruthPanel({
         {processingChunk && <LoadingHint text="Analyzing\u2026" />}
         {!d.batch && <FlagFeed flags={d.flatFlags} onSeek={onSeekTranscriptChunk} />}
         {!d.batch && d.flatFlags.length === 0 && entries.length > 0 && (
-          <p className="px-4 py-3 text-[11px] text-green/70">No flags so far. The argument looks straight.</p>
+          <p className="px-4 py-3 text-base text-green/70">No flags so far. The argument looks straight.</p>
         )}
         <DisclosureTabs active={active} onToggle={toggle} tabs={d.tabs} />
         <DisclosureBody active={active} snapshot={snapshot} verificationRun={verificationRun}
