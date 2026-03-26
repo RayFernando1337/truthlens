@@ -80,7 +80,7 @@ function SessionTitleButton({
       type="button"
       onClick={() => onRestore(session)}
       disabled={disabled}
-      className="block w-full truncate text-left text-base text-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-foreground"
+      className="block w-full truncate text-left text-base text-text-secondary transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-text-secondary"
     >
       {session.title}
     </button>
