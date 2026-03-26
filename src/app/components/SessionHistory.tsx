@@ -100,7 +100,7 @@ export default function SessionHistory({ onRestore, disabled = false }: Props) {
   if (!open) {
     return (
       <button type="button" onClick={handleOpen} disabled={disabled}
-        className="text-[10px] uppercase tracking-wider text-[#555] transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-[#555]">
+        className="text-sm font-semibold uppercase tracking-widest text-text-secondary transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-text-secondary">
         History
       </button>
     );
@@ -109,12 +109,12 @@ export default function SessionHistory({ onRestore, disabled = false }: Props) {
   return (
     <div className="relative">
       <button type="button" onClick={handleClose}
-        className="text-[10px] uppercase tracking-wider text-foreground">
+        className="text-sm font-semibold uppercase tracking-widest text-foreground">
         History &#x25B4;
       </button>
-      <div className="absolute right-0 top-full z-30 mt-1 max-h-[320px] w-[320px] overflow-y-auto border border-[#333] bg-surface shadow-lg">
+      <div className="absolute right-0 top-full z-30 mt-1 max-h-[320px] w-[320px] overflow-y-auto border border-input bg-card shadow-lg">
         {sessions.length === 0
-          ? <p className="px-3 py-4 text-center text-[10px] text-[#444]">No saved sessions.</p>
+          ? <p className="px-3 py-4 text-center text-sm text-muted-foreground/50">No saved sessions.</p>
           : sessions.map((session) => (
             <SessionHistoryRow
               key={session.sessionId}

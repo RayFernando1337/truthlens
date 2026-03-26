@@ -60,9 +60,9 @@ export default function TrustChart({
   const main = buildPath(scores);
   const overlayD = overlay && overlay.length > 1 ? buildPath(overlay).d : null;
   return (
-    <div className="bg-[#0f0f0f] px-4 py-3">
+    <div className="bg-card px-4 py-3">
       <div className="flex items-baseline justify-between">
-        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#555]">Trust</span>
+        <span className="text-sm font-semibold uppercase tracking-widest text-text-secondary">Trust</span>
         <span className="text-xl font-bold tabular-nums leading-none" style={{ color }}>
           {Math.round(latest * 100)}
         </span>
