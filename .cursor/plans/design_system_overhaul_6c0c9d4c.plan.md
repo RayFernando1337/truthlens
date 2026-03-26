@@ -1,6 +1,6 @@
 ---
 name: Design System Overhaul
-overview: Install shadcn/ui, rationalize the color palette from ~18 hardcoded grays to semantic tokens (dual light/dark mode via CSS custom properties), replace all arbitrary hex values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), and remove legacy aliases.
+overview: Reconcile the existing shadcn/ui scaffold with the app's current dark-first token stack, expand the migration inventory to cover the newly split UI files, replace remaining arbitrary hex class values, migrate typography to a 3-tier hierarchy (18/16/14px — heading, body, chrome), adopt cn(), align verification with the current smoke scripts, and remove legacy aliases once the repo is truly ready.
 todos:
   - id: phase-1a-reaudit
     content: "[Phase 1A] Re-audit the existing shadcn/ui setup against the updated plan and confirm the required scaffold is already present"
@@ -30,16 +30,16 @@ todos:
     content: "[Phase 2F] Update the plan after the globals.css rewrite, record new discoveries and remaining token work, and confirm that the Phase 3 slices are ready to hand off"
     status: pending
   - id: phase-3a-right-panel
-    content: "[Phase 3A] Migrate TruthPanel.tsx and TruthPanelSections.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
+    content: "[Phase 3A] Migrate TruthPanel.tsx, TruthPanelSections.tsx, and AnalysisContent.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3b-extras-fixtures
     content: "[Phase 3B] Migrate TruthPanelExtras.tsx and TranscriptInputFixtures.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3c-supporting
-    content: "[Phase 3C] Migrate SessionHistory.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
+    content: "[Phase 3C] Migrate SessionHistory.tsx, SessionHistoryRow.tsx, Flag.tsx, TrustChart.tsx, and ShareCapture.tsx: hex replacements, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3d-input-page
-    content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: typography tiers, cn() adoption, alias renames, and slice handoff notes"
+    content: "[Phase 3D] Migrate TranscriptInputParts.tsx and page.tsx: remaining header hex cleanup, typography tiers, cn() adoption, alias renames, and slice handoff notes"
     status: pending
   - id: phase-3e-grep-merge
     content: "[Phase 3E] Merge the Phase 3 implementation slices and run grep sweeps for remaining hex classNames and legacy aliases"
@@ -54,7 +54,7 @@ todos:
     content: "[Phase 4A] Remove the temporary --color-surface and --color-bg aliases from src/app/globals.css once all component migrations are merged"
     status: pending
   - id: phase-4b-automated-checks
-    content: "[Phase 4B] Run final automated checks: bunx tsc --noEmit, bun run lint, and bun run test:smoke"
+    content: "[Phase 4B] Run final automated checks: bunx tsc --noEmit, bun run lint, bun run smoke:readiness, and bun run test:smoke"
     status: pending
   - id: phase-4c-final-browser
     content: "[Phase 4C] Run final browser verification in both modes after alias removal and confirm there are no visual regressions"
@@ -90,9 +90,14 @@ Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4
 - `components.json` exists and points shadcn to `src/app/globals.css`, `@/lib/utils`, and `@/components/ui`
 - `src/lib/utils.ts` exists and exports `cn()`
 - `package.json` already includes `clsx`, `tailwind-merge`, `class-variance-authority`, `tw-animate-css`, `lucide-react`, and `shadcn`
-- `src/app/globals.css` contains the Phase 1 shadcn imports and base layer, but its token blocks are still transitional and must be replaced in Phase 2
-- `src/app/layout.tsx` already imports `cn()`, loads the font variables, and applies the mono font on `<body>`
-- `src/components/ui/button.tsx` exists from the initial shadcn setup and is outside the Phase 2 token rewrite
+- `src/app/globals.css` contains the Phase 1 shadcn imports and base layer, but it is still a split-brain file: TruthLens dark-first hex tokens live in `@theme inline`, shadcn OKLCH defaults live in `:root` / `.dark`, and raw `body` / scrollbar / `::selection` hex bypass the token system
+- `src/app/layout.tsx` already imports `cn()`, loads the font variables, and applies the mono font on `<body>`, but it does not currently set `class="dark"` on `<html>`
+- `src/components/ui/button.tsx` exists from the initial shadcn setup, is built on `@base-ui/react/button`, and the app shell still uses raw `<button>` elements almost everywhere else
+- `src/app/components/AnalysisContent.tsx` is now a first-class Phase 3 file; the previous plan incorrectly treated its appeals toggle and verdict copy as if they still lived inside `TruthPanelSections.tsx`
+- `src/app/components/SessionHistoryRow.tsx` is now a first-class Phase 3 file; `SessionHistory.tsx` alone no longer represents the whole history surface
+- `src/app/page.tsx` is not clean: it still carries `text-[#555]` on the header action and still uses the `bg-bg` / `bg-surface` aliases
+- `package.json` now exposes two distinct verification scripts: `bun run smoke:readiness` for mocked API contract checks and `bun run test:smoke` for Playwright UI smoke
+- `README.md` and `TRUTHLENS_ARCHITECTURE.md` are currently drifted from the live app; this plan should be treated as the execution truth for the overhaul until those docs are refreshed
 
 ## Execution Orchestration
 
@@ -111,9 +116,9 @@ Phase 4 is the sequential cleanup and closeout wave. `Phase 4A` through `Phase 4
 ### Recommended handoff units
 
 - `Phase 2A-2F`: 1 engineer or agent working sequentially
-- `Phase 3A`: 1 engineer or agent for `TruthPanel.tsx` and `TruthPanelSections.tsx`
+- `Phase 3A`: 1 engineer or agent for `TruthPanel.tsx`, `TruthPanelSections.tsx`, and `AnalysisContent.tsx`
 - `Phase 3B`: 1 engineer or agent for `TruthPanelExtras.tsx` and `TranscriptInputFixtures.tsx`
-- `Phase 3C`: 1 engineer or agent for `SessionHistory.tsx`, `Flag.tsx`, `TrustChart.tsx`, and `ShareCapture.tsx`
+- `Phase 3C`: 1 engineer or agent for `SessionHistory.tsx`, `SessionHistoryRow.tsx`, `Flag.tsx`, `TrustChart.tsx`, and `ShareCapture.tsx`
 - `Phase 3D`: 1 engineer or agent for `TranscriptInputParts.tsx` and `page.tsx`
 - `Phase 3E-3G`: 1 integration engineer or agent after the parallel wave lands
 - `Phase 4A-4D`: 1 finisher engineer or agent for cleanup, verification, and plan sync
@@ -165,7 +170,7 @@ Reference screenshots saved in `assets/`. Factory uses **light mode for marketin
 
 These are mode-agnostic structural rules — they apply to both dark and light:
 
-- **Single-hue canvas** with a single orange accent — no other hue besides green for success states
+- **Single-hue canvas** with orange-led chrome — allow extra hues only when they are data-driven domain signals (for example, segment-type colors), not ad hoc decorative theme choices
 - **Monospace typography** (JetBrains Mono) — hierarchy via size, weight, tracking, not color variety
 - **Small uppercase tracking-widest labels** with orange dot prefix for section markers
 - **Bordered buttons**, never filled (invert on hover) — the Factory signature
@@ -351,11 +356,11 @@ Breakpoints in use: `xl:` (1280px) for sidebar width expansion.
 
 ### Color Mode
 
-Dark mode activates via `.dark` class on `<html>`. The `@custom-variant dark` directive makes Tailwind's `dark:` prefix work with this class-based approach.
+Target architecture: dark mode activates via `.dark` class on `<html>`. The `@custom-variant dark` directive makes Tailwind's `dark:` prefix work with this class-based approach.
 
-Default is light mode (`:root` values). To default to dark, add `class="dark"` to the `<html>` element in `layout.tsx`. A runtime toggle can swap this class.
+Current repo reality is different: `layout.tsx` does not apply `dark`, so the app behaves as dark-first because `bg-bg`, `bg-surface`, and raw `body` hex dominate the rendered shell. Treat light mode as an explicit Phase 2 target, not a shipped capability.
 
-For the initial overhaul, existing hardcoded hex values (which assumed dark mode) are replaced with semantic tokens that work in both modes. Inline `style=` attributes that use hex for dynamic semantic colors (verdict borders, pattern type indicators, flag type colors) remain as-is — these are data-driven colors tied to domain semantics, not theme tokens.
+For the overhaul, existing hardcoded hex values that assumed dark mode are replaced with semantic tokens that can support both modes once the class wiring is real. Inline `style=` attributes that use hex for dynamic semantic colors (verdict borders, pattern type indicators, flag type colors) remain as-is — these are data-driven colors tied to domain semantics, not theme tokens.
 
 ---
 
@@ -404,14 +409,17 @@ Reference: https://ui.shadcn.com/docs/theming
 
 ### Dark mode toggle
 
-Dark mode uses **class-based switching** via `.dark` on `<html>`. The `@custom-variant dark (&:is(.dark *))` directive (already in `globals.css` from Phase 1) makes Tailwind's `dark:` prefix work with this class.
+Dark mode uses **class-based switching** via `.dark` on `<html>`. The `@custom-variant dark (&:is(.dark *))` directive (already in `globals.css` from Phase 1) makes Tailwind's `dark:` prefix work with this class. The live repo does not currently apply that class, so this section describes the target behavior that Phase 2 must actually wire up.
 
 ```html
 <html class="dark">
   <!-- dark mode active -->
-  <html>
-    <!-- light mode (default) -->
-  </html>
+  ...
+</html>
+
+<html>
+  <!-- light mode (default) -->
+  ...
 </html>
 ```
 
@@ -443,7 +451,7 @@ Per project rules (`.cursor/rules/code-standards.mdc`):
 
 ## Problem
 
-TruthLens started with this Factory-like intent but drifted: no component library, no `cn()` utility, and a fragmented color system — 8 named tokens plus ~10 unnamed grays hardcoded as `[#xxx]` across 60+ locations. The gray soup undermines the clean Factory aesthetic.
+TruthLens started with this Factory-like intent but drifted: the repo now has the shadcn scaffold and `cn()`, yet the live UI still runs on a fragmented token stack, raw global hex, and an incomplete migration manifest that missed newer split files. The gray soup still undermines the clean Factory aesthetic.
 
 ## Guiding Principles
 
@@ -540,7 +548,9 @@ Validation: `bunx tsc --noEmit` and `bun run lint` pass.
 
 Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css](src/app/globals.css) with the full TruthLens-flavored token set. Uses CSS custom property indirection (the pattern shadcn established in Phase 1) so Tailwind utility classes like `bg-card` and `text-muted-foreground` resolve to the correct value per mode.
 
-**Architecture:** `@theme inline` maps Tailwind color-\* tokens to `var()` references. `:root` provides light values, `.dark` provides dark values. The `@custom-variant dark` directive (already present from Phase 1) makes `dark:` prefixed utilities work.
+**Current repo reality to fix in Phase 2:** `@theme inline` is still hardcoded to TruthLens dark hex, `:root` and `.dark` still contain the default shadcn OKLCH palette, and the plain `body` / scrollbar / `::selection` rules still use literal hex outside the shared token system. Because those `body` rules are unlayered, they can override the later `@layer base` body styling. Phase 2 is therefore both a token rewrite and a cascade cleanup.
+
+**Architecture:** `@theme inline` maps Tailwind color-\* tokens to `var()` references. `:root` provides light values, `.dark` provides dark values, and the raw global rules must also move onto `var()` references. The `@custom-variant dark` directive (already present from Phase 1) makes `dark:` prefixed utilities work once the class is actually applied.
 
 **Exact target CSS:**
 
@@ -645,7 +655,7 @@ Replace the `@theme inline`, `:root`, and `.dark` blocks in [src/app/globals.css
 }
 ```
 
-Last two `@theme inline` entries (`surface`, `bg`) are backward-compat aliases removed in `Phase 4A`.
+Last two `@theme inline` entries (`surface`, `bg`) are backward-compat aliases removed in `Phase 4A`. They are still actively used across the app today, so do not treat them as dead cleanup-only tokens until `Phase 3E` confirms the alias sweep is complete.
 
 **body/scrollbar/selection** use `var()`:
 
@@ -686,12 +696,12 @@ body {
 
 **Note:** `::selection` changes from `#ff440033` (20% alpha) to `#ff440066` (40% alpha via ring). Slightly more visible selection highlight — acceptable.
 
-**Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic: `text-foreground` resolves to #e5e5e5 in dark, #171717 in light.
+**Only file touched in Phase 2:** `globals.css`. No component files need changes yet — the backward-compat aliases ensure existing `bg-bg`, `bg-surface`, `border-border`, etc. all keep working. Token class names are mode-agnostic once the rewrite lands: `text-foreground` resolves to #e5e5e5 in dark, #171717 in light.
 
 ### Phase 2 verification and handoff criteria
 
 - `Phase 2D` passes `bunx tsc --noEmit` and `bun run lint`
-- `Phase 2E` confirms token behavior in both modes on desktop and mobile
+- `Phase 2E` confirms the token behavior in the current dark-first shell and verifies manual `.dark` toggling only after the class-based mode path is actually wired or explicitly simulated in browser tools
 - `Phase 2F` updates the plan, current file status, and any newly discovered token, alias, or affected-file information
 - Before handing off to `Phase 3A-3D`, confirm the parallel slice boundaries still make sense and call out any newly discovered files that should join or leave a slice
 
@@ -719,86 +729,30 @@ Concrete substitutions:
 
 ### Hex color replacements
 
-**Audit confirmed 73 discrete substitutions across 8 files.** Full manifest:
+**Re-audit on 2026-03-26:** the old "73 substitutions across 8 files" manifest is stale. The app now includes additional split files and still carries remaining header / history / analysis shell debt. Treat the Phase 3 migration inventory below as the current source of truth.
 
-### [src/app/components/TruthPanelSections.tsx](src/app/components/TruthPanelSections.tsx) — 13 replacements
+**Files with remaining arbitrary hex in `className` or still-active legacy aliases:**
 
-- L27: `border-[#333]` -> `border-input`, `text-[#888]` -> `text-muted-foreground`
-- L105: `border-[#333]` -> `border-input`
-- L128: `border-[#333]` -> `border-input`
-- L151: `text-[#444]` -> `text-muted-foreground/50`
-- L158: `text-[#ffb199]` -> `text-accent-muted`
-- L164: `text-[#444]` -> `text-muted-foreground/50`
-- L173: `text-[#333]` -> `text-muted-foreground/40`
-- L175: `text-[#333]` -> `text-muted-foreground/40`
-- L187: `border-[#333]` -> `border-input`
-- L188: `text-[#888]` -> `text-muted-foreground`
-- L228: `text-[#ccc]` -> `text-foreground`
-- L232: `text-[#444]` -> `text-muted-foreground/50`
+- `src/app/components/TruthPanel.tsx` — stats rail, flag rows, disclosure tabs, retry states, idle copy, plus `bg-bg` / `bg-surface`
+- `src/app/components/TruthPanelSections.tsx` — verdict CTA, empty states, unverifiable rows, pattern descriptions, plus `bg-bg`
+- `src/app/components/AnalysisContent.tsx` — appeals toggle, yellow evidence blocks, quoted excerpts, and `text-bg` in the selected state
+- `src/app/components/TruthPanelExtras.tsx` — topic segments, query tabs, evidence rows, input placeholder, and `text-bg` in the selected state
+- `src/app/components/TranscriptInputFixtures.tsx` — menu shell, fixture card, hover states, preview box, and `bg-surface` / `bg-bg`
+- `src/app/components/SessionHistory.tsx` — history trigger, dropdown shell, empty state, and `bg-surface`
+- `src/app/components/SessionHistoryRow.tsx` — title button, session kind label, age metadata, editor input, and row divider
+- `src/app/components/TrustChart.tsx` — chart shell background and chrome label (SVG stroke/fill stays excluded)
+- `src/app/components/ShareCapture.tsx` — share button label only (canvas drawing code stays excluded)
+- `src/app/components/Flag.tsx` — badge background token map still contains `bg-[#444]/15`
+- `src/app/page.tsx` — header action still uses `text-[#555]`, and the page shell still relies on `bg-bg` / `bg-surface`
 
-### [src/app/components/TruthPanelExtras.tsx](src/app/components/TruthPanelExtras.tsx) — 13 replacements
+**Files that still need alias cleanup even without arbitrary hex class values:**
 
-- L28: `text-[#444]` -> `text-muted-foreground/50`
-- L35: `text-[#444]` -> `text-muted-foreground/50`
-- L37: `border-[#333]` -> `border-input`
-- L53: `text-[#444]` -> `text-muted-foreground/50`
-- L59: `text-[#555]` -> `text-text-secondary`
-- L85: `border-[#333]` -> `border-input`
-- L86: `text-[#888]` -> `text-muted-foreground`
-- L87: `text-[#ccc]` -> `text-foreground`
-- L118: `border-[#333]` -> `border-input`, `text-[#888]` -> `text-muted-foreground`
-- L126: `border-[#333]` -> `border-input`, `placeholder:text-[#444]` -> `placeholder:text-muted-foreground/50`
-- L128: `border-[#333]` -> `border-input`
+- `src/app/components/TranscriptInputParts.tsx` — `bg-bg`, `hover:text-bg`, and typography cleanup
 
-### [src/app/components/TruthPanel.tsx](src/app/components/TruthPanel.tsx) — 13 replacements
+**Files already clean for this phase's purposes:**
 
-- L77: `border-[#1a1a1a]` -> `border-muted`
-- L79: `text-[#333]` -> `text-muted-foreground/40`
-- L81: `text-[#333]` -> `text-muted-foreground/40`
-- L98: `border-[#1a1a1a]` -> `border-muted`, `hover:bg-[#1a1a1a]` -> `hover:bg-muted`
-- L107: `text-[#ccc]` -> `text-foreground`
-- L118: `text-[#444]` -> `text-muted-foreground/50`
-- L136: `bg-[#1a1a1a]` -> `bg-muted`, `text-[#555]` -> `text-text-secondary`, `hover:text-[#888]` -> `hover:text-muted-foreground`
-- L163: `text-[#444]` -> `text-muted-foreground/50`
-- L213: `text-[#555]` -> `text-text-secondary`
-- L214: `text-[#333]` -> `text-muted-foreground/40`
-
-### [src/app/components/TranscriptInputFixtures.tsx](src/app/components/TranscriptInputFixtures.tsx) — 12 replacements
-
-- L18: `border-[#333]` -> `border-input`
-- L24: `text-[#555]` -> `text-text-secondary`
-- L33: `text-[#888]` -> `text-muted-foreground`, `hover:bg-[#1a1a1a]` -> `hover:bg-muted`
-- L53: `bg-[#111]` -> `bg-card`
-- L68: `text-[#555]` -> `text-text-secondary`, `hover:text-[#aaa]` -> `hover:text-muted-foreground`
-- L73: `text-[#999]` -> `text-muted-foreground`
-- L74: `text-[#555]` -> `text-text-secondary`
-- L78: `border-[#1a1a1a]` -> `border-muted`
-- L79: `text-[#ccc]` -> `text-foreground`
-- L87: `text-[#999]` -> `text-muted-foreground`
-
-### [src/app/components/SessionHistory.tsx](src/app/components/SessionHistory.tsx) — 10 replacements
-
-- L41: `text-[#555]` -> `text-text-secondary`
-- L53: `border-[#333]` -> `border-input`
-- L55: `text-[#444]` -> `text-muted-foreground/50`
-- L59: `border-[#1a1a1a]` -> `border-muted`, `hover:bg-[#1a1a1a]` -> `hover:bg-muted`
-- L60: `text-[#555]` -> `text-text-secondary`
-- L63: `text-[#ccc]` -> `text-foreground`
-- L64: `text-[#444]` -> `text-muted-foreground/50`
-- L66: `text-[#333]` -> `text-muted-foreground/40`, `group-hover:text-[#555]` -> `group-hover:text-text-secondary`
-
-### [src/app/components/TrustChart.tsx](src/app/components/TrustChart.tsx) — 2 replacements
-
-- L63: `bg-[#0f0f0f]` -> `bg-background`
-- L65: `text-[#555]` -> `text-text-secondary`
-
-### [src/app/components/ShareCapture.tsx](src/app/components/ShareCapture.tsx) — 1 replacement
-
-- L161: `text-[#555]` -> `text-text-secondary`
-
-### [src/app/components/Flag.tsx](src/app/components/Flag.tsx) — 1 replacement (JS object -> className)
-
-- L14: `bg-[#444]/15` -> `bg-muted-foreground/15`
+- `src/app/layout.tsx`
+- `src/app/components/TranscriptInput.tsx`
 
 **DO NOT TOUCH** (inline styles / canvas — confirmed exclusions):
 
@@ -808,59 +762,58 @@ Concrete substitutions:
 - `TruthPanelSections.tsx` lines 135-138 (VCOL), 179-181, 195-198 (PCOL), 217-226 (`style=`)
 - `TrustChart.tsx` lines 7-10 (trustColor), 38-45 (SVG stroke/fill)
 
-**Files already clean (zero [#...] in className):** `page.tsx`, `layout.tsx`, `TranscriptInput.tsx`, `TranscriptInputParts.tsx`.
-
 ## Phase 3 sub-task assignments
 
 `Phase 3A` through `Phase 3D` run **in parallel** after `Phase 2F` completes. `Phase 3E`, `Phase 3F`, and `Phase 3G` are sequential integration tasks after those four implementation slices merge. Each sub-task handles ALL migration work for its assigned files: hex replacements, typography scale, `cn()` adoption, and alias renames. This avoids multiple passes over the same files.
 
 **Each agent should:** read the full Design Specification and Technical Implementation Notes in this plan before starting. Apply the hex color map, typography migration map, `cn()` sites, and alias renames listed below for their assigned files. Run `bunx tsc --noEmit` and `bun run lint` after completing their files. Produce a slice closeout note that lists files touched, checks run, new discoveries, adjacent files that may also be affected, and whether the slice is ready for `Phase 3E` merge.
 
-### Phase 3A — TruthPanel.tsx + TruthPanelSections.tsx
+### Phase 3A — TruthPanel.tsx + TruthPanelSections.tsx + AnalysisContent.tsx
 
-**Hex replacements:** See the per-file manifests above (13 + 13 = 26 replacements).
+**Hex replacements:** Truth panel shell, tab states, error / retry copy, verdict and pattern empty states, appeals toggle, excerpt blocks, and any remaining `text-[#...]`, `border-[#...]`, `bg-[#...]`, or hover-state equivalents in these three files.
 
-**cn() sites (add `import { cn } from "@/lib/utils"`):**
+**cn() sites (add `import { cn } from "@/lib/utils"` where needed):**
 
-- `TruthPanel.tsx` L135-137: disclosure tab active/inactive ternary
-- `TruthPanelSections.tsx` L24-28: appeals toggle selected/unselected ternary
+- `TruthPanel.tsx`: disclosure tab active/inactive ternary
+- `AnalysisContent.tsx`: appeals toggle selected/unselected ternary (this moved out of `TruthPanelSections.tsx`)
 
 **Alias renames:**
 
-- `TruthPanel.tsx` L219: `bg-surface` → `bg-card`
-- `TruthPanel.tsx` L131: `bg-bg` → `bg-background`
-- `TruthPanelSections.tsx` L208: `bg-bg` → `bg-background`
-- `TruthPanelSections.tsx` L26: `text-bg` → `text-background`
+- `TruthPanel.tsx`: `bg-surface` → `bg-card`
+- `TruthPanel.tsx`: `bg-bg` → `bg-background`
+- `TruthPanelSections.tsx`: `bg-bg` → `bg-background`
+- `AnalysisContent.tsx`: `text-bg` → `text-background`
 
 **Typography:** Apply 3-tier map. Readable content (11px, 12px, 14px) → `text-base` Body. Labels/buttons/tabs (9px, 10px) → `text-sm` Chrome. Add `text-lg` Headings for section titles.
 
 ### Phase 3B — TruthPanelExtras.tsx + TranscriptInputFixtures.tsx
 
-**Hex replacements:** See manifests above (13 + 12 = 25 replacements).
+**Hex replacements:** Topic segment empty states, query tabs, evidence rows, the query input placeholder, fixture menu shell, fixture card hover states, and the preview box shell.
 
 **cn() sites:**
 
-- `TruthPanelExtras.tsx` L115-119: query type tab selected/unselected ternary
+- `TruthPanelExtras.tsx`: query type tab selected/unselected ternary
 
 **Alias renames:**
 
-- `TruthPanelExtras.tsx` L117: `text-bg` → `text-background`
-- `TranscriptInputFixtures.tsx` L18: `bg-surface` → `bg-card`
-- `TranscriptInputFixtures.tsx` L78: `bg-bg` → `bg-background`
+- `TruthPanelExtras.tsx`: `text-bg` → `text-background`
+- `TranscriptInputFixtures.tsx`: `bg-surface` → `bg-card`
+- `TranscriptInputFixtures.tsx`: `bg-bg` → `bg-background`
 
 **Typography:** Apply 3-tier map. Readable content → `text-base` Body. Labels/buttons (9px, 10px, 11px) → `text-sm` Chrome. Add `text-lg` Headings.
 
-### Phase 3C — SessionHistory.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
+### Phase 3C — SessionHistory.tsx + SessionHistoryRow.tsx + Flag.tsx + TrustChart.tsx + ShareCapture.tsx
 
-**Hex replacements:** See manifests above (10 + 1 + 2 + 1 = 14 replacements).
+**Hex replacements:** History trigger, dropdown shell, row title / metadata states, session kind label, row dividers, chart shell label, share button label, and the `Flag.tsx` badge map.
 
 **cn() sites:**
 
-- `Flag.tsx` L34: flag badge style composition from record lookup
+- `Flag.tsx`: flag badge style composition from record lookup
 
 **Alias renames:**
 
-- `SessionHistory.tsx` L53: `bg-surface` → `bg-card`
+- `SessionHistory.tsx`: `bg-surface` → `bg-card`
+- `SessionHistoryRow.tsx`: `bg-bg` → `bg-background`
 
 **Typography:** Apply 3-tier map. SessionHistory 8px kind labels → `text-sm` Chrome. Flag badge → `text-sm` Chrome. Readable content → `text-base` Body.
 
@@ -871,23 +824,23 @@ Concrete substitutions:
 
 ### Phase 3D — TranscriptInputParts.tsx + page.tsx
 
-**Hex replacements:** None — these files have zero `[#...]` in classNames.
+**Hex replacements:** `page.tsx` still has a header action in `text-[#555]`; migrate that along with the alias cleanup. `TranscriptInputParts.tsx` does not have arbitrary hex classNames left, but it still has typography and alias debt.
 
-**cn() sites (add `import { cn } from "@/lib/utils"` to TranscriptInputParts):**
+**cn() sites (add `import { cn } from "@/lib/utils"` to `TranscriptInputParts.tsx`):**
 
-- `TranscriptInputParts.tsx` L43-45: mic button ternary (recording vs idle)
-- `TranscriptInputParts.tsx` L47: recording indicator dot ternary
-- `TranscriptInputParts.tsx` L85-89: severity border class composition (multi-condition)
-- `TranscriptInputParts.tsx` L132: progress bar inner class composition
+- `TranscriptInputParts.tsx`: mic button ternary (recording vs idle)
+- `TranscriptInputParts.tsx`: recording indicator dot ternary
+- `TranscriptInputParts.tsx`: severity border class composition (multi-condition)
+- `TranscriptInputParts.tsx`: progress bar inner class composition
 
 **Alias renames:**
 
-- `TranscriptInputParts.tsx` L75: `bg-bg` → `bg-background`
-- `TranscriptInputParts.tsx` L160: `hover:text-bg` → `hover:text-background`
-- `page.tsx` L37, L41: `bg-bg` → `bg-background`
-- `page.tsx` L62: `bg-surface` → `bg-card`
+- `TranscriptInputParts.tsx`: `bg-bg` → `bg-background`
+- `TranscriptInputParts.tsx`: `hover:text-bg` → `hover:text-background`
+- `page.tsx`: `bg-bg` → `bg-background`
+- `page.tsx`: `bg-surface` → `bg-card`
 
-**Typography:** Apply 3-tier map. InputHeader label → `text-sm` Chrome. Body content → `text-base` Body. Page header logo → `text-lg` Heading.
+**Typography:** Apply 3-tier map. InputHeader label → `text-sm` Chrome. Body content → `text-base` Body. Page header logo → `text-lg` Heading, and header status/actions should also land on the 14px chrome tier.
 
 ### Phase 3E — Merge + grep sweeps
 
@@ -896,7 +849,7 @@ Runs after **all** `Phase 3A-3D` sub-tasks complete. Merge the four implementati
 - Grep sweep: zero `[#` remaining in `.tsx` className strings
 - Grep sweep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` remaining in `.tsx` files
 - Resolve any cross-branch conflicts before final verification
-- Run `bunx tsc --noEmit` and `bun run lint` on the merged branch before handing off to `Phase 3F`
+- Run `bunx tsc --noEmit`, `bun run lint`, and `bun run smoke:readiness` on the merged branch before handing off to `Phase 3F`
 
 ### Phase 3F — Browser verification
 
@@ -925,6 +878,7 @@ Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from t
 
 - `bunx tsc --noEmit` — zero type errors (confirms no remaining references to removed tokens)
 - `bun run lint` — zero warnings
+- `bun run smoke:readiness` — mocked API contract smoke passes
 - `bun run test:smoke` — 2/2 pass
 - Grep: zero `[#` in `.tsx` className strings
 - Grep: zero `bg-surface`, `bg-bg`, `text-bg`, `hover:text-bg` in `.tsx` files
@@ -938,13 +892,16 @@ Delete `--color-surface: var(--card)` and `--color-bg: var(--background)` from t
 
 ## Verification Workflow
 
-### Automated checks (run after every phase)
+### Automated checks and readiness gates
 
 ```bash
 bunx tsc --noEmit        # zero type errors
 bun run lint             # zero warnings
-bun run test:smoke       # 2/2 pass
+bun run smoke:readiness  # mocked analyze/summarize/verify route contracts
+bun run test:smoke       # 2/2 Playwright UI smoke when shell behavior changed
 ```
+
+Use `tsc` + `lint` as the minimum implementation-pass checks. Use `smoke:readiness` at phase boundaries and before declaring a phase ready. Use `test:smoke` whenever the rendered shell or user interaction flow changed materially.
 
 ### Readiness gate before starting any new phase
 
@@ -994,8 +951,8 @@ These phases change visual output. Use the browser MCP tools to verify.
 
 **Mode toggle verification:**
 
-1. Use `browser_snapshot` to find the `<html>` element
-2. Run JavaScript in console to toggle: `document.documentElement.classList.toggle('dark')`
+1. Confirm whether the live page is still dark-first via the alias tokens and raw body rules or whether the Phase 2 class-based rewrite has landed
+2. If the class-based rewrite has landed, use `browser_snapshot` to find the `<html>` element and toggle `document.documentElement.classList.toggle('dark')`
 3. Take screenshots in both modes
 4. Verify that:
    - Background inverts (near-black ↔ near-white)
@@ -1016,21 +973,21 @@ If the browser verification reveals issues:
 
 ### Per-phase verification checklist
 
-| Phase    | Automated                            | Browser                      | Plan / discovery sync                                                                                     | Handoff gate                                                                                                      |
-| -------- | ------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 1A-1C    | `tsc` + `lint`                       | —                            | Status headings and file status updated; remaining Phase 2 work called out                                | `Phase 2` only starts once the scaffold baseline and transitional `globals.css` state are clearly documented     |
-| 2A-2C    | —                                    | —                            | Capture any newly discovered token, alias, or shared-style dependencies before the validation pass        | Do not hand off `Phase 3` yet; the `globals.css` rewrite is still in flight                                      |
-| 2D       | `tsc` + `lint`                       | —                            | Note any compiler or lint surprises that change the planned component slices                              | `Phase 2E` only if the token rewrite compiles cleanly                                                            |
-| 2E       | —                                    | Desktop + mobile, both modes | Record any visual regressions, light-mode surprises, or newly affected files found during browser review  | `Phase 2F` only if the new token system behaves correctly in both modes                                          |
-| 2F       | —                                    | —                            | Update the plan, current file status, and discovered follow-on work; confirm `Phase 3A-3D` slice mapping | `Phase 3A-3D` only if the slice boundaries and prerequisites are still accurate                                  |
-| 3A-3D    | `tsc` + `lint` (each agent)          | —                            | Each slice owner writes a closeout note with discoveries, affected neighbors, and ready/not-ready status  | `Phase 3E` only after all slice handoffs exist and the merge owner has read them                                 |
-| 3E       | Grep sweeps + merged `tsc` + `lint`  | —                            | Consolidate discoveries from all slice owners and note any merge-only issues                              | `Phase 3F` only if the merged branch is clean and no hidden alias/hex debt remains                               |
-| 3F       | —                                    | Desktop + mobile, both modes | Record integrated UI findings, typography issues, and any residual regressions                            | `Phase 3G` only if the integrated UI is visually coherent in both modes                                          |
-| 3G       | —                                    | —                            | Update the plan, file status, residual issue list, and Phase 4 cleanup scope                              | `Phase 4A-4D` only if the remaining work is true cleanup rather than missing migration work                      |
-| 4A       | `tsc` + `lint`                       | —                            | Note any cleanup fallout or alias-removal surprises                                                       | `Phase 4B` only if alias removal is mechanically safe                                                            |
-| 4B       | `tsc` + `lint` + smoke               | —                            | Record any test gaps or regressions that change final-closeout confidence                                 | `Phase 4C` only if the automated baseline is clean                                                               |
-| 4C       | —                                    | Desktop + mobile, both modes | Record final visual findings and any non-blocking follow-up ideas                                         | `Phase 4D` only if final visuals are acceptable and any remaining issues are explicitly classified               |
-| 4D       | Plan sync                            | —                            | Prose headings, file status, learned constraints, and follow-on questions match the repo                  | Overhaul is complete only when the plan is synced and any remaining work has been captured for the orchestrator  |
+| Phase | Automated                           | Browser                      | Plan / discovery sync                                                                                    | Handoff gate                                                                                                    |
+| ----- | ----------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1A-1C | `tsc` + `lint`                      | —                            | Status headings and file status updated; remaining Phase 2 work called out                               | `Phase 2` only starts once the scaffold baseline and transitional `globals.css` state are clearly documented    |
+| 2A-2C | —                                   | —                            | Capture any newly discovered token, alias, or shared-style dependencies before the validation pass       | Do not hand off `Phase 3` yet; the `globals.css` rewrite is still in flight                                     |
+| 2D    | `tsc` + `lint`                      | —                            | Note any compiler or lint surprises that change the planned component slices                             | `Phase 2E` only if the token rewrite compiles cleanly                                                           |
+| 2E    | —                                   | Desktop + mobile, both modes | Record any visual regressions, light-mode surprises, or newly affected files found during browser review | `Phase 2F` only if the new token system behaves correctly in both modes                                         |
+| 2F    | `smoke:readiness`                   | —                            | Update the plan, current file status, and discovered follow-on work; confirm `Phase 3A-3D` slice mapping | `Phase 3A-3D` only if the slice boundaries and prerequisites are still accurate                                 |
+| 3A-3D | `tsc` + `lint` (each agent)         | —                            | Each slice owner writes a closeout note with discoveries, affected neighbors, and ready/not-ready status | `Phase 3E` only after all slice handoffs exist and the merge owner has read them                                |
+| 3E    | Grep sweeps + merged `tsc` + `lint` + `smoke:readiness` | —                            | Consolidate discoveries from all slice owners and note any merge-only issues                             | `Phase 3F` only if the merged branch is clean and no hidden alias/hex debt remains                              |
+| 3F    | —                                   | Desktop + mobile, both modes | Record integrated UI findings, typography issues, and any residual regressions                           | `Phase 3G` only if the integrated UI is visually coherent in both modes                                         |
+| 3G    | `smoke:readiness`                   | —                            | Update the plan, file status, residual issue list, and Phase 4 cleanup scope                             | `Phase 4A-4D` only if the remaining work is true cleanup rather than missing migration work                     |
+| 4A    | `tsc` + `lint`                      | —                            | Note any cleanup fallout or alias-removal surprises                                                      | `Phase 4B` only if alias removal is mechanically safe                                                           |
+| 4B    | `tsc` + `lint` + `smoke:readiness` + `test:smoke` | —                            | Record any test gaps or regressions that change final-closeout confidence                                | `Phase 4C` only if the automated baseline is clean                                                              |
+| 4C    | —                                   | Desktop + mobile, both modes | Record final visual findings and any non-blocking follow-up ideas                                        | `Phase 4D` only if final visuals are acceptable and any remaining issues are explicitly classified              |
+| 4D    | Plan sync                           | —                            | Prose headings, file status, learned constraints, and follow-on questions match the repo                 | Overhaul is complete only when the plan is synced and any remaining work has been captured for the orchestrator |
 
 ### Dependency graph
 
